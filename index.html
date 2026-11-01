@@ -116,13 +116,8 @@
 
     <!-- JUEGOS -->
     <section id="sec-juegos" class="seccion oculto">
-      <!-- v3.1: la tarjeta del juego va PRIMERA en la sección (antes de la
-           tarjeta de creación, que en el teléfono mide varias pantallas):
-           aunque el scroll falle, al entrar a Juegos el tablero está arriba. -->
-      <div class="tarjeta oculto" id="tarjeta-juego">
-        <div class="fila-cerrar-juego"><button type="button" class="btn-suave btn-chico" id="btn-cerrar-juego">✖ Cerrar juego</button></div>
-        <div id="zona-juego"></div>
-      </div>
+      <!-- v3.2: el tablero ya NO vive en esta sección: se abre en la capa
+           sobrepuesta #capa-juego (al final del body), encima de todo. -->
       <div class="tarjeta">
         <h2>🎮 Juegos en línea</h2>
         <p class="subtitulo">Crea una partida y quien esté conectado se une con un toque. ¡Sin filas ni esperas!</p>
@@ -194,19 +189,20 @@
     <section id="sec-biblia" class="seccion oculto">
       <div class="tarjeta">
         <h2>📖 Versículo del día</h2>
-        <p class="versiculo-texto" id="biblia-versiculo-texto">Cargando el versículo de hoy…</p>
-        <p class="versiculo-cita" id="biblia-versiculo-cita"></p>
+        <div id="versiculo-dia-tocable" role="button" tabindex="0" title="Toca para verlo en grande">
+          <p class="versiculo-texto" id="biblia-versiculo-texto">Cargando el versículo de hoy…</p>
+          <p class="versiculo-cita" id="biblia-versiculo-cita"></p>
+        </div>
+        <p class="subtitulo" style="margin-top:6px">Tócalo para verlo en grande, encima de todo 🔎</p>
         <div class="botones-juego">
           <button class="btn-verde" id="btn-compartir-versiculo">📣 Compartir con todos</button>
         </div>
-        <div id="biblia-versiculo-compartido" class="aviso oculto" style="margin-top:12px"></div>
       </div>
       <div class="tarjeta">
         <h2>📚 Historias para leer juntos</h2>
-        <p class="subtitulo">Toca una historia para leerla aquí. Con «Leer para todos» se abre en la pantalla de toda la familia a la vez. 💛</p>
+        <p class="subtitulo">Toca una historia y se abre encima de la pantalla, en grande. Con «Leer para todos» se abre en la pantalla de toda la familia a la vez. 💛</p>
         <div id="biblia-aviso-lectura" class="aviso oculto" style="margin-bottom:12px"></div>
         <div id="lista-biblia-historias"></div>
-        <div id="biblia-historia-contenido" style="margin-top:14px"></div>
       </div>
       <div class="tarjeta">
         <h2>🎲 Juegos bíblicos</h2>
@@ -320,6 +316,54 @@
     <div class="botones-juego" style="justify-content:center">
       <button class="btn-verde" id="llamada-contestar">📞 Contestar</button>
       <button class="btn-suave" id="llamada-ahora-no">Ahora no</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== v3.2 · CAPAS SOBREPUESTAS =====
+     El juego, la historia y el versículo se abren ENCIMA de la pantalla
+     (capa fija a pantalla completa): la página de debajo no se mueve ni
+     se desplaza jamás. Cada capa se cierra SOLO con su ✖ grande. -->
+<div id="capa-juego" class="capa oculto" role="dialog" aria-modal="true" aria-label="Juego abierto">
+  <div class="capa-panel">
+    <div class="capa-cabecera">
+      <span class="capa-titulo" id="capa-juego-titulo">🎮 Juego</span>
+      <button type="button" class="btn-cerrar-capa" id="btn-cerrar-juego" aria-label="Cerrar el juego">✖</button>
+    </div>
+    <div class="capa-cuerpo">
+      <div class="tarjeta tarjeta-en-capa" id="tarjeta-juego">
+        <div id="zona-juego"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="capa-historia" class="capa oculto" role="dialog" aria-modal="true" aria-label="Historia bíblica">
+  <div class="capa-panel">
+    <div class="capa-cabecera">
+      <span class="capa-titulo">📖 Historia para leer juntos</span>
+      <button type="button" class="btn-cerrar-capa" id="btn-cerrar-historia" aria-label="Cerrar la historia">✖</button>
+    </div>
+    <div class="capa-cuerpo">
+      <div class="tarjeta tarjeta-en-capa">
+        <div id="biblia-historia-contenido"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="capa-versiculo" class="capa oculto" role="dialog" aria-modal="true" aria-label="Versículo">
+  <div class="capa-panel">
+    <div class="capa-cabecera">
+      <span class="capa-titulo" id="capa-versiculo-titulo">📖 Versículo del día</span>
+      <button type="button" class="btn-cerrar-capa" id="btn-cerrar-versiculo" aria-label="Cerrar el versículo">✖</button>
+    </div>
+    <div class="capa-cuerpo">
+      <div class="tarjeta tarjeta-en-capa versiculo-grande">
+        <p class="versiculo-texto" id="capa-versiculo-texto"></p>
+        <p class="versiculo-cita" id="capa-versiculo-cita"></p>
+        <p class="subtitulo" id="capa-versiculo-de"></p>
+      </div>
     </div>
   </div>
 </div>
