@@ -215,8 +215,14 @@ table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius
   nav.pestanas button{min-width:100px; min-height:50px; font-size:.97rem; padding:10px 8px}
   main{padding:10px 10px 178px}
   .tarjeta{padding:16px 14px}
-  .barra-voz{bottom:64px; flex-wrap:nowrap; padding:6px 8px; max-width:96vw}
-  .barra-voz button{min-height:44px; padding:6px 13px; font-size:.95rem; white-space:nowrap}
+  /* v3.4.3: NADA de nowrap aquí — con la llamada viva hay 5–6
+     controles y en fila única los últimos (¡COLGAR!) quedaban FUERA
+     de la pantalla por la derecha (medido: «Colgar» en x=497–603 en
+     un viewport de 390). La barra envuelve en dos filas y TODO se ve. */
+  .barra-voz{bottom:64px; flex-wrap:wrap; padding:6px 8px; max-width:96vw}
+  .barra-voz button{min-height:42px; padding:5px 10px; font-size:.9rem; white-space:nowrap}
+  /* (El levantamiento de la franja de videos vive en la ÚLTIMA
+     media query de este archivo, que es la que manda.) */
   .barra-voz .quien-voz{font-size:.78rem; max-width:96px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .barra-reacciones{bottom:10px; padding:4px 8px}
   .barra-reacciones button{font-size:1.3rem; min-height:42px; padding:2px 7px}
@@ -308,7 +314,11 @@ button.celda-naval.disparo:disabled{cursor:default; opacity:1}
   .palabra-ahorcado{font-size:1.45rem; letter-spacing:.22em}
   .operacion-grande{font-size:2.1rem}
   .numero-grande{font-size:2.2rem}
-  .franja-videos{bottom:118px; padding:6px 8px}
+  /* v3.4.3: con la barra de voz ya envuelta en filas (~229 px de
+     alto en un celular con todos los controles), la franja de
+     videos sube por encima de la barra para que esta no la tape ni
+     robe los toques de los recuadros (medido en el arnés). */
+  .franja-videos{bottom:308px; padding:6px 8px}
   .mosaico-video{width:92px; height:70px}
   .mosaico-video .avatar-grande{font-size:1.7rem}
   .tabla-basta{font-size:.8rem}
@@ -463,3 +473,35 @@ body.con-capa{position:fixed; left:0; right:0; width:100%; overflow:hidden}
 #btn-otra-vez{width:100%; min-height:64px; font-size:1.3rem; font-weight:900;
   border-radius:20px}
 #zona-otra-vez .subtitulo{margin:8px 0 0}
+
+/* ================= V3.4.3 · ORDEN TAPADO · SIMÓN FIRME · LLAMADAS CÓMODAS · SONIDOS =================
+   (1) «Recuerda el Orden»: la fila objetivo en fase de respuesta va
+   TAPADA (.fila-tapada): dorsos ❓ en vez de los iconos — la fila se ve
+   abierta solo al memorizarla y al revelarse el resultado.
+   (2) Simón: sin cambios de CSS (el arreglo fue de estado, en app.js).
+   (3) Llamadas: botón de COLGAR rojo e inconfundible, siempre visible
+   en la barra durante la llamada, y recuadros que se ponen EN GRANDE
+   (escenario) al tocarlos. */
+
+/* (1) La fila tapada se lee como «dorsos»: misma fila, aire de misterio */
+.fila-tapada{opacity:.85; letter-spacing:.06em}
+.fila-tapada span{display:inline-block; background:linear-gradient(135deg,var(--cielo),var(--azul));
+  border-radius:12px; padding:2px 8px; margin:0 2px}
+
+/* (3a) COLGAR: rojo, grande, imposible de confundir con otro botón */
+.btn-colgar{background:#d92b2b; color:#fff; font-weight:900; font-size:1.05rem;
+  border:3px solid #a11d1d; border-radius:999px; padding:10px 24px; min-height:52px;
+  box-shadow:0 4px 16px rgba(217,43,43,.5); cursor:pointer}
+.btn-colgar:active{transform:scale(.96)}
+
+/* (3b) Escenario: el recuadro tocado manda; los demás, en fila debajo */
+.mosaico-video{cursor:pointer}
+.videos-mosaicos.con-escenario{flex-wrap:wrap; overflow-x:visible}
+/* Con escenario, la franja toma un ancho definido (94vw): si no, la
+   franja — que se encoge a su contenido — deja el recuadro «grande»
+   en ~175 px y no se nota grande (medido en el arnés). */
+.franja-videos:has(.con-escenario){width:94vw}
+.videos-mosaicos.con-escenario{width:100%}
+.videos-mosaicos .mosaico-video.mosaico-grande{width:100%; flex:1 1 100%; height:auto;
+  aspect-ratio:16/10; max-height:54vh; max-width:none; order:-1}
+.videos-mosaicos .mosaico-video.mosaico-grande .avatar-grande{font-size:4rem}
