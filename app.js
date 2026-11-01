@@ -38,7 +38,9 @@
       document.getElementById(v).classList.toggle('oculto', v !== id);
     });
     var dentro = id === 'vista-app';
-    $('#barra-voz').classList.toggle('oculto', !dentro);
+    // v3.5 · La barra de voz ya NO vive fija abajo: solo aparece DURANTE
+    // una llamada (la maneja unirseVoz/salirDeLaVoz). Se entra a la voz
+    // con el botón 📞 de la barra de arriba.
     $('#barra-reacciones').classList.toggle('oculto', !dentro);
   }
 
@@ -315,6 +317,7 @@
     chatIniciado = true;
     armarPanelEmojis();
     prepararBotonGrabar();
+    prepararBotonArchivo();
     supa.from('mensajes').select('*').order('creado_en', { ascending: true }).limit(80).then(function (res) {
       (res.data || []).forEach(function (m) { mensajesChat[m.id] = m; pintarMensaje(m); });
       bajarChat();
@@ -359,11 +362,22 @@
   // bocadillo normal, o GRANDE y sin bocadillo si es solo emojis (1–3),
   // como en WhatsApp. Debajo, las pastillitas con sus reacciones.
   function rellenarMensaje(div, m) {
+    var esArchivo = !!m.archivo_path;
     var esAudio = !!m.audio_path;
-    var soloEmojis = !esAudio && Fun.esSoloEmojis(m.texto);
+    var soloEmojis = !esAudio && !esArchivo && Fun.esSoloEmojis(m.texto);
     div.className = 'mensaje' + (m.autor === yo.id ? ' mio' : '') + (soloEmojis ? ' solo-emojis' : '');
     div.innerHTML = '<div class="quien">' + escapar(m.nombre) + '</div>';
-    if (esAudio) {
+    if (esArchivo) {
+      var zonaA = document.createElement('div');
+      div.appendChild(zonaA);
+      pintarArchivo(zonaA, m);
+      if (m.texto) {
+        var textoA = document.createElement('div');
+        textoA.className = 'texto-msg';
+        textoA.textContent = m.texto;
+        div.appendChild(textoA);
+      }
+    } else if (esAudio) {
       var zona = document.createElement('div');
       div.appendChild(zona);
       pintarAudio(zona, m);
@@ -442,6 +456,119 @@
   }
 
   function bajarChat() { var c = $('#chat-caja'); c.scrollTop = c.scrollHeight; }
+
+  /* ------------------- archivos en el chat ------------------- */
+  // Bucket privado `archivos` (mismo patrón que `audios`): la URL
+  // firmada (1 h) se pide al pintar y se guarda en memoria.
+  var archivoEstado = {};   // msgId -> url firmada
+  var TOPE_ARCHIVO = 25 * 1024 * 1024; // 25 MB
+
+  function iconoArchivo(tipo, nombre) {
+    var t = (tipo || '').toLowerCase(), n = (nombre || '').toLowerCase();
+    if (t.indexOf('image/') === 0) return '🖼️';
+    if (t.indexOf('video/') === 0) return '🎬';
+    if (t.indexOf('audio/') === 0) return '🎵';
+    if (t.indexOf('pdf') !== -1 || /\.pdf$/.test(n)) return '📕';
+    if (/\.(docx?|odt)$/.test(n)) return '📘';
+    if (/\.(xlsx?|csv|ods)$/.test(n)) return '📗';
+    if (/\.(zip|rar|7z)$/.test(n)) return '🗜️';
+    return '📄';
+  }
+
+  function formatoBytes(b) {
+    if (!b && b !== 0) return '';
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(0) + ' KB';
+    return (b / (1024 * 1024)).toFixed(1).replace('.', ',') + ' MB';
+  }
+
+  function pintarArchivo(zona, m) {
+    var esImagen = (m.archivo_tipo || '').indexOf('image/') === 0;
+    if (esImagen) {
+      var img = document.createElement('img');
+      img.className = 'archivo-img';
+      img.alt = m.archivo_nombre || 'foto';
+      zona.appendChild(img);
+      var pie = document.createElement('div');
+      pie.className = 'subtitulo';
+      pie.textContent = '🖼️ ' + (m.archivo_nombre || 'foto');
+      zona.appendChild(pie);
+    } else {
+      var tarjeta = document.createElement('div');
+      tarjeta.className = 'archivo-tarjeta';
+      tarjeta.innerHTML = '<span class="archivo-icono">' + iconoArchivo(m.archivo_tipo, m.archivo_nombre) + '</span>' +
+        '<span class="archivo-datos"><span class="archivo-nombre">' + escapar(m.archivo_nombre || 'archivo') + '</span>' +
+        '<br><span class="subtitulo">' + formatoBytes(m.archivo_bytes) + '</span></span>';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-principal btn-chico';
+      btn.textContent = 'Abrir ⬇️';
+      btn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        abrirArchivo(m);
+      });
+      tarjeta.appendChild(btn);
+      zona.appendChild(tarjeta);
+    }
+    if (archivoEstado[m.id]) {
+      if (esImagen) zona.querySelector('img').src = archivoEstado[m.id];
+    } else {
+      supa.storage.from('archivos').createSignedUrl(m.archivo_path, 3600).then(function (res) {
+        if (res.data && res.data.signedUrl) {
+          archivoEstado[m.id] = res.data.signedUrl;
+          if (esImagen) { var im = zona.querySelector('img'); if (im) im.src = res.data.signedUrl; }
+        }
+      });
+    }
+    if (esImagen) {
+      zona.querySelector('img').addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        abrirArchivo(m);
+      });
+    }
+  }
+
+  function abrirArchivo(m) {
+    var abrir = function (url) { if (url) window.open(url, '_blank'); };
+    if (archivoEstado[m.id]) { abrir(archivoEstado[m.id]); return; }
+    supa.storage.from('archivos').createSignedUrl(m.archivo_path, 3600).then(function (res) {
+      if (res.data && res.data.signedUrl) { archivoEstado[m.id] = res.data.signedUrl; abrir(res.data.signedUrl); }
+      else avisarAudio('Uy, no se pudo abrir el archivo. 📶');
+    });
+  }
+
+  function prepararBotonArchivo() {
+    var boton = $('#btn-archivo'), entrada = $('#chat-archivo');
+    if (!boton || !entrada) return;
+    boton.addEventListener('click', function () { entrada.click(); });
+    entrada.addEventListener('change', function () {
+      var f = entrada.files && entrada.files[0];
+      entrada.value = '';
+      if (f) enviarArchivo(f);
+    });
+  }
+
+  function enviarArchivo(f) {
+    if (f.size > TOPE_ARCHIVO) {
+      avisarAudio('Ese archivo pesa demasiado (máximo 25 MB) 🙈');
+      return;
+    }
+    var nombreLimpio = (f.name || 'archivo').replace(/[\\/:*?"<>|]/g, '_').slice(0, 120) || 'archivo';
+    var ruta = yo.id + '/' + Date.now() + '-' + nombreLimpio;
+    informarAudio('Subiendo «' + nombreLimpio + '»… 📎');
+    supa.storage.from('archivos').upload(ruta, f, { contentType: f.type || 'application/octet-stream' }).then(function (res) {
+      if (res.error) { avisarAudio('Uy, el archivo no subió. Revisa tu internet y prueba otra vez 📶'); return; }
+      supa.from('mensajes').insert({
+        autor: yo.id, nombre: miPerfil.nombre, texto: '',
+        archivo_path: ruta, archivo_nombre: nombreLimpio,
+        archivo_tipo: f.type || '', archivo_bytes: f.size
+      }).then(function (res2) {
+        informarAudio('');
+        if (res2.error) avisarAudio('Uy, el archivo no se pudo enviar. 📶');
+        else Fun.sonido('turno');
+      });
+    });
+  }
 
   /* ------------------- notas de voz: avisos en el chat ------------------- */
   function informarAudio(texto) {
@@ -3319,6 +3446,12 @@
   var colaActual = [];
   var canalCine = null;
   var ticksSync = 0;
+  // v3.5 · Rescate de reproducción en iPhone/iPad: esos aparatos no dejan
+  // que un video arranque CON SONIDO sin un toque del dueño. Si el grupo
+  // quiere sonar y el reproductor no arrancó, lo arrancamos en silencio
+  // (eso sí lo permiten) y ofrecemos el botón grande «Toca para…».
+  var grupoQuiereSonar = false;
+  var rescateTimer = null;
 
   function iniciarCine() {
     if (!CFG.YOUTUBE_API_KEY) $('#aviso-yt-config').classList.remove('oculto');
@@ -3368,6 +3501,24 @@
     $('#cine-play').addEventListener('click', function () { controlGlobal('reproducir'); });
     $('#cine-pause').addEventListener('click', function () { controlGlobal('pausar'); });
     $('#cine-siguiente').addEventListener('click', function () { siguienteDeLaCola(true); });
+    // v3.5 · Botón grande sobre el video: su toque SÍ cuenta como gesto
+    // del dueño, así que con él el video arranca con sonido en iOS.
+    $('#cine-toca').addEventListener('click', function () {
+      if (!ytListo || !ytPlayer) return;
+      try { ytPlayer.unMute(); ytPlayer.setVolume(100); ytPlayer.playVideo(); } catch (e) { /* queda el intento */ }
+      ocultarToca();
+    });
+    // v3.5 · Salida de emergencia: ver el video actual en YouTube.
+    $('#cine-youtube').addEventListener('click', function () {
+      if (videoActual) window.open('https://www.youtube.com/watch?v=' + encodeURIComponent(videoActual), '_blank');
+    });
+    // v3.5 · Vigilante: si la API de YouTube no cargó en 9 s y hay un
+    // video puesto, se avisa con claridad en vez de un cuadro mudo.
+    setTimeout(function () {
+      if (!ytListo && (videoActual || (estadoRepro && estadoRepro.video_id))) {
+        var av = $('#aviso-yt-carga'); if (av) av.classList.remove('oculto');
+      }
+    }, 9000);
     // v3.4 · «Más apps»: el formulario de pegar enlaces y la capa de
     // «Abrir para todos» (su ✖ y su botón de abrir).
     $('#form-apps').addEventListener('submit', compartirEnlaceApps);
@@ -3442,15 +3593,73 @@
     return msg;
   }
 
+  function mostrarToca(texto) {
+    var b = $('#cine-toca');
+    if (!b) return;
+    if (texto) b.textContent = texto;
+    b.classList.remove('oculto');
+  }
+
+  function ocultarToca() {
+    var b = $('#cine-toca');
+    if (b) b.classList.add('oculto');
+  }
+
+  function programarRescate() {
+    clearTimeout(rescateTimer);
+    rescateTimer = setTimeout(rescateToque, 1300);
+  }
+
+  // Si el grupo quiere escuchar y el video no arrancó solo (pasa en
+  // iPhone/iPad sin un toque previo), lo arrancamos en silencio y
+  // dejamos el botón grande para que un toque traiga el sonido.
+  function rescateToque() {
+    if (!ytListo || !ytPlayer || !grupoQuiereSonar || !videoActual) return;
+    var estado;
+    try { estado = ytPlayer.getPlayerState(); } catch (e) { return; }
+    if (estado === 1) {
+      var mudo = false;
+      try { mudo = ytPlayer.isMuted(); } catch (e) { /* sin dato */ }
+      if (mudo) mostrarToca('🔊 Toca para escuchar el video');
+      else ocultarToca();
+      return;
+    }
+    try { ytPlayer.mute(); ytPlayer.playVideo(); } catch (e) { /* queda el botón */ }
+    mostrarToca('🔊 Toca para escuchar el video');
+    setTimeout(function () {
+      if (!grupoQuiereSonar || !ytListo) return;
+      var e2;
+      try { e2 = ytPlayer.getPlayerState(); } catch (err) { return; }
+      if (e2 !== 1) mostrarToca('▶️ Toca para ver el video');
+    }, 1300);
+  }
+
   function ejecutarAccionSync(accionObj, evento) {
-    if (!ytListo || !ytPlayer) return;
+    if (!ytListo || !ytPlayer) {
+      // Sin reproductor listo: si hay un video puesto, que se sepa por qué no se ve.
+      if (accionObj && accionObj.accion === 'cargar') {
+        var avc = $('#aviso-yt-carga'); if (avc) avc.classList.remove('oculto');
+        var by = $('#cine-youtube'); if (by) by.classList.remove('oculto');
+        videoActual = accionObj.videoId || videoActual;
+      }
+      return;
+    }
     if (accionObj.accion === 'cargar') {
       videoActual = accionObj.videoId;
+      grupoQuiereSonar = true;
       $('#aviso-embed').classList.add('oculto');
+      var btnY = $('#cine-youtube'); if (btnY) btnY.classList.remove('oculto');
       ytPlayer.loadVideoById({ videoId: accionObj.videoId, startSeconds: Math.max(0, accionObj.posicion || 0) });
-    } else if (accionObj.accion === 'play') ytPlayer.playVideo();
-    else if (accionObj.accion === 'pause') ytPlayer.pauseVideo();
-    else if (accionObj.accion === 'seek') ytPlayer.seekTo(accionObj.a, true);
+      programarRescate();
+    } else if (accionObj.accion === 'play') {
+      grupoQuiereSonar = true;
+      ytPlayer.playVideo();
+      programarRescate();
+    } else if (accionObj.accion === 'pause') {
+      grupoQuiereSonar = false;
+      ocultarToca();
+      ytPlayer.pauseVideo();
+    } else if (accionObj.accion === 'seek') ytPlayer.seekTo(accionObj.a, true);
   }
 
   function recibirSyncBroadcast(ev) {
@@ -3461,6 +3670,11 @@
 
   function aplicarEstadoReproduccion(row, inicial) {
     if (!row) return;
+    grupoQuiereSonar = !!row.reproduciendo;
+    if (row.video_id && !ytListo) {
+      var av2 = $('#aviso-yt-carga'); if (av2) av2.classList.remove('oculto');
+      var by2 = $('#cine-youtube'); if (by2) by2.classList.remove('oculto');
+    }
     ultimoMsgSync = {
       posicion: row.posicion || 0,
       reproduciendo: !!row.reproduciendo,
@@ -3485,6 +3699,7 @@
 
   function reproducirParaTodos(videoId, titulo) {
     soyControlador = true;
+    grupoQuiereSonar = true;
     var nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
     ultimoNonce = nonce;
     enviarSync('cargar', { videoId: videoId, posicion: 0, reproduciendo: true });
@@ -3496,6 +3711,7 @@
   function controlGlobal(tipo) {
     if (!videoActual) return;
     soyControlador = true;
+    grupoQuiereSonar = tipo === 'reproducir';
     var pos = ytListo && ytPlayer.getCurrentTime ? ytPlayer.getCurrentTime() : 0;
     enviarSync(tipo, { posicion: pos });
     ejecutarAccionSync(L.interpretarSync({ tipo: tipo, posicion: pos }), null);
@@ -3693,6 +3909,13 @@
 
   /* ----- eventos del reproductor y corrección de deriva ----- */
   function alCambiarEstadoYT(ev) {
+    if (ev.data === 1) { // ya está sonando
+      var mudo2 = false;
+      try { mudo2 = ytPlayer.isMuted(); } catch (e) { /* sin dato */ }
+      if (mudo2 && grupoQuiereSonar) mostrarToca('🔊 Toca para escuchar el video');
+      else ocultarToca();
+    }
+    if (ev.data === 2 && !grupoQuiereSonar) ocultarToca();
     if (ev.data === 0 && soyControlador) { // terminó el video
       if (colaActual.length) siguienteDeLaCola(false);
       else actualizarFilaRepro({ reproduciendo: false, posicion: 0 });
@@ -4116,13 +4339,18 @@
   function unirseVoz() {
     prepararCanalVoz();
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      $('#barra-voz').classList.remove('oculto');
       $('#voz-estado').textContent = 'Este navegador no deja usar el micrófono aquí. Prueba desde Safari/Chrome actualizado. 🎤';
       return;
     }
     navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
       flujoLocal = stream;
       enVoz = true;
-      $('#voz-unirse').classList.add('oculto');
+      // v3.5 · Durante la llamada sí se ve la barra de controles, y el
+      // botón 📞 de arriba queda rojo: tocarlo de nuevo cuelga.
+      $('#barra-voz').classList.remove('oculto');
+      var btnL = $('#btn-llamar');
+      if (btnL) { btnL.classList.add('en-llamada'); btnL.title = 'Colgar'; }
       $('#voz-silenciar').classList.remove('oculto');
       $('#voz-camara').classList.remove('oculto');
       // Compartir pantalla SOLO si el navegador lo soporta (PC/Android).
@@ -4138,6 +4366,7 @@
       pintarEstadoVoz();
       pintarMosaicos();
     }).catch(function () {
+      $('#barra-voz').classList.remove('oculto');
       $('#voz-estado').textContent = 'No se pudo usar el micrófono 🎤 Revisa el permiso (candado de la barra de direcciones → Micrófono → Permitir) y prueba otra vez.';
       Fun.sonido('error');
     });
@@ -4160,7 +4389,11 @@
     flujosPantallaRemotos = {};
     pantallaPistaPorId = {};
     videosPendientes = {};
-    $('#voz-unirse').classList.remove('oculto');
+    // v3.5 · Al colgar, la barra de controles se esconde otra vez y el
+    // 📞 de arriba vuelve a la normalidad.
+    $('#barra-voz').classList.add('oculto');
+    var btnL2 = $('#btn-llamar');
+    if (btnL2) { btnL2.classList.remove('en-llamada'); btnL2.title = 'Llamar a la familia (voz y video)'; }
     $('#voz-silenciar').classList.add('oculto');
     $('#voz-camara').classList.add('oculto');
     $('#voz-cambiar-camara').classList.add('oculto');
@@ -4418,7 +4651,12 @@
     pintarMosaicos();
   });
 
-  $('#voz-unirse').addEventListener('click', unirseVoz);
+  // v3.5 · El 📞 de la barra de arriba es la puerta de la voz: sin
+  // llamada une; en llamada, cuelga.
+  $('#btn-llamar').addEventListener('click', function () {
+    if (enVoz) salirDeLaVoz();
+    else unirseVoz();
+  });
   $('#voz-salir').addEventListener('click', salirDeLaVoz);
   $('#voz-camara').addEventListener('click', alternarCamara);
   $('#voz-pantalla').addEventListener('click', alternarPantalla);
