@@ -450,3 +450,16 @@ body.con-capa{position:fixed; left:0; right:0; width:100%; overflow:hidden}
 .lanzar-enlace{word-break:break-all; margin-bottom:6px}
 .regresiva{font-size:4.4rem; font-weight:900; line-height:1.15; color:var(--coral);
   min-height:1.15em; margin:6px 0 12px}
+
+/* ================= V3.4.2 · JUGAR OTRA VEZ =================
+   Pedido del dueño: «no me da la opción de seguir jugando ahí mismo
+   luego de terminar esa partida». Al llegar la partida a su FIN, bajo
+   el tablero (dentro de la misma tarjeta y la misma capa) aparece un
+   botón GRANDE «🔁 Jugar otra vez»: ancho completo, alto generoso y
+   letra clara, para tocarlo sin puntería ni salir del juego. La zona
+   nace oculta (.oculto) y solo la muestra pintarBotonOtraVez (app.js)
+   cuando la partida abierta está terminada. */
+#zona-otra-vez{margin-top:18px; text-align:center}
+#btn-otra-vez{width:100%; min-height:64px; font-size:1.3rem; font-weight:900;
+  border-radius:20px}
+#zona-otra-vez .subtitulo{margin:8px 0 0}
