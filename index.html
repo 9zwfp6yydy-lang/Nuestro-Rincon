@@ -69,6 +69,7 @@
     <span class="titulo">🏡 Nuestro Rincón</span>
     <div class="presencia" id="presencia"></div>
     <button id="btn-sonido" class="btn-suave btn-chico" title="Silenciar / activar sonidos">🔊</button>
+    <button id="btn-llamar" class="btn-suave btn-chico" title="Llamar a la familia (voz y video)">📞</button>
     <button id="btn-salir" class="btn-suave btn-chico">Salir</button>
   </header>
 
@@ -188,12 +189,14 @@
         </div>
         <div class="tarjeta">
           <h3>📺 Ahora en el rincón</h3>
-          <div class="reproductor-marco"><div id="yt-player"></div></div>
+          <div class="reproductor-marco"><div id="yt-player"></div><button id="cine-toca" class="cine-toca oculto" type="button">🔊 Toca para escuchar el video</button></div>
           <div id="aviso-embed" class="aviso oculto" style="margin-top:10px">Este video no permite verse dentro de otras apps 🙈 (lo decidió su dueño en YouTube). Prueba con otro de la lista: ¡hay millones!</div>
+          <div id="aviso-yt-carga" class="aviso oculto" style="margin-top:10px">El reproductor de YouTube no cargó en este aparato 📶 Revisa el internet o las restricciones del aparato. Mientras tanto, abre el video con el botón «📺 Ver en YouTube».</div>
           <div class="controles-cine">
             <button class="btn-verde" id="cine-play">▶️ Reproducir para todos</button>
             <button class="btn-suave" id="cine-pause">⏸️ Pausa para todos</button>
             <button class="btn-suave" id="cine-siguiente">⏭️ Siguiente</button>
+            <button class="btn-suave oculto" id="cine-youtube">📺 Ver en YouTube</button>
           </div>
           <h3 style="margin-top:18px">🎶 Cola compartida</h3>
           <div id="cola"><p class="subtitulo">La cola está vacía. Busca algo rico y agrégalo.</p></div>
@@ -231,6 +234,8 @@
           <button type="button" id="btn-emojis" class="btn-suave btn-emoji" title="Emojis">😀</button>
           <input type="text" id="chat-texto" maxlength="500" placeholder="Escribe algo bonito… ✍️" autocomplete="off">
           <button type="button" id="btn-grabar" class="btn-suave btn-emoji" title="Grabar una nota de voz">🎤</button>
+          <button type="button" id="btn-archivo" class="btn-suave btn-emoji" title="Enviar un archivo o una foto">📎</button>
+          <input type="file" id="chat-archivo" hidden>
           <button type="submit" class="btn-principal">Enviar 💌</button>
         </form>
       </div>
@@ -240,7 +245,6 @@
 
 <!-- Barra de voz flotante (funciona en cualquier pestaña) -->
 <div id="barra-voz" class="barra-voz oculto">
-  <button id="voz-unirse" class="btn-verde">🎙️ Unirse a la voz</button>
   <button id="voz-silenciar" class="btn-suave oculto">🔇 Silenciarme</button>
   <button id="voz-camara" class="btn-suave oculto">📹 Activar cámara</button>
   <button id="voz-cambiar-camara" class="btn-suave oculto">🔄 Cambiar cámara</button>
