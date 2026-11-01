@@ -308,6 +308,152 @@
     return m + ':' + (r < 10 ? '0' : '') + r;
   }
 
+  /* ------------- MÁS APPS: ENLACES DE OTRAS PLATAFORMAS (puro, probado en Node) -------------
+     v3.4 · Pedido del dueño: «solo aparece YouTube y quiero las demás apps».
+     La verdad de cada casa, sin inventar:
+     · YouTube: busca Y suena aquí dentro (es el módulo de siempre).
+     · Spotify, Apple Music y SoundCloud: SÍ suenan aquí dentro, pero solo
+       pegando su ENLACE y con el reproductor OFICIAL incrustado de cada
+       plataforma (su buscador interno exige credenciales de desarrollador
+       de cada una: por eso no hay búsqueda para estas).
+     · Netflix, Disney+, Prime Video, Max, TikTok, Twitch…: NO dejan
+       sonar dentro de otras apps (lo bloquea la plataforma, no nosotros).
+       Con esos, el enlace se ABRE en la app de cada aparato.
+     Estas funciones solo CLASIFICAN texto: sin red y sin DOM. Nada de lo
+     que devuelven lleva HTML del usuario: la URL incrustada se CONSTRUYE
+     aquí, pieza a pieza, desde el enlace pegado. */
+
+  // Deja el texto como URL http(s) o devuelve null. Sin esquema pero con
+  // pinta de dominio («open.spotify.com/…») se le pone https:// delante.
+  // Con espacios o comillas no vale: jamás se inyecta tal cual en un src.
+  function normalizarEnlace(texto) {
+    var t = String(texto == null ? '' : texto).trim();
+    if (!t) return null;
+    if (!/^https?:\/\//i.test(t)) {
+      if (/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}(\/|$)/i.test(t)) t = 'https://' + t;
+      else return null;
+    }
+    if (/[\s<>"']/.test(t)) return null;
+    return t;
+  }
+  function partesEnlace(url) {
+    var m = /^https?:\/\/([^/?#]+)([^?#]*)(?:\?([^#]*))?(?:#[\s\S]*)?$/i.exec(url || '');
+    if (!m) return null;
+    return { host: m[1].toLowerCase().replace(/^www\./, ''), ruta: m[2] || '/', query: m[3] || '' };
+  }
+
+  // ¿Este enlace suena AQUÍ DENTRO con el reproductor oficial incrustado?
+  // → { plataforma, nombre, icono, embed, altura } o null si no.
+  function enlaceIncrustable(texto) {
+    var crudo = String(texto == null ? '' : texto).trim();
+    // Spotify también copia como URI («spotify:track:…») desde su app de escritorio.
+    var uri = /^spotify:(track|album|playlist|episode|show|artist):([A-Za-z0-9]+)$/.exec(crudo);
+    if (uri) {
+      return { plataforma: 'spotify', nombre: 'Spotify', icono: '🎵',
+        altura: (uri[1] === 'track' || uri[1] === 'episode') ? 152 : 352,
+        embed: 'https://open.spotify.com/embed/' + uri[1] + '/' + uri[2] + '?utm_source=generator' };
+    }
+    var url = normalizarEnlace(crudo);
+    if (!url) return null;
+    var p = partesEnlace(url);
+    if (!p) return null;
+    if (p.host === 'open.spotify.com' || p.host === 'play.spotify.com') {
+      var seg = p.ruta.split('/').filter(function (s) { return !!s; });
+      if (seg[0] && /^intl-[a-z]{2}(-[a-z]{2})?$/i.test(seg[0])) seg.shift(); // «/intl-es/track/…»
+      var TIPOS = ['track', 'album', 'playlist', 'episode', 'show', 'artist'];
+      if (TIPOS.indexOf(seg[0]) !== -1 && /^[A-Za-z0-9]+$/.test(seg[1] || '')) {
+        return { plataforma: 'spotify', nombre: 'Spotify', icono: '🎵',
+          altura: (seg[0] === 'track' || seg[0] === 'episode') ? 152 : 352,
+          embed: 'https://open.spotify.com/embed/' + seg[0] + '/' + seg[1] + '?utm_source=generator' };
+      }
+      return null;
+    }
+    if (p.host === 'music.apple.com') {
+      var segs = p.ruta.split('/').filter(function (s) { return !!s; });
+      if (segs.length >= 2) {
+        // El reproductor incrustado oficial es el MISMO camino en
+        // embed.music.apple.com (álbum, canción, lista, emisora…).
+        var esCancion = p.ruta.indexOf('/song/') !== -1 || /(^|&)i=\d+/.test(p.query);
+        return { plataforma: 'apple', nombre: 'Apple Music', icono: '🍎',
+          altura: esCancion ? 150 : 450,
+          embed: 'https://embed.music.apple.com' + p.ruta + (p.query ? '?' + p.query : '') };
+      }
+      return null;
+    }
+    if (p.host === 'soundcloud.com' || p.host === 'm.soundcloud.com') {
+      var ss = p.ruta.split('/').filter(function (s) { return !!s; });
+      var RESERVADAS = ['discover', 'stream', 'search', 'upload', 'settings', 'messages', 'notifications', 'charts', 'popular', 'you', 'terms', 'pages'];
+      if (ss.length >= 2 && RESERVADAS.indexOf(ss[0]) === -1) {
+        var limpia = 'https://soundcloud.com/' + ss.join('/');
+        return { plataforma: 'soundcloud', nombre: 'SoundCloud', icono: '🧡', altura: 166,
+          embed: 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(limpia) +
+            '&color=%23ff8a5c&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false' };
+      }
+      return null;
+    }
+    return null;
+  }
+
+  // El id de un enlace de YouTube (para mandarlo al reproductor de la
+  // casa si alguien lo pega en «Más apps» en vez de buscarlo).
+  function idVideoYouTube(texto) {
+    var url = normalizarEnlace(texto);
+    if (!url) return null;
+    var p = partesEnlace(url);
+    if (!p) return null;
+    function idOk(s) { return /^[A-Za-z0-9_-]{6,}$/.test(s || '') ? s : null; }
+    if (p.host === 'youtu.be') return idOk(p.ruta.split('/').filter(function (s) { return !!s; })[0]);
+    if (p.host === 'youtube.com' || p.host === 'm.youtube.com' || p.host === 'music.youtube.com') {
+      var mv = /(^|&)v=([A-Za-z0-9_-]{6,})/.exec(p.query);
+      if (mv) return mv[2];
+      var seg = p.ruta.split('/').filter(function (s) { return !!s; });
+      if (['shorts', 'live', 'embed', 'v'].indexOf(seg[0]) !== -1) return idOk(seg[1]);
+    }
+    return null;
+  }
+
+  // Los que NO suenan aquí dentro: ¿de qué servicio es el enlace?
+  // → { nombre, icono, url } (url ya normalizada) o null si ni es enlace.
+  var SERVICIOS_EXTERNOS = [
+    [/netflix\.com$/, 'Netflix', '🎬'],
+    [/disneyplus\.com$/, 'Disney+', '🏰'],
+    [/primevideo\.com$/, 'Prime Video', '📦'],
+    [/max\.com$/, 'Max', '🎬'],
+    [/hbomax\.com$/, 'Max', '🎬'],
+    [/tiktok\.com$/, 'TikTok', '🎵'],
+    [/twitch\.tv$/, 'Twitch', '🎮'],
+    [/hulu\.com$/, 'Hulu', '📺'],
+    [/paramountplus\.com$/, 'Paramount+', '⛰️'],
+    [/peacocktv\.com$/, 'Peacock', '🦚'],
+    [/vimeo\.com$/, 'Vimeo', '📹'],
+    [/facebook\.com$/, 'Facebook', '📘'],
+    [/instagram\.com$/, 'Instagram', '📸']
+  ];
+  function servicioExterno(texto) {
+    var url = normalizarEnlace(texto);
+    if (!url) return null;
+    var p = partesEnlace(url);
+    if (!p) return null;
+    if (/^amazon\./.test(p.host) && (p.ruta.indexOf('/video') !== -1)) {
+      return { nombre: 'Prime Video', icono: '📦', url: url };
+    }
+    for (var i = 0; i < SERVICIOS_EXTERNOS.length; i++) {
+      if (SERVICIOS_EXTERNOS[i][0].test(p.host)) {
+        return { nombre: SERVICIOS_EXTERNOS[i][1], icono: SERVICIOS_EXTERNOS[i][2], url: url };
+      }
+    }
+    return { nombre: p.host, icono: '🌐', url: url };
+  }
+
+  // Segundos que faltan para un instante (la cuenta regresiva de
+  // «Abrir para todos»): nunca negativo; a mitad de segundo ya cuenta
+  // el segundo entero que se está viviendo (como las cuentas de verdad).
+  function restanteRegresiva(abrirEn, ahora) {
+    var ms = (Number(abrirEn) || 0) - (Number(ahora) || 0);
+    if (ms <= 0) return 0;
+    return Math.ceil(ms / 1000);
+  }
+
   var API = {
     sonido: sonido,
     nota: nota,
@@ -336,7 +482,12 @@
     pantallaSoportada: pantallaSoportada,
     registrarPantalla: registrarPantalla,
     tienePantalla: tienePantalla,
-    participantesConPantalla: participantesConPantalla
+    participantesConPantalla: participantesConPantalla,
+    normalizarEnlace: normalizarEnlace,
+    enlaceIncrustable: enlaceIncrustable,
+    idVideoYouTube: idVideoYouTube,
+    servicioExterno: servicioExterno,
+    restanteRegresiva: restanteRegresiva
   };
 
   global.Fun = API;
