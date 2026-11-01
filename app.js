@@ -783,9 +783,10 @@
       .on('postgres_changes', { event: '*', schema: 'public', table: 'partidas' }, function () { cargarPartidas(); })
       .subscribe();
     $('#btn-cerrar-juego').addEventListener('click', cerrarJuegoVista);
-    $('#crear-gato').addEventListener('click', function () { crearPartida('gato'); });
-    $('#crear-trivia').addEventListener('click', function () { crearPartida('trivia'); });
-    $('#crear-memoria').addEventListener('click', function () { crearPartida('memoria'); });
+    // v3.4: las tarjetas se generan desde CATEGORIAS_JUEGOS (barras por
+    // categoría) y se pintan ANTES de cablear [data-crear], para que el
+    // cableado de siempre las recoja a ellas también.
+    pintarCategoriasJuegos();
     $$('[data-crear]').forEach(function (b) {
       b.addEventListener('click', function () { crearPartida(b.dataset.crear); });
     });
@@ -852,6 +853,71 @@
     ordenab: { icono: '📜', nombre: 'Ordena la Historia', tope: 3 },
     misterio: { icono: '🕵️', nombre: 'Personaje Misterioso', tope: 3 }
   };
+
+  /* ----- v3.4: los juegos POR CATEGORÍAS, en barras que se deslizan -----
+     Pedido del dueño: «los juegos, ponlos por categoría y deslizamiento
+     en sus categorías». La pestaña Juegos deja de ser una lista larga de
+     botones apilados: cada categoría es una BARRA horizontal deslizable
+     (el mismo patrón visual que las historias de Biblia) de tarjetas
+     compactas (icono + nombre) que se pinta desde estos datos.
+     Reglas de la casa:
+     · Cada clave de creación vive en UNA sola categoría.
+     · Los 33 del CATALOGO están todos (las variantes de creación —
+       memoria-tema, trivia-biblica, memoria-biblica — son el mismo juego
+       con otro banco/mazo; ver BASE_CREAR).
+     · Los 8 bíblicos viven también en la pestaña Biblia (su rejilla de
+       la v3.3 no cambia): aquí tienen su propia barra, como ya vivían
+       en ambas pestañas con su grupo propio.
+     Asignación (documentada): los de tablero y fichas de siempre a
+     «Mesa clásica»; lo que se juega con cartas, cartones o dados a
+     «Cartas y dados»; lo de pensar y lo de letras a «Mente y palabras»;
+     lo de acordarse y reaccionar a «Memoria y reflejos»; los de fiesta
+     y risa a «Para reírse»; y los de la Biblia a «Bíblicos». */
+  var EXTRA_CREAR = {
+    'memoria-tema': { icono: '🎨', nombre: 'Memoria con temas' },
+    'trivia-biblica': { icono: '📖', nombre: 'Trivia Bíblica' },
+    'memoria-biblica': { icono: '🕊️', nombre: 'Memoria Bíblica' }
+  };
+  var BASE_CREAR = { 'memoria-tema': 'memoria', 'trivia-biblica': 'trivia', 'memoria-biblica': 'memoria' };
+  var CATEGORIAS_JUEGOS = [
+    { id: 'mesa', icono: '🎲', nombre: 'Mesa clásica', juegos: ['gato', 'conecta', 'serpientes', 'domino', 'naval', 'damas', 'tesoro'] },
+    { id: 'cartas', icono: '🃏', nombre: 'Cartas y dados', juegos: ['parchis', 'loteria', 'guerra', 'carrera'] },
+    { id: 'mente', icono: '🔤', nombre: 'Mente y palabras', juegos: ['trivia', 'ahorcado', 'sopa', 'basta', 'calculo', 'adivina', 'encadenada'] },
+    { id: 'memoria', icono: '🧠', nombre: 'Memoria y reflejos', juegos: ['memoria', 'memoria-tema', 'simon', 'quef', 'orden', 'numeros'] },
+    { id: 'risas', icono: '😂', nombre: 'Para reírse', juegos: ['dibujo', 'verdad', 'puzzle', 'ppt'] },
+    { id: 'biblicos', icono: '📖', nombre: 'Bíblicos', juegos: ['trivia-biblica', 'memoria-biblica', 'versiculo', 'quien', 'vf', 'encuentra', 'ordenab', 'misterio'] }
+  ];
+  function infoCrear(clave) { return CATALOGO[clave] || EXTRA_CREAR[clave] || { icono: '🎮', nombre: clave }; }
+
+  // Pinta las barras por categoría en #categorias-juegos. Las tarjetas
+  // usan data-crear, así que el cableado de siempre ([data-crear] →
+  // crearPartida) las recoge: tocar una tarjeta CREA la partida y abre
+  // su capa al instante (la conducta de la v3.3, intacta).
+  function pintarCategoriasJuegos() {
+    var caja = $('#categorias-juegos');
+    if (!caja) return;
+    caja.innerHTML = '';
+    CATEGORIAS_JUEGOS.forEach(function (cat) {
+      var titulo = document.createElement('h3');
+      titulo.className = 'categoria-titulo';
+      titulo.textContent = cat.icono + ' ' + cat.nombre;
+      caja.appendChild(titulo);
+      var barra = document.createElement('div');
+      barra.className = 'barra-juegos';
+      barra.dataset.categoria = cat.id;
+      cat.juegos.forEach(function (clave) {
+        var info = infoCrear(clave);
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'juego-tarjeta';
+        b.dataset.crear = clave;
+        b.innerHTML = '<span class="juego-tarjeta-icono">' + info.icono + '</span>' +
+          '<span class="juego-tarjeta-nombre">' + escapar(info.nombre) + '</span>';
+        barra.appendChild(b);
+      });
+      caja.appendChild(barra);
+    });
+  }
 
   // v3.2: el tablero se abre en la CAPA sobrepuesta (#capa-juego), encima
   // de todo y sin mover la página de debajo (ni cambio de pestaña, ni
@@ -3067,7 +3133,17 @@
       if (estadoRepro) aplicarEstadoReproduccion(estadoRepro, true);
     };
     canalCine = supa.channel('cine-sync', { config: { broadcast: { self: false } } });
-    canalCine.on('broadcast', { event: 'sync' }, function (msg) { recibirSyncBroadcast(msg.payload); }).subscribe();
+    canalCine.on('broadcast', { event: 'sync' }, function (msg) { recibirSyncBroadcast(msg.payload); });
+    // v3.4 · «Más apps»: lo que comparte un familiar llega por el mismo
+    // canal de cine (broadcast, sin tocar la base: cero SQL nuevo).
+    canalCine.on('broadcast', { event: 'apps-embed' }, function (msg) {
+      if (msg.payload) { mostrarEmbedApps(msg.payload); Fun.sonido('mensaje'); }
+    });
+    canalCine.on('broadcast', { event: 'apps-quitar' }, function () { quitarEmbedApps(); });
+    canalCine.on('broadcast', { event: 'apps-lanzar' }, function (msg) {
+      if (msg.payload) abrirLanzamiento(msg.payload);
+    });
+    canalCine.subscribe();
 
     supa.from('estado_reproduccion').select('*').eq('id', 1).maybeSingle().then(function (res) {
       estadoRepro = res.data;
@@ -3090,6 +3166,11 @@
     $('#cine-play').addEventListener('click', function () { controlGlobal('reproducir'); });
     $('#cine-pause').addEventListener('click', function () { controlGlobal('pausar'); });
     $('#cine-siguiente').addEventListener('click', function () { siguienteDeLaCola(true); });
+    // v3.4 · «Más apps»: el formulario de pegar enlaces y la capa de
+    // «Abrir para todos» (su ✖ y su botón de abrir).
+    $('#form-apps').addEventListener('submit', compartirEnlaceApps);
+    $('#btn-cerrar-lanzar').addEventListener('click', cerrarLanzamiento);
+    $('#lanzar-abrir').addEventListener('click', abrirEnlaceLanzado);
     setInterval(mantenimientoSync, 4000);
   }
 
@@ -3257,6 +3338,155 @@
     if (!item) { if (manual) Fun.sonido('error'); return; }
     reproducirParaTodos(item.video_id, item.titulo);
     supa.from('cola_videos').delete().eq('id', item.id).then(function () { cargarCola(); });
+  }
+
+  /* ----- v3.4 · MÁS APPS: compartir contenido de otras plataformas -----
+     Pedido del dueño: «solo aparece YouTube y quiero las demás apps».
+     Dos caminos honestos, según lo que cada plataforma permite (la
+     clasificación vive en fun.js, pura y probada):
+     1) INCRUSTABLES (Spotify, Apple Music, SoundCloud): suenan AQUÍ
+        DENTRO con el reproductor oficial incrustado. Se pega el enlace,
+        la tarjeta aparece en #apps-zona de TODOS (broadcast por el canal
+        de cine, sin base de datos: cero SQL) y cada quien le da play en
+        su aparato — el reproductor incrustado no se puede sincronizar
+        como el de YouTube, y no fingimos lo contrario. Sin búsqueda
+        interna para estas: su buscador exige credenciales de
+        desarrollador de cada plataforma.
+     2) LAS DEMÁS (Netflix, Disney+, Prime Video, Max, TikTok, Twitch…):
+        no dejan sonar dentro de otras apps. Se avisa a todos con la capa
+        «Abrir para todos»: cuenta regresiva SINCRONIZADA de 3 segundos
+        (un instante absoluto compartido, abrirEn) y botón «¡Abrir
+        ahora!» que abre el enlace en el aparato de cada quien, en su
+        app y con su cuenta — para empezar a la vez.
+     Un enlace de YouTube pegado aquí se manda al reproductor de la casa. */
+  var embedAppsActual = null;
+  var lanzarActual = null;
+  var lanzarTimer = null;
+  var lanzarSonoYa = false;
+
+  function compartirEnlaceApps(e) {
+    e.preventDefault();
+    var input = $('#apps-enlace');
+    var aviso = $('#apps-aviso');
+    var texto = (input.value || '').trim();
+    if (!texto) return;
+    var ytId = Fun.idVideoYouTube(texto);
+    if (ytId) {
+      reproducirParaTodos(ytId, 'Video de YouTube 🎬');
+      input.value = '';
+      aviso.classList.add('oculto');
+      return;
+    }
+    var inc = Fun.enlaceIncrustable(texto);
+    if (inc) {
+      var payload = { plataforma: inc.plataforma, nombre: inc.nombre, icono: inc.icono,
+        embed: inc.embed, altura: inc.altura, de: yo.id, nombreDe: miPerfil.nombre };
+      mostrarEmbedApps(payload); // el canal es self:false: me lo aplico yo mismo
+      if (canalCine) canalCine.send({ type: 'broadcast', event: 'apps-embed', payload: payload });
+      Fun.sonido('turno');
+      input.value = '';
+      aviso.classList.add('oculto');
+      return;
+    }
+    var ext = Fun.servicioExterno(texto);
+    if (ext) {
+      var lanzamiento = { url: ext.url, servicio: ext.nombre, icono: ext.icono,
+        de: yo.id, nombreDe: miPerfil.nombre, abrirEn: Date.now() + 3000 };
+      abrirLanzamiento(lanzamiento); // y a los demás les llega por broadcast
+      if (canalCine) canalCine.send({ type: 'broadcast', event: 'apps-lanzar', payload: lanzamiento });
+      input.value = '';
+      aviso.classList.add('oculto');
+      return;
+    }
+    aviso.textContent = 'Mmm… eso no parece un enlace. 🙈 Copia el enlace desde la otra app (Compartir → Copiar enlace) y pégalo aquí.';
+    aviso.classList.remove('oculto');
+    Fun.sonido('error');
+  }
+
+  function mostrarEmbedApps(p) {
+    if (!p || !p.embed) return;
+    embedAppsActual = p;
+    var zona = $('#apps-zona');
+    if (!zona) return;
+    zona.innerHTML = '';
+    var cab = document.createElement('p');
+    cab.className = 'apps-cabecera';
+    cab.innerHTML = '<strong>' + (p.icono || '🎵') + ' ' + escapar(p.nombre || 'Música') + '</strong>' +
+      ' <span class="subtitulo">· lo compartió ' + escapar(p.nombreDe || 'alguien') + ' — dale play aquí mismo ▶️</span>';
+    zona.appendChild(cab);
+    var marco = document.createElement('div');
+    marco.className = 'apps-marco';
+    var ifr = document.createElement('iframe');
+    ifr.src = p.embed; // construida por Fun.enlaceIncrustable, nunca el texto tal cual
+    ifr.style.height = (p.altura || 166) + 'px';
+    ifr.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture');
+    ifr.setAttribute('allowfullscreen', '');
+    ifr.setAttribute('loading', 'lazy');
+    ifr.title = p.nombre || 'Reproductor';
+    marco.appendChild(ifr);
+    zona.appendChild(marco);
+    var btn = document.createElement('button');
+    btn.className = 'btn-suave';
+    btn.style.marginTop = '10px';
+    btn.textContent = '⏹️ Parar y quitar (para todos)';
+    btn.addEventListener('click', function () {
+      quitarEmbedApps();
+      if (canalCine) canalCine.send({ type: 'broadcast', event: 'apps-quitar', payload: {} });
+      Fun.sonido('pop');
+    });
+    zona.appendChild(btn);
+  }
+
+  function quitarEmbedApps() {
+    embedAppsActual = null;
+    var zona = $('#apps-zona');
+    if (zona) zona.innerHTML = '<p class="subtitulo">Todavía no suena nada de otras apps. ¡Pega el primer enlace!</p>';
+  }
+
+  function abrirLanzamiento(p) {
+    if (!p || !p.url) return;
+    lanzarActual = p;
+    lanzarSonoYa = false;
+    $('#lanzar-icono').textContent = p.icono || '📺';
+    $('#lanzar-de').textContent = p.nombreDe || 'Alguien';
+    $('#lanzar-servicio').textContent = (p.icono || '📺') + ' ' + (p.servicio || 'Otra app');
+    $('#lanzar-enlace').textContent = p.url;
+    var btn = $('#lanzar-abrir');
+    btn.disabled = true;
+    btn.textContent = '⏳ ¡Prepárate…!';
+    abrirCapa('capa-lanzar');
+    Fun.sonido('mensaje');
+    detenerRegresiva();
+    lanzarTimer = setInterval(pintarRegresiva, 120);
+    pintarRegresiva();
+  }
+  function pintarRegresiva() {
+    if (!lanzarActual) { detenerRegresiva(); return; }
+    var queda = Fun.restanteRegresiva(lanzarActual.abrirEn, Date.now());
+    var cuenta = $('#lanzar-cuenta');
+    if (queda > 0) {
+      if (cuenta) cuenta.textContent = String(queda);
+      return;
+    }
+    if (cuenta) cuenta.textContent = '¡Ya! 🎉';
+    var btn = $('#lanzar-abrir');
+    if (btn) { btn.disabled = false; btn.textContent = '▶️ ¡Abrir ahora!'; }
+    if (!lanzarSonoYa) { lanzarSonoYa = true; Fun.sonido('acierto'); }
+    detenerRegresiva();
+  }
+  function detenerRegresiva() {
+    if (lanzarTimer) { clearInterval(lanzarTimer); lanzarTimer = null; }
+  }
+  function cerrarLanzamiento() {
+    detenerRegresiva();
+    lanzarActual = null;
+    cerrarCapa('capa-lanzar');
+  }
+  function abrirEnlaceLanzado() {
+    if (!lanzarActual) return;
+    var url = lanzarActual.url;
+    window.open(url, '_blank'); // en el mismo gesto del toque: el navegador lo deja pasar
+    cerrarLanzamiento();
   }
 
   /* ----- eventos del reproductor y corrección de deriva ----- */
