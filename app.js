@@ -1447,7 +1447,12 @@
         (i === e.turno && !e.terminado ? '👉 ' : '') + escapar(nombreDe(id)) + ': <strong>' + (e.puntajes[id] || 0) + '</strong> parejas</span>';
     }).join('') + '</div>';
     html += '<p>' + (e.terminado ? '🏁 ¡Se encontraron todas las parejas!' : esMiTurno ? '¡Tu turno! Toca dos cartas 🃏' : 'Turno de ' + escapar(nombreDe(e.jugadores[e.turno])) + '…') + '</p>';
-    html += '<div class="tablero-memoria">';
+    // v3.4.1: las columnas las manda el CONTEO de cartas, no el ancho de
+    // pantalla (los mazos de la casa son de 16 cartas → 4×4, cuadrado y
+    // completo en el celular). La rejilla usa minmax(0,1fr): ver la nota
+    // de la v3.4.1 en styles.css.
+    var colsMemoria = e.cartas.length <= 9 ? 3 : e.cartas.length <= 16 ? 4 : e.cartas.length <= 25 ? 5 : 6;
+    html += '<div class="tablero-memoria" style="--cols-memoria:' + colsMemoria + '">';
     e.cartas.forEach(function (carta, i) {
       var visible = carta.encontrada || e.volteadas.indexOf(i) !== -1;
       var clase = 'carta-memoria' + (carta.encontrada ? ' encontrada' : visible ? ' volteada' : '');
