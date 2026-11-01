@@ -934,6 +934,8 @@
     partidaActualId = null;
     var zona = $('#zona-juego');
     if (zona) zona.innerHTML = '';
+    var zonaOV = $('#zona-otra-vez'); // v3.4.2: el «otra vez» se apaga con la vista
+    if (zonaOV) zonaOV.classList.add('oculto');
     cerrarCapa('capa-juego');
     Fun.sonido('pop');
   }
@@ -1185,6 +1187,68 @@
       // rompa la cadena de abrir: se pinta el aviso y la capa se abre igual.
       var zonaR = $('#zona-juego');
       if (zonaR) zonaR.innerHTML = '<p>Uy, este juego se trabó al abrirse 🙈 Ciérralo con la ✖ de arriba y vuelve a tocar «Abrir».</p>';
+    }
+    // v3.4.2: el botón «🔁 Jugar otra vez» se decide AQUÍ, en el camino
+    // compartido de pintado — ningún juego se lo puede olvidar.
+    pintarBotonOtraVez(p);
+  }
+
+  /* ----- v3.4.2: «🔁 Jugar otra vez» al terminar, sin salir de la capa -----
+     Pedido del dueño (su captura del 2026-10-31, un Personaje Misterioso
+     ya terminado): «No me da la opción de seguir jugando ahí mismo luego
+     de terminar esa partida». Al llegar una partida a su FIN, la MISMA
+     capa muestra bajo el tablero un botón grande «🔁 Jugar otra vez»;
+     al tocarlo se crea al instante otra partida del MISMO tipo (y del
+     mismo banco/mazo cuando aplica) reutilizando crearPartida — la
+     apertura optimista de la v3.3 — y la capa NUNCA se cierra: pasa a
+     mostrar la partida nueva, lista para jugar.
+     Semántica que se respeta:
+     · La terminada NO se toca: queda en «Partidas abiertas» como hasta
+       ahora (activa, con su tabla final), y sus puntos ya se aplicaron
+       una sola vez al terminar (la bandera puntosAplicados del estado).
+       Repetir NO la cierra, NO la reactiva y NO duplica sus puntos.
+     · La nueva nace como partida viva aparte, con su creador como
+       primer jugador y la puerta abierta a que los demás se unan desde
+       la lista, exactamente igual que si se creara desde su tarjeta.
+       (Si los dos finalistas tocan «otra vez» a la vez, cada uno crea
+       la suya: la misma conducta que crear desde las categorías.) */
+  function partidaTerminada(p) {
+    var e = (p && p.estado) || {};
+    // Cada juego marca su fin a su manera y hay que aceptarlas todas:
+    // la mayoría pone estado.terminado = true; los de preguntas ponen
+    // estado.fase = 'final' (la trivia usa SOLO la fase; varios
+    // bíblicos marcan las dos cosas a la vez).
+    return e.terminado === true || e.fase === 'final';
+  }
+  function claveCreacionDe(p) {
+    // La inversa de crearPartida: de la partida terminada a la clave de
+    // creación que la repite TAL CUAL (mismo banco / mismo mazo).
+    var e = (p && p.estado) || {};
+    if (p.tipo === 'trivia' && e.banco === 'biblica') return { clave: 'trivia-biblica' };
+    if (p.tipo === 'memoria' && e.mazo === 'biblia') return { clave: 'memoria-biblica' };
+    if (p.tipo === 'memoria' && e.mazo) return { clave: 'memoria-tema', mazo: e.mazo };
+    return { clave: p.tipo };
+  }
+  function jugarOtraVez(p) {
+    var datos = claveCreacionDe(p);
+    if (datos.mazo) {
+      // «Memoria con temas» lee el mazo del selector: se deja elegido el
+      // de la partida terminada para que la nueva salga del mismo tema.
+      var sel = $('#mazo-memoria');
+      if (sel && G.MAZOS_MEMORIA[datos.mazo]) sel.value = datos.mazo;
+    }
+    crearPartida(datos.clave);
+  }
+  function pintarBotonOtraVez(p) {
+    var zona = $('#zona-otra-vez');
+    var btn = $('#btn-otra-vez');
+    if (!zona || !btn) return;
+    if (partidaTerminada(p)) {
+      zona.classList.remove('oculto');
+      btn.onclick = function () { jugarOtraVez(p); };
+    } else {
+      zona.classList.add('oculto');
+      btn.onclick = null;
     }
   }
 
