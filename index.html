@@ -116,6 +116,13 @@
 
     <!-- JUEGOS -->
     <section id="sec-juegos" class="seccion oculto">
+      <!-- v3.1: la tarjeta del juego va PRIMERA en la sección (antes de la
+           tarjeta de creación, que en el teléfono mide varias pantallas):
+           aunque el scroll falle, al entrar a Juegos el tablero está arriba. -->
+      <div class="tarjeta oculto" id="tarjeta-juego">
+        <div class="fila-cerrar-juego"><button type="button" class="btn-suave btn-chico" id="btn-cerrar-juego">✖ Cerrar juego</button></div>
+        <div id="zona-juego"></div>
+      </div>
       <div class="tarjeta">
         <h2>🎮 Juegos en línea</h2>
         <p class="subtitulo">Crea una partida y quien esté conectado se une con un toque. ¡Sin filas ni esperas!</p>
@@ -176,10 +183,6 @@
           <button class="btn-principal" data-crear="ordenab">📜 Ordena la Historia</button>
           <button class="btn-principal" data-crear="misterio">🕵️ Personaje Misterioso</button>
         </div>
-      </div>
-      <div class="tarjeta oculto" id="tarjeta-juego">
-        <div class="fila-cerrar-juego"><button type="button" class="btn-suave btn-chico" id="btn-cerrar-juego">✖ Cerrar juego</button></div>
-        <div id="zona-juego"></div>
       </div>
       <div class="tarjeta">
         <h3>🚪 Partidas abiertas</h3>
