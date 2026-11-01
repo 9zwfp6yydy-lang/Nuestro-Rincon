@@ -150,6 +150,14 @@
           <button class="btn-principal" data-crear="calculo">➕ Cálculo Rápido</button>
           <button class="btn-principal" data-crear="ppt">✊ Piedra, Papel o Tijera</button>
           <button class="btn-principal" data-crear="adivina">🔢 Adivina el Número</button>
+          <button class="btn-principal" data-crear="damas">🔴 Damas</button>
+          <button class="btn-principal" data-crear="loteria">🎴 Lotería</button>
+          <button class="btn-principal" data-crear="guerra">⚔️ Guerra de Cartas</button>
+          <button class="btn-principal" data-crear="tesoro">🗺️ El Tesoro Escondido</button>
+          <button class="btn-principal" data-crear="verdad">💬 Verdad o Reto</button>
+          <button class="btn-principal" data-crear="carrera">🎲 Carrera de Dados</button>
+          <button class="btn-principal" data-crear="encadenada">🔤 Palabra Encadenada</button>
+          <button class="btn-principal" data-crear="puzzle">🧩 Rompecabezas Deslizante</button>
         </div>
         <h3 style="margin-top:16px">🧠 Juegos de memoria</h3>
         <div class="botones-juego">
@@ -162,14 +170,20 @@
           <button class="btn-principal" data-crear="trivia-biblica">📖 Trivia Bíblica</button>
           <button class="btn-principal" data-crear="memoria-biblica">🕊️ Memoria Bíblica</button>
           <button class="btn-principal" data-crear="versiculo">✍️ Completa el Versículo</button>
+          <button class="btn-principal" data-crear="quien">🗣️ ¿Quién lo Dijo?</button>
+          <button class="btn-principal" data-crear="vf">✅ Verdadero o Falso</button>
+          <button class="btn-principal" data-crear="encuentra">🔍 Encuentra el Versículo</button>
+          <button class="btn-principal" data-crear="ordenab">📜 Ordena la Historia</button>
+          <button class="btn-principal" data-crear="misterio">🕵️ Personaje Misterioso</button>
         </div>
+      </div>
+      <div class="tarjeta oculto" id="tarjeta-juego">
+        <div class="fila-cerrar-juego"><button type="button" class="btn-suave btn-chico" id="btn-cerrar-juego">✖ Cerrar juego</button></div>
+        <div id="zona-juego"></div>
       </div>
       <div class="tarjeta">
         <h3>🚪 Partidas abiertas</h3>
         <div id="lista-partidas"><p class="subtitulo">No hay partidas todavía. ¡Crea la primera!</p></div>
-      </div>
-      <div class="tarjeta oculto" id="tarjeta-juego">
-        <div id="zona-juego"></div>
       </div>
     </section>
 
@@ -188,16 +202,21 @@
         <h2>📚 Historias para leer juntos</h2>
         <p class="subtitulo">Toca una historia para leerla aquí. Con «Leer para todos» se abre en la pantalla de toda la familia a la vez. 💛</p>
         <div id="biblia-aviso-lectura" class="aviso oculto" style="margin-bottom:12px"></div>
-        <div class="botones-juego" id="lista-biblia-historias"></div>
+        <div id="lista-biblia-historias"></div>
         <div id="biblia-historia-contenido" style="margin-top:14px"></div>
       </div>
       <div class="tarjeta">
         <h2>🎲 Juegos bíblicos</h2>
-        <p class="subtitulo">Se crean como partidas: aparecen en la lista de Juegos para que se una la familia.</p>
+        <p class="subtitulo">Se crean como partidas y el tablero se abre al instante para que se una la familia.</p>
         <div class="botones-juego">
           <button class="btn-principal" data-crear="trivia-biblica">📖 Trivia Bíblica</button>
           <button class="btn-principal" data-crear="memoria-biblica">🕊️ Memoria Bíblica</button>
           <button class="btn-principal" data-crear="versiculo">✍️ Completa el Versículo</button>
+          <button class="btn-principal" data-crear="quien">🗣️ ¿Quién lo Dijo?</button>
+          <button class="btn-principal" data-crear="vf">✅ Verdadero o Falso</button>
+          <button class="btn-principal" data-crear="encuentra">🔍 Encuentra el Versículo</button>
+          <button class="btn-principal" data-crear="ordenab">📜 Ordena la Historia</button>
+          <button class="btn-principal" data-crear="misterio">🕵️ Personaje Misterioso</button>
         </div>
       </div>
     </section>
@@ -260,6 +279,7 @@
   <button id="voz-silenciar" class="btn-suave oculto">🔇 Silenciarme</button>
   <button id="voz-camara" class="btn-suave oculto">📹 Activar cámara</button>
   <button id="voz-cambiar-camara" class="btn-suave oculto">🔄 Cambiar cámara</button>
+  <button id="voz-pantalla" class="btn-suave oculto">🖥️ Compartir pantalla</button>
   <button id="voz-salir" class="btn-suave oculto">👋 Salir de la voz</button>
   <span class="quien-voz" id="voz-estado">La voz está tranquila… por ahora 😴</span>
 </div>

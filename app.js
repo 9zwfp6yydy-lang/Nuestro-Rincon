@@ -729,6 +729,7 @@
     supa.channel('partidas-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'partidas' }, function () { cargarPartidas(); })
       .subscribe();
+    $('#btn-cerrar-juego').addEventListener('click', cerrarJuegoVista);
     $('#crear-gato').addEventListener('click', function () { crearPartida('gato'); });
     $('#crear-trivia').addEventListener('click', function () { crearPartida('trivia'); });
     $('#crear-memoria').addEventListener('click', function () { crearPartida('memoria'); });
@@ -779,8 +780,46 @@
     versiculo: { icono: '✍️', nombre: 'Completa el Versículo', tope: 3 },
     quef: { icono: '🤔', nombre: '¿Qué falta?', tope: 3 },
     orden: { icono: '🔢', nombre: 'Recuerda el Orden', tope: 3 },
-    numeros: { icono: '🧮', nombre: 'Memoria de Números', tope: 3 }
+    numeros: { icono: '🧮', nombre: 'Memoria de Números', tope: 3 },
+    damas: { icono: '🔴', nombre: 'Damas', tope: 2 },
+    loteria: { icono: '🎴', nombre: 'Lotería', tope: 3 },
+    guerra: { icono: '⚔️', nombre: 'Guerra de Cartas', tope: 3 },
+    tesoro: { icono: '🗺️', nombre: 'El Tesoro Escondido', tope: 3 },
+    verdad: { icono: '💬', nombre: 'Verdad o Reto', tope: 3 },
+    carrera: { icono: '🎲', nombre: 'Carrera de Dados', tope: 3 },
+    encadenada: { icono: '🔤', nombre: 'Palabra Encadenada', tope: 3 },
+    puzzle: { icono: '🧩', nombre: 'Rompecabezas Deslizante', tope: 3 },
+    quien: { icono: '🗣️', nombre: '¿Quién lo Dijo?', tope: 3 },
+    vf: { icono: '✅', nombre: 'Verdadero o Falso Bíblico', tope: 3 },
+    encuentra: { icono: '🔍', nombre: 'Encuentra el Versículo', tope: 3 },
+    ordenab: { icono: '📜', nombre: 'Ordena la Historia', tope: 3 },
+    misterio: { icono: '🕵️', nombre: 'Personaje Misterioso', tope: 3 }
   };
+
+  // Abre el tablero AL INSTANTE y lo deja A LA VISTA (arreglo «ningún juego abre»:
+  // antes el tablero se pintaba debajo de la lista, fuera de pantalla, y al crear
+  // una partida ni siquiera se abría).
+  function llevarJuegoALaVista() {
+    var t = $('#tarjeta-juego');
+    if (!t) return;
+    setTimeout(function () {
+      try { t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      catch (err) { t.scrollIntoView(true); }
+    }, 80);
+  }
+  function abrirYMostrar(p) {
+    mostrarPestana('juegos');
+    renderJuego(p); // desoculta #tarjeta-juego (ahora va PRIMERO en la sección) y dibuja
+    llevarJuegoALaVista();
+  }
+  function cerrarJuegoVista() {
+    partidaActualId = null;
+    var zona = $('#zona-juego');
+    if (zona) zona.innerHTML = '';
+    var t = $('#tarjeta-juego');
+    if (t) t.classList.add('oculto');
+    Fun.sonido('pop');
+  }
 
   function crearPartida(tipo) {
     var estado, tipoReal = tipo;
@@ -823,14 +862,27 @@
       case 'quef': estado = G.crearQueFalta([yo.id]); estado.vistaInicio = Date.now(); break;
       case 'orden': estado = G.crearOrden([yo.id]); estado.vistaInicio = Date.now(); break;
       case 'numeros': estado = G.crearNumeros([yo.id]); estado.vistaInicio = Date.now(); break;
+      case 'damas': estado = G.crearDamas([yo.id]); break;
+      case 'loteria': estado = G.crearLoteria([yo.id]); break;
+      case 'guerra': estado = G.crearGuerra([yo.id]); break;
+      case 'tesoro': estado = G.crearTesoro([yo.id]); break;
+      case 'verdad': estado = G.crearVerdad([yo.id]); break;
+      case 'carrera': estado = G.crearCarrera([yo.id]); break;
+      case 'encadenada': estado = G.crearEncadenada([yo.id]); break;
+      case 'puzzle': estado = G.crearPuzzle([yo.id]); estado.inicioEn = Date.now(); break;
+      case 'quien': estado = G.crearQuizBiblico('quien', [yo.id], ordenAleatorio(G.BANCO_QUIEN.length, 10)); break;
+      case 'vf': estado = G.crearQuizBiblico('vf', [yo.id], ordenAleatorio(G.BANCO_VF.length, 10)); break;
+      case 'encuentra': estado = G.crearQuizBiblico('encuentra', [yo.id], ordenAleatorio(G.BANCO_ENCUENTRA.length, 10)); break;
+      case 'ordenab': estado = G.crearOrdena([yo.id]); break;
+      case 'misterio': estado = G.crearMisterio([yo.id]); break;
       default: return;
     }
     supa.from('partidas').insert({ tipo: tipoReal, estado: estado, creada_por: yo.id })
       .select().single().then(function (res) {
         if (res.error) { Fun.sonido('error'); return; }
-        partidaActualId = res.data.id;
         Fun.sonido('turno');
-        mostrarPestana('juegos');
+        partidasPorId[res.data.id] = res.data;
+        abrirYMostrar(res.data); // el tablero se abre solo y a la vista, sin bajar a buscarlo
         cargarPartidas();
       });
   }
@@ -877,7 +929,7 @@
         cerrar.textContent = 'Cerrar';
         cerrar.addEventListener('click', function () {
           supa.from('partidas').update({ activa: false }).eq('id', p.id).then(function () {
-            if (partidaActualId === p.id) { partidaActualId = null; $('#tarjeta-juego').classList.add('oculto'); }
+            if (partidaActualId === p.id) cerrarJuegoVista();
             cargarPartidas();
           });
         });
@@ -889,9 +941,11 @@
 
   function abrirPartida(p, dentro) {
     partidaActualId = p.id;
-    if (dentro) { renderJuego(p); return; }
+    if (dentro) { abrirYMostrar(p); return; }
     var estado = JSON.parse(JSON.stringify(p.estado));
     estado.jugadores = (estado.jugadores || []).concat([yo.id]);
+    // Se muestra al instante (optimista) y queda a la vista; el guardado confirma la unión.
+    abrirYMostrar({ id: p.id, tipo: p.tipo, estado: estado, creada_por: p.creada_por });
     guardarEstado(p, estado).then(function () { Fun.sonido('turno'); });
   }
 
@@ -919,6 +973,17 @@
       case 'quef': renderQueFalta(p); break;
       case 'orden': renderOrden(p); break;
       case 'numeros': renderNumeros(p); break;
+      case 'damas': renderDamas(p); break;
+      case 'loteria': renderLoteria(p); break;
+      case 'guerra': renderGuerra(p); break;
+      case 'tesoro': renderTesoro(p); break;
+      case 'verdad': renderVerdad(p); break;
+      case 'carrera': renderCarrera(p); break;
+      case 'encadenada': renderEncadenada(p); break;
+      case 'puzzle': renderPuzzle(p); break;
+      case 'quien': case 'vf': case 'encuentra': renderQuizBiblico(p); break;
+      case 'ordenab': renderOrdena(p); break;
+      case 'misterio': renderMisterio(p); break;
       default: $('#zona-juego').innerHTML = '<p>Este juego todavía no tiene pantalla. 🙈</p>';
     }
   }
@@ -1050,6 +1115,7 @@
 
   // El reloj de la partida abierta: barras de tiempo y cierres del anfitrión.
   var revelandoVersiculo = -1;
+  var revelandoQuiz = {}; // clave partida:preguntaIdx ya revelada por este aparato
   var accionesReloj = {}; // clave -> true (acciones automáticas ya disparadas)
   function accionRelojUnaVez(clave, fn) {
     if (accionesReloj[clave]) return;
@@ -1101,6 +1167,28 @@
             guardarEstado(p, nuevoV).then(function () { aplicarPuntosDePartida(nuevoV); });
           } else guardarEstado(p, nuevoV);
         } catch (err) { /* otra ventana ya lo reveló */ }
+      }
+      return;
+    }
+
+    if (['quien', 'vf', 'encuentra'].indexOf(p.tipo) !== -1 && e.fase === 'pregunta') {
+      var restanteQ = Math.max(0, G.TIEMPO_QUIZ_SEG - (Date.now() - (e.preguntaInicio || Date.now())) / 1000);
+      var barraQ = document.getElementById('quiz-tiempo');
+      if (barraQ) barraQ.style.width = (restanteQ / G.TIEMPO_QUIZ_SEG * 100) + '%';
+      var segQ = document.getElementById('quiz-seg');
+      if (segQ) segQ.textContent = Math.ceil(restanteQ);
+      var claveQ = p.id + ':' + e.preguntaIdx;
+      if (!soyAnfitrion || revelandoQuiz[claveQ]) return;
+      var todosQ = e.jugadores.every(function (id) { return !!e.respuestas[id]; });
+      if (todosQ || restanteQ <= 0) {
+        revelandoQuiz[claveQ] = true;
+        try {
+          var nuevoQ = G.revelarQuiz(e);
+          if (nuevoQ.fase === 'final' && !e.puntosAplicados) {
+            nuevoQ.puntosAplicados = true;
+            guardarEstado(p, nuevoQ).then(function () { aplicarPuntosDePartida(nuevoQ); });
+          } else guardarEstado(p, nuevoQ);
+        } catch (err) { /* otro aparato ya lo reveló */ }
       }
       return;
     }
@@ -2256,6 +2344,458 @@
     celebrarPorPuntajes(p, e, '¡Calculadora con patas! 🧮🏆', 'Ni un dígito se te escapa');
   }
 
+  /* ==================== v3: RENDERS DE JUEGOS NUEVOS ==================== */
+
+  /* ----- Damas ----- */
+  var damasSeleccion = -1;
+  function renderDamas(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    avisoTurno(p, !e.terminado && miIdx !== -1 && e.turno === miIdx);
+    var emojis = { r: '🔴', R: '👑', b: '⚪', B: '👑' };
+    var destinos = damasSeleccion >= 0 ? G.movimientosDamas(e, damasSeleccion).map(function (m) { return m.hasta; }) : [];
+    var turnoTxt = e.terminado
+      ? '🏆 ¡Ganó ' + escapar(nombreDe(e.ganador)) + '!'
+      : (miIdx === -1 ? '' : e.turno === miIdx ? '¡Tu turno! Toca tu pieza y luego la casilla ✨' : 'Turno de ' + escapar(nombreDe(e.jugadores[e.turno])) + '…');
+    var html = tituloJuego(p, e, '🔴 Damas') +
+      '<p>' + e.jugadores.map(function (id, i) { return (i === 0 ? '🔴 ' : '⚪ ') + escapar(nombreDe(id)); }).join('  ·  ') +
+      '</p><p><strong>' + turnoTxt + '</strong></p><div class="tablero-damas">';
+    e.tablero.forEach(function (celda, i) {
+      var f = Math.floor(i / 8), c = i % 8;
+      var clase = 'casilla-damas ' + ((f + c) % 2 === 1 ? 'oscura' : 'clara') + (i === damasSeleccion ? ' sel' : '');
+      var extra = destinos.indexOf(i) !== -1 ? ' style="outline:3px solid #51cf66; outline-offset:-3px"' : '';
+      html += '<button class="' + clase + '"' + extra + ' data-damas="' + i + '">' + (celda ? emojis[celda] : '') + '</button>';
+    });
+    html += '</div><p class="subtitulo">Salta sobre la pieza rival para comerla. Al llegar al otro lado, ¡corona! 👑 (reyes sencillos: un paso en cualquier diagonal)</p>';
+    zona.innerHTML = html;
+    $$('#zona-juego [data-damas]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (e.terminado || miIdx === -1 || e.turno !== miIdx) return;
+        var i = Number(b.dataset.damas);
+        var pieza = e.tablero[i];
+        var esMia = pieza && (miIdx === 0 ? (pieza === 'r' || pieza === 'R') : (pieza === 'b' || pieza === 'B'));
+        if (esMia) { damasSeleccion = i; renderDamas(p); return; }
+        if (damasSeleccion >= 0) {
+          try {
+            var nuevo = G.moverDamas(e, miIdx, damasSeleccion, i);
+            damasSeleccion = -1;
+            Fun.sonido('pop');
+            guardarConPuntos(p, e, nuevo);
+          } catch (err) { Fun.sonido('error'); }
+        }
+      });
+    });
+    celebrarGanador(p, e, '¡Damas de campeón! 🔴🏆', 'Estrategia pura, paso a paso');
+  }
+
+  /* ----- Lotería ----- */
+  function renderLoteria(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var salidas = e.ordenCantadas.slice(0, e.cantadas);
+    var soyAnfitrion = p.creada_por === yo.id;
+    var html = tituloJuego(p, e, '🎴 Lotería') +
+      '<p class="subtitulo">El anfitrión canta las figuras. Tu cartón se marca solo con 🫘. ¡El primero en llenarlo grita «¡Lotería!» y gana!</p>';
+    if (e.cantadas > 0) {
+      var ult = G.FIGURAS_LOTERIA[e.ordenCantadas[e.cantadas - 1]];
+      html += '<p style="text-align:center;font-size:1.3rem">🎙️ «¡' + escapar(ult.n) + '!» <span style="font-size:2.2rem">' + ult.e + '</span></p>';
+    } else html += '<p style="text-align:center">🎙️ Todavía no se canta ninguna…</p>';
+    html += '<p class="subtitulo" style="text-align:center">Van ' + e.cantadas + ' de ' + e.ordenCantadas.length + ' figuras</p>';
+    if (e.terminado) {
+      html += '<p style="text-align:center"><strong>🎉 ¡LOTERÍA! Ganó ' + escapar(nombreDe(e.ganador)) + ' 🎉</strong></p>';
+    } else if (soyAnfitrion) {
+      html += '<div class="botones-juego" style="justify-content:center"><button class="btn-principal" id="loteria-cantar">🎙️ Cantar la siguiente</button></div>';
+    } else html += '<p class="subtitulo" style="text-align:center">El anfitrión está cantando… 👂</p>';
+    e.jugadores.forEach(function (uid) {
+      var carton = G.cartonDeLoteria(e.semilla, uid);
+      var marcadas = carton.filter(function (fi) { return salidas.indexOf(fi) !== -1; }).length;
+      html += '<h4>' + (uid === yo.id ? '🫘 Tu cartón' : 'Cartón de ' + escapar(nombreDe(uid))) + ' · ' + marcadas + '/16</h4><div class="carton-loteria">' +
+        carton.map(function (fi) {
+          return '<div class="celda-loteria' + (salidas.indexOf(fi) !== -1 ? ' marcada' : '') + '">' + G.FIGURAS_LOTERIA[fi].e + '</div>';
+        }).join('') + '</div>';
+    });
+    zona.innerHTML = html;
+    var bc = $('#loteria-cantar');
+    if (bc) bc.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.cantarLoteria(e)); Fun.sonido('pop'); }
+      catch (err) { Fun.sonido('error'); }
+    });
+    celebrarGanador(p, e, '¡LOTERÍA! 🎴🏆', 'Cartón lleno, qué emoción');
+  }
+
+  /* ----- Guerra de Cartas ----- */
+  function renderGuerra(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var html = tituloJuego(p, e, '⚔️ Guerra de Cartas') + marcadorPuntos(e, ' rondas') +
+      '<p>Ronda ' + Math.min(e.ronda + 1, e.rondasTotales) + ' de ' + e.rondasTotales + ' · Todos sacan carta a la vez: ¡la mayor gana la ronda!</p>';
+    if (e.terminado) {
+      html += '<h3>🏁 ¡Fin de la guerra!</h3>' + rankingFinalHTML(e);
+    } else if (e.fase === 'esperando') {
+      html += '<div class="botones-juego"><button class="btn-principal" id="guerra-revelar">🃏 ¡A revelar cartas!</button></div>';
+    } else {
+      html += '<div class="botones-juego">' + e.jugadores.map(function (uid) {
+        return '<div class="carta-guerra">' + emojiDe(uid) + '<br>' + G.nombreCartaGuerra(e.cartas[uid]) + '<br><small>' + escapar(nombreDe(uid)) + (e.ultimoGanador === uid ? ' ⭐' : '') + '</small></div>';
+      }).join('') + '</div>' +
+        '<p>' + (e.ultimoGanador ? '⭐ Ronda para ' + escapar(nombreDe(e.ultimoGanador)) : '🤝 ¡Empate en lo alto! Nadie suma') + '</p>' +
+        '<button class="btn-principal" id="guerra-siguiente">➡️ Siguiente ronda</button>';
+    }
+    zona.innerHTML = html;
+    var br = $('#guerra-revelar');
+    if (br) br.addEventListener('click', function () {
+      try { guardarEstado(p, G.revelarGuerra(e)); Fun.sonido('pop'); } catch (err) { Fun.sonido('error'); }
+    });
+    var bs = $('#guerra-siguiente');
+    if (bs) bs.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.siguienteGuerra(e)); } catch (err) { Fun.sonido('error'); }
+    });
+    celebrarPorPuntajes(p, e, '¡Guerra ganada! ⚔️🏆', 'La carta mayor manda');
+  }
+
+  /* ----- El Tesoro Escondido ----- */
+  function renderTesoro(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    avisoTurno(p, !e.terminado && miIdx !== -1 && e.turno === miIdx);
+    var probadas = {};
+    Object.keys(e.intentos).forEach(function (uid) {
+      (e.intentos[uid] || []).forEach(function (c) { probadas[c] = G.pistaTesoro(G.distanciaTesoro(c, e.tesoro)); });
+    });
+    var html = tituloJuego(p, e, '🗺️ El Tesoro Escondido') +
+      '<p>Hay un tesoro 💰 escondido en el mapa. Por turnos, toquen una casilla: 🔥 caliente = cerquita, 🧊 frío = lejos.</p>';
+    if (e.terminado) html += '<p><strong>💰 ¡' + escapar(nombreDe(e.ganador)) + ' encontró el tesoro!</strong></p>';
+    else if (e.ultimoIntento) html += '<p>' + emojiDe(e.ultimoIntento.de) + ' ' + escapar(nombreDe(e.ultimoIntento.de)) + ' probó una casilla: <strong>' + e.ultimoIntento.pista + '</strong></p>';
+    if (!e.terminado) html += '<p><strong>' + (miIdx === e.turno ? '¡Tu turno, a buscar! 🔎' : 'Turno de ' + escapar(nombreDe(e.jugadores[e.turno])) + '…') + '</strong></p>';
+    html += '<div class="mapa-tesoro">';
+    for (var i = 0; i < 36; i++) {
+      var esTesoro = e.terminado && i === e.tesoro;
+      var marca = esTesoro ? '💰' : (probadas[i] ? probadas[i].split(' ')[0] : '▫️');
+      html += '<button class="casilla-tesoro" data-tesoro="' + i + '"' + (e.terminado || probadas[i] || miIdx !== e.turno ? ' disabled' : '') + '>' + marca + '</button>';
+    }
+    html += '</div>';
+    zona.innerHTML = html;
+    $$('#zona-juego [data-tesoro]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        try {
+          var nuevo = G.buscarTesoro(e, miIdx, Number(b.dataset.tesoro));
+          Fun.sonido(nuevo.terminado ? 'acierto' : 'pop');
+          guardarConPuntos(p, e, nuevo);
+        } catch (err) { Fun.sonido('error'); }
+      });
+    });
+    celebrarGanador(p, e, '¡Tesoro encontrado! 🗺️🏆', 'Nariz de explorador');
+  }
+
+  /* ----- Verdad o Reto familiar ----- */
+  function renderVerdad(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    var esMiTurno = !e.terminado && miIdx !== -1 && e.turno === miIdx;
+    avisoTurno(p, esMiTurno);
+    var html = tituloJuego(p, e, '💬 Verdad o Reto familiar') +
+      '<p class="subtitulo">Tarjetas suaves y divertidas para toda la familia. Turno ' + (e.jugadas + 1) + ' de ' + e.jugadasTotales + '.</p>';
+    if (e.terminado) {
+      html += '<h3>🎉 ¡Lo lograron!</h3><p>Completaron todas las tarjetas. ¡Qué familia tan valiente y divertida! 💛</p>';
+    } else if (e.fase === 'eligiendo') {
+      html += '<p><strong>' + (esMiTurno ? '¡Tu turno! Elige:' : 'Turno de ' + escapar(nombreDe(e.jugadores[e.turno])) + ': está eligiendo…') + '</strong></p>';
+      if (esMiTurno) html += '<div class="botones-juego"><button class="btn-principal" data-verdad="verdad">💬 Verdad</button><button class="btn-verde" data-verdad="reto">🎲 Reto</button></div>';
+    } else {
+      html += '<p>' + emojiDe(e.jugadores[e.turno]) + ' ' + escapar(nombreDe(e.jugadores[e.turno])) + ' eligió <strong>' + (e.tarjeta.clase === 'reto' ? '🎲 RETO' : '💬 VERDAD') + '</strong>:</p>' +
+        '<p style="font-size:1.25rem;background:#fff3d6;border-radius:12px;padding:14px">' + escapar(e.tarjeta.texto) + '</p>';
+      if (esMiTurno) html += '<button class="btn-principal" id="verdad-hecho">✅ ¡Hecho!</button>';
+      else html += '<p class="subtitulo">A cumplirla con una sonrisa… 😄</p>';
+    }
+    zona.innerHTML = html;
+    $$('#zona-juego [data-verdad]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        try { guardarEstado(p, G.elegirTarjetaVerdad(e, miIdx, b.dataset.verdad)); Fun.sonido('pop'); }
+        catch (err) { Fun.sonido('error'); }
+      });
+    });
+    var bh = $('#verdad-hecho');
+    if (bh) bh.addEventListener('click', function () {
+      try {
+        var nuevo = G.completarVerdad(e);
+        Fun.sonido('acierto');
+        if (nuevo.terminado && !celebraciones[p.id]) { celebraciones[p.id] = true; Fun.pantallaGanador('¡Verdad o Reto completo! 💬🏆', 'Familia valiente y divertida'); }
+        guardarEstado(p, nuevo);
+      } catch (err) { Fun.sonido('error'); }
+    });
+  }
+
+  /* ----- Carrera de Dados ----- */
+  function renderCarrera(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    var esMiTurno = !e.terminado && miIdx !== -1 && e.turno === miIdx;
+    avisoTurno(p, esMiTurno);
+    var html = tituloJuego(p, e, '🎲 Carrera de Dados') +
+      '<p>Llega a <strong>' + e.meta + ' puntos</strong>. Tira dos dados y suma… pero si sale un <strong>1</strong>, ¡pierdes lo del turno! Tú decides: ¿plantarte o seguir?</p>' +
+      e.jugadores.map(function (uid) {
+        var tot = e.totales[uid] || 0;
+        return '<p>' + emojiDe(uid) + ' ' + escapar(nombreDe(uid)) + ': <strong>' + tot + '/' + e.meta + '</strong></p>' +
+          '<div class="barra-tiempo"><div style="width:' + Math.min(100, tot / e.meta * 100) + '%"></div></div>';
+      }).join('');
+    if (e.terminado) {
+      html += '<p><strong>🏆 ¡' + escapar(nombreDe(e.ganador)) + ' llegó a la meta!</strong></p>';
+    } else {
+      html += '<p>Turno de ' + emojiDe(e.jugadores[e.turno]) + ' <strong>' + escapar(nombreDe(e.jugadores[e.turno])) + '</strong>' +
+        (e.parcial ? ' · En la mano: <strong>' + e.parcial + ' pts</strong> sin guardar' : '') + '</p>';
+      if (e.ultimosDados) html += '<p style="font-size:1.6rem;text-align:center">🎲 ' + e.ultimosDados[0] + ' · ' + e.ultimosDados[1] + ' 🎲</p>';
+      if (e.ultimoEvento) html += '<p class="subtitulo">' + escapar(e.ultimoEvento) + '</p>';
+      if (esMiTurno) html += '<div class="botones-juego"><button class="btn-principal" id="carrera-tirar">🎲 Tirar dados</button>' +
+        '<button class="btn-verde" id="carrera-plantar"' + (e.parcial ? '' : ' disabled') + '>🏦 Plantarme y guardar</button></div>';
+    }
+    zona.innerHTML = html;
+    var bt = $('#carrera-tirar');
+    if (bt) bt.addEventListener('click', function () {
+      try { guardarEstado(p, G.tirarCarrera(e)); Fun.sonido('pop'); } catch (err) { Fun.sonido('error'); }
+    });
+    var bp = $('#carrera-plantar');
+    if (bp) bp.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.plantarseCarrera(e)); Fun.sonido('acierto'); } catch (err) { Fun.sonido('error'); }
+    });
+    celebrarGanador(p, e, '¡Carrera ganada! 🎲🏆', 'Supo cuándo plantarse');
+  }
+
+  /* ----- Palabra Encadenada ----- */
+  function renderEncadenada(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    var esMiTurno = !e.terminado && miIdx !== -1 && e.turno === miIdx;
+    avisoTurno(p, esMiTurno);
+    var html = tituloJuego(p, e, '🔤 Palabra Encadenada') + marcadorPuntos(e, ' pts') +
+      '<p>La siguiente palabra debe <strong>empezar con la última letra</strong> de la anterior y estar en la lista secreta de palabras. ¡10 puntos por palabra!</p>';
+    if (e.terminado) {
+      html += '<h3>🏁 ¡Se acabó la cadena!</h3>' + rankingFinalHTML(e);
+    } else {
+      html += '<p style="text-align:center;font-size:1.5rem">Palabra: <strong>' + escapar(e.palabraActual.toUpperCase()) + '</strong> → empieza con <strong>' + escapar(G.ultimaLetraEncadena(e.palabraActual).toUpperCase()) + '</strong></p>' +
+        '<p class="subtitulo">Turno ' + (e.turnoGlobal + 1) + ' de ' + e.turnosTotales + ' · ' + (esMiTurno ? '¡Te toca!' : 'Turno de ' + escapar(nombreDe(e.jugadores[e.turno])) + '…') + '</p>';
+      if (e.ultimoError) html += '<p class="aviso">' + escapar(e.ultimoError) + '</p>';
+      if (esMiTurno) html += '<form class="chat-enviar" id="form-encadenada"><input type="text" id="encadenada-valor" autocomplete="off" placeholder="Tu palabra…"><button type="submit" class="btn-principal">¡Esa!</button></form>' +
+        '<button class="btn-suave btn-chico" id="encadenada-pasar" style="margin-top:8px">⏭️ No sé ninguna: pasar</button>';
+      if (e.usadas.length) html += '<p class="subtitulo" style="margin-top:10px">Cadena: ' + e.usadas.map(escapar).join(' → ') + '</p>';
+    }
+    zona.innerHTML = html;
+    var form = $('#form-encadenada');
+    if (form) form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      try {
+        var nuevo = G.enviarEncadenada(e, miIdx, $('#encadenada-valor').value);
+        Fun.sonido(nuevo.ultimoError ? 'error' : 'acierto');
+        guardarConPuntos(p, e, nuevo);
+      } catch (err) { Fun.sonido('error'); }
+    });
+    var bpasar = $('#encadenada-pasar');
+    if (bpasar) bpasar.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.pasarEncadenada(e, miIdx)); } catch (err) { Fun.sonido('error'); }
+    });
+    celebrarPorPuntajes(p, e, '¡Cadena de campeón! 🔤🏆', 'Las palabras fluyen en esta familia');
+  }
+
+  /* ----- Rompecabezas Deslizante (cooperativo) ----- */
+  function renderPuzzle(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var dentro = e.jugadores.indexOf(yo.id) !== -1;
+    var segs = e.inicioEn ? Math.floor((Date.now() - e.inicioEn) / 1000) : 0;
+    var html = tituloJuego(p, e, '🧩 Rompecabezas Deslizante') +
+      '<p>¡En equipo! Toca una pieza junto al hueco para moverla. Ordenen los animalitos como la fila de arriba. Movimientos: <strong>' + e.movimientos + '</strong> · ⏱️ ' + segs + ' s</p>' +
+      '<p style="text-align:center;font-size:1.3rem">' + G.EMOJIS_PUZZLE.join(' ') + '</p><div class="puzzle-deslizante">';
+    e.piezas.forEach(function (pz, i) {
+      html += '<button class="pieza-puzzle' + (pz ? '' : ' vacia') + '" data-puzzle="' + i + '"' + (e.terminado || !dentro ? ' disabled' : '') + '>' + pz + '</button>';
+    });
+    html += '</div>';
+    if (e.terminado) html += '<p style="text-align:center"><strong>🎉 ¡Lo lograron en ' + e.movimientos + ' movimientos y ' + segs + ' segundos!</strong></p>';
+    zona.innerHTML = html;
+    $$('#zona-juego [data-puzzle]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        try {
+          var nuevo = G.moverPuzzle(e, Number(b.dataset.puzzle));
+          Fun.sonido(nuevo.terminado ? 'acierto' : 'pop');
+          guardarConPuntos(p, e, nuevo);
+        } catch (err) { /* pieza que no se mueve: sin ruido */ }
+      });
+    });
+    if (e.terminado && !celebraciones[p.id]) {
+      celebraciones[p.id] = true;
+      Fun.pantallaGanador('¡Rompecabezas completo! 🧩🏆', 'Trabajo en equipo de verdad');
+    }
+  }
+
+  /* ----- Quizzes bíblicos (quien / vf / encuentra) ----- */
+  var QUIZ_CFG = {
+    quien: { titulo: '🗣️ ¿Quién lo Dijo?', premio: '¡Lo dijo clarito! 🗣️🏆' },
+    vf: { titulo: '✅ Verdadero o Falso Bíblico', premio: '¡Verdad de campeón! ✅🏆' },
+    encuentra: { titulo: '🔍 Encuentra el Versículo', premio: '¡Versículo encontrado! 🔍🏆' }
+  };
+  function opcionesDeQuiz(e) {
+    var item = G.preguntaQuiz(e);
+    if (e.tipo === 'vf') return ['✅ ¡Verdadero!', '❌ Falso'];
+    return item.opciones;
+  }
+  function enunciadoDeQuiz(e) {
+    var item = G.preguntaQuiz(e);
+    if (e.tipo === 'quien') return '<p class="versiculo-texto">«' + escapar(item.frase) + '»</p><p>¿Quién dijo esto?</p>';
+    if (e.tipo === 'vf') return '<p class="versiculo-texto">' + escapar(item.afirmacion) + '</p><p>¿Es verdadero o falso?</p>';
+    return '<p>¿Cuál es el texto correcto de <strong>' + escapar(item.cita) + '</strong>?</p>';
+  }
+  function renderQuizBiblico(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var cfg = QUIZ_CFG[e.tipo];
+    var soyAnfitrion = p.creada_por === yo.id;
+    var html = tituloJuego(p, e, cfg.titulo) + marcadorPuntos(e, ' pts');
+    if (e.fase === 'esperando') {
+      html += '<p>El anfitrión presenta las preguntas cuando estén todos. ¡A pensar en familia!</p>';
+      if (soyAnfitrion) html += '<button class="btn-principal" id="quiz-iniciar">🚀 ¡Empezar!</button>';
+      else html += '<p class="subtitulo">Esperando la salida del anfitrión… 🏁</p>';
+    } else if (e.fase === 'pregunta') {
+      var ya = !!e.respuestas[yo.id];
+      html += '<p class="subtitulo">Pregunta ' + (e.preguntaIdx + 1) + ' de ' + e.orden.length + ' · ⏱️ <span id="quiz-seg">' + G.TIEMPO_QUIZ_SEG + '</span>s</p>' +
+        '<div class="barra-tiempo"><div id="quiz-tiempo" style="width:100%"></div></div>' + enunciadoDeQuiz(e) + '<div class="opciones-trivia">';
+      opcionesDeQuiz(e).forEach(function (op, i) {
+        html += '<button class="opcion-trivia" data-qop="' + i + '" ' + (ya ? 'disabled' : '') + '>' + escapar(op) + '</button>';
+      });
+      html += '</div>' + (ya ? '<p>✅ ¡Guardado! Esperando a los demás…</p>' : '<p class="subtitulo">Responde rápido y ganas más ⚡</p>');
+    } else if (e.fase === 'revelado') {
+      var item = G.preguntaQuiz(e);
+      html += enunciadoDeQuiz(e) + '<div class="opciones-trivia">';
+      opcionesDeQuiz(e).forEach(function (op, i) {
+        html += '<button class="opcion-trivia ' + (i === e.correctaRevelada ? 'correcta' : '') + '" disabled>' + escapar(op) + (i === e.correctaRevelada ? ' ✅' : '') + '</button>';
+      });
+      html += '</div>';
+      if (e.tipo === 'quien' && item.cita) html += '<p class="versiculo-cita">— ' + escapar(item.cita) + '</p>';
+      if (soyAnfitrion) html += '<button class="btn-principal" id="quiz-siguiente" style="margin-top:12px">Siguiente pregunta ➡️</button>';
+      else html += '<p class="subtitulo">El anfitrión sigue cuando quiera…</p>';
+    } else if (e.fase === 'final') {
+      html += '<h3>🏁 ¡Se acabaron las preguntas!</h3>' + rankingFinalHTML(e);
+    }
+    zona.innerHTML = html;
+    var bi = $('#quiz-iniciar');
+    if (bi) bi.addEventListener('click', function () {
+      var nuevo = G.iniciarQuiz(e);
+      nuevo.preguntaInicio = Date.now();
+      guardarEstado(p, nuevo);
+    });
+    var bs2 = $('#quiz-siguiente');
+    if (bs2) bs2.addEventListener('click', function () {
+      var nuevo = G.siguienteQuiz(e);
+      nuevo.preguntaInicio = Date.now();
+      guardarEstado(p, nuevo);
+    });
+    $$('#zona-juego [data-qop]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var restante = Math.max(0, G.TIEMPO_QUIZ_SEG - (Date.now() - (e.preguntaInicio || Date.now())) / 1000);
+        try {
+          var nuevo = G.responderQuiz(e, yo.id, Number(b.dataset.qop), restante);
+          var eraCorrecta = Number(b.dataset.qop) === (e.tipo === 'vf' ? (G.preguntaQuiz(e).verdad ? 0 : 1) : G.preguntaQuiz(e).correcta);
+          if (eraCorrecta) { Fun.sonido('acierto'); Fun.confeti({ cantidad: 30, duracionMs: 1200 }); }
+          else Fun.sonido('error');
+          guardarEstado(p, nuevo);
+        } catch (err) { Fun.sonido('error'); }
+      });
+    });
+    if (e.fase === 'final') celebrarPorPuntajes(p, e, cfg.premio, 'Esa memoria bíblica es de oro');
+  }
+
+  /* ----- Ordena la Historia ----- */
+  function renderOrdena(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var datos = G.EVENTOS_ORDENA[e.historiaIdx];
+    var dentro = e.jugadores.indexOf(yo.id) !== -1;
+    var entregue = !!e.entregados[yo.id];
+    var html = tituloJuego(p, e, '📜 Ordena la Historia') + marcadorPuntos(e, ' pts') +
+      '<p>Historia: <strong>' + escapar(datos.historia) + '</strong>. ' +
+      (e.fase === 'final' ? 'Este es el orden correcto:' : 'Pon los 5 momentos en el orden en que pasaron (20 pts por cada uno en su sitio). ¡Solo tú ves tu orden hasta entregar!') + '</p>';
+    var arreglo = e.fase === 'final' ? [0, 1, 2, 3, 4] : G.arregloDeOrdena(e, yo.id);
+    html += '<div class="ordenable">' + arreglo.map(function (evIdx, pos) {
+      var bien = e.fase === 'final' || (entregue && evIdx === pos);
+      return '<div class="orden-item"><strong>' + (pos + 1) + '.</strong><span class="crece">' + escapar(datos.eventos[evIdx]) + (bien && e.fase !== 'final' ? ' ✅' : '') + '</span>' +
+        (e.fase === 'ordenando' && dentro && !entregue
+          ? '<button class="btn-suave btn-chico" data-ord="' + pos + ':-1">⬆️</button><button class="btn-suave btn-chico" data-ord="' + pos + ':1">⬇️</button>'
+          : '') + '</div>';
+    }).join('') + '</div>';
+    if (e.fase === 'ordenando') {
+      var entregados = e.jugadores.filter(function (uid) { return !!e.entregados[uid]; }).length;
+      html += '<p class="subtitulo">Han entregado ' + entregados + ' de ' + e.jugadores.length + '.</p>';
+      if (dentro && !entregue) html += '<button class="btn-principal" id="ordena-entregar">✅ ¡Así quedó! Entregar</button>';
+      else if (entregue) html += '<p>✅ ¡Entregado! Esperando a los demás…</p>';
+    } else {
+      html += rankingFinalHTML(e);
+    }
+    zona.innerHTML = html;
+    $$('#zona-juego [data-ord]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var partes = b.dataset.ord.split(':');
+        try { guardarEstado(p, G.moverEnOrdena(e, yo.id, Number(partes[0]), Number(partes[1]))); Fun.sonido('pop'); }
+        catch (err) { Fun.sonido('error'); }
+      });
+    });
+    var be = $('#ordena-entregar');
+    if (be) be.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.entregarOrdena(e, yo.id)); Fun.sonido('acierto'); }
+      catch (err) { Fun.sonido('error'); }
+    });
+    celebrarPorPuntajes(p, e, '¡Historia en orden! 📜🏆', 'Conoces la historia de principio a fin');
+  }
+
+  /* ----- Personaje Misterioso ----- */
+  function renderMisterio(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var pj = G.personajeMisterio(e);
+    var dentro = e.jugadores.indexOf(yo.id) !== -1;
+    var yaLoTengo = !!e.resueltos[yo.id];
+    var soyAnfitrion = p.creada_por === yo.id;
+    var html = tituloJuego(p, e, '🕵️ Personaje Misterioso') + marcadorPuntos(e, ' pts') +
+      '<p>Un personaje de la Biblia se esconde tras las pistas. ¡Descúbrelo con las menos pistas posibles: con 1 pista ganas 100 pts; con 5, solo 20!</p>';
+    for (var i = 0; i < e.pistasMostradas; i++) {
+      html += '<p class="pista-misterio">🔎 Pista ' + (i + 1) + ': ' + escapar(pj.pistas[i]) + '</p>';
+    }
+    if (e.terminado) {
+      html += '<p style="font-size:1.3rem;text-align:center">🎉 ¡Era <strong>' + escapar(pj.nombre) + '</strong>!</p>' + rankingFinalHTML(e);
+    } else {
+      html += '<p class="subtitulo">Ya lo descubrieron: ' +
+        (e.jugadores.filter(function (uid) { return !!e.resueltos[uid]; }).map(function (uid) { return emojiDe(uid) + ' ' + escapar(nombreDe(uid)) + ' (con ' + e.resueltos[uid] + ' pista' + (e.resueltos[uid] > 1 ? 's' : '') + ')'; }).join(' · ') || 'nadie todavía…') + '</p>';
+      if (dentro && !yaLoTengo) {
+        html += '<form class="chat-enviar" id="form-misterio"><input type="text" id="misterio-valor" autocomplete="off" placeholder="¿Quién es? Escribe su nombre…"><button type="submit" class="btn-principal">¡Es…!</button></form>';
+        if (e.intentosFallidos[yo.id]) html += '<p class="subtitulo">Intentos fallidos tuyos: ' + e.intentosFallidos[yo.id] + ' ❌ ¡Sigue pensando!</p>';
+      } else if (yaLoTengo) html += '<p>✅ ¡Lo descubriste con ' + e.resueltos[yo.id] + ' pista' + (e.resueltos[yo.id] > 1 ? 's' : '') + '! Esperando a los demás…</p>';
+      if (soyAnfitrion) {
+        if (e.pistasMostradas < pj.pistas.length) html += '<button class="btn-verde" id="misterio-pista" style="margin-top:10px">➕ Revelar otra pista</button>';
+        html += ' <button class="btn-suave" id="misterio-cerrar" style="margin-top:10px">🏁 Terminar y revelar</button>';
+      }
+    }
+    zona.innerHTML = html;
+    var form = $('#form-misterio');
+    if (form) form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var antes = (e.intentosFallidos[yo.id] || 0);
+      try {
+        var nuevo = G.adivinarMisterio(e, yo.id, $('#misterio-valor').value);
+        if (nuevo.resueltos[yo.id]) { Fun.sonido('acierto'); Fun.confeti({ cantidad: 40, duracionMs: 1300 }); }
+        else Fun.sonido('error');
+        guardarConPuntos(p, e, nuevo);
+      } catch (err) { Fun.sonido('error'); }
+    });
+    var bpis = $('#misterio-pista');
+    if (bpis) bpis.addEventListener('click', function () {
+      try { guardarEstado(p, G.revelarPistaMisterio(e)); Fun.sonido('pop'); } catch (err) { Fun.sonido('error'); }
+    });
+    var bcer = $('#misterio-cerrar');
+    if (bcer) bcer.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.cerrarMisterio(e)); } catch (err) { Fun.sonido('error'); }
+    });
+    celebrarPorPuntajes(p, e, '¡Detective bíblico! 🕵️🏆', 'Qué bien conoces a los personajes');
+  }
+
   /* ============================ BIBLIA 📖 ============================ */
   var historiaAbierta = -1;
 
@@ -2265,13 +2805,24 @@
     $('#biblia-versiculo-cita').textContent = '— ' + v.cita;
     var lista = $('#lista-biblia-historias');
     lista.innerHTML = '';
-    G.HISTORIAS_BIBLICAS.forEach(function (h, i) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'btn-suave';
-      b.textContent = h.emoji + ' ' + h.titulo;
-      b.addEventListener('click', function () { abrirHistoria(i); });
-      lista.appendChild(b);
+    // v3: las 36 historias en orden bíblico, agrupadas por testamento.
+    [['antiguo', '📜 Antiguo Testamento'], ['nuevo', '🌟 Nuevo Testamento']].forEach(function (grupo) {
+      var cab = document.createElement('h3');
+      cab.className = 'biblia-grupo';
+      cab.textContent = grupo[1];
+      lista.appendChild(cab);
+      var fila = document.createElement('div');
+      fila.className = 'botones-juego';
+      G.HISTORIAS_BIBLICAS.forEach(function (h, i) {
+        if (h.testamento !== grupo[0]) return;
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn-suave';
+        b.textContent = h.emoji + ' ' + h.titulo;
+        b.addEventListener('click', function () { abrirHistoria(i); });
+        fila.appendChild(b);
+      });
+      lista.appendChild(fila);
     });
     $('#btn-compartir-versiculo').addEventListener('click', function () {
       var payload = { texto: v.texto, cita: v.cita, de: yo.id };
@@ -2296,6 +2847,8 @@
     if (!h) return;
     $('#biblia-historia-contenido').innerHTML =
       '<h3>' + h.emoji + ' ' + escapar(h.titulo) + '</h3>' +
+      (h.slug ? '<img class="historia-img" src="biblia-img/' + escapar(h.slug) + '.jpg" alt="Dibujo de la historia">' : '') +
+      (h.cita ? '<p class="versiculo-cita">📖 ' + escapar(h.cita) + '</p>' : '') +
       h.parrafos.map(function (t) { return '<p>' + escapar(t) + '</p>'; }).join('') +
       '<div class="aviso">💬 Para conversar en familia: ' + escapar(h.pregunta) + '</div>' +
       '<div class="botones-juego" style="margin-top:12px"><button class="btn-verde" id="btn-leer-todos">📖 Leer para todos</button></div>';
@@ -2730,6 +3283,14 @@
   var caraCamara = 'user';      // 'user' = frontal · 'environment' = trasera
   var estadoVideo = {};         // id -> 'camara' (Fun.registrarVideo; sin entrada = avatar)
   var flujosRemotos = {};       // id -> MediaStream remoto (para su mosaico)
+  // --- Compartir pantalla: una pista de video más por la misma malla ---
+  var pantallaActiva = false;
+  var pistaPantallaLocal = null;
+  var flujoPantallaLocal = null;
+  var estadoPantalla = {};        // id -> 'pantalla' (Fun.registrarPantalla)
+  var flujosPantallaRemotos = {}; // id -> MediaStream de SU pantalla
+  var pantallaPistaPorId = {};    // id -> track.id de su pantalla (llega por señalización)
+  var videosPendientes = {};      // id -> [{track, stream}] por clasificar (¿cámara o pantalla?)
 
   function prepararCanalVoz() {
     if (canalVoz) return;
@@ -2751,6 +3312,20 @@
         estadoVideo = Fun.registrarVideo(estadoVideo, p.de, !!p.activo);
         pintarMosaicos();
       })
+      .on('broadcast', { event: 'pantalla' }, function (msg) {
+        var p = msg.payload;
+        if (!p || p.de === yo.id) return;
+        if (p.activo) {
+          pantallaPistaPorId[p.de] = p.pista || null;
+          estadoPantalla = Fun.registrarPantalla(estadoPantalla, p.de, true);
+          clasificarVideosPendientes(p.de);
+        } else {
+          delete flujosPantallaRemotos[p.de];
+          delete pantallaPistaPorId[p.de];
+          estadoPantalla = Fun.registrarPantalla(estadoPantalla, p.de, false);
+        }
+        pintarMosaicos();
+      })
       .subscribe();
   }
 
@@ -2765,6 +3340,7 @@
       : 'La voz está tranquila… por ahora 😴';
     // Si mi cámara está encendida, recuerdo mi estado a quien acabe de llegar.
     if (enVoz && videoActivo) avisarVideo(true);
+    if (enVoz && pantallaActiva) avisarPantalla(true);
     pintarMosaicos();
     revisarLlamadaEntrante(); // ¿hay que mostrar la tarjeta de llamada?
   }
@@ -2773,26 +3349,57 @@
     if (canalVoz) canalVoz.send({ type: 'broadcast', event: 'rtc', payload: { de: yo.id, para: para, tipo: tipo, datos: datos } });
   }
 
+  // Clasifica un video remoto: ¿es la CÁMARA de este participante o su PANTALLA?
+  // La señalización «pantalla» trae el track.id de la pantalla; si el video llegó
+  // antes que la señal, queda en espera y se clasifica al llegar.
+  function clasificarVideosPendientes(id) {
+    var pend = videosPendientes[id] || [];
+    delete videosPendientes[id];
+    pend.forEach(function (v) { registrarVideoRemoto(id, v.track, v.stream); });
+  }
+  function registrarVideoRemoto(id, track, stream) {
+    if (pantallaPistaPorId[id] && track.id === pantallaPistaPorId[id]) {
+      flujosPantallaRemotos[id] = stream; // su pantalla, NO su cámara
+    } else if (Fun.tienePantalla(estadoPantalla, id) && !pantallaPistaPorId[id]) {
+      (videosPendientes[id] = videosPendientes[id] || []).push({ track: track, stream: stream });
+      return;
+    } else {
+      flujosRemotos[id] = stream;
+      estadoVideo = Fun.registrarVideo(estadoVideo, id, true);
+    }
+    pintarMosaicos();
+  }
+  function vigilarPistaVideoRemota(id, track) {
+    track.onmute = function () {
+      if (pantallaPistaPorId[id] === track.id) return; // la pantalla no apaga la cámara
+      estadoVideo = Fun.registrarVideo(estadoVideo, id, false);
+      pintarMosaicos();
+    };
+    track.onended = function () {
+      if (pantallaPistaPorId[id] === track.id) {
+        delete flujosPantallaRemotos[id];
+        delete pantallaPistaPorId[id];
+        estadoPantalla = Fun.registrarPantalla(estadoPantalla, id, false);
+      } else {
+        estadoVideo = Fun.registrarVideo(estadoVideo, id, false);
+      }
+      pintarMosaicos();
+    };
+  }
+
   function crearConexion(id, iniciador) {
     if (paresVoz[id]) return paresVoz[id].pc;
     var pc = new RTCPeerConnection(STUN);
     paresVoz[id] = { pc: pc, el: null, iniciador: !!iniciador };
     if (flujoLocal) flujoLocal.getTracks().forEach(function (t) { pc.addTrack(t, flujoLocal); });
+    // Si ya estoy compartiendo pantalla, el recién llegado también la recibe.
+    if (pantallaActiva && pistaPantallaLocal && flujoPantallaLocal) pc.addTrack(pistaPantallaLocal, flujoPantallaLocal);
     pc.onicecandidate = function (e) { if (e.candidate) enviarRTC(id, 'ice', e.candidate); };
     pc.ontrack = function (e) {
       if (e.track.kind === 'video') {
-        // El video remoto va a su mosaico; el audio sigue por su altavoz oculto.
-        flujosRemotos[id] = e.streams[0];
-        estadoVideo = Fun.registrarVideo(estadoVideo, id, true);
-        e.track.onmute = function () {
-          estadoVideo = Fun.registrarVideo(estadoVideo, id, false);
-          pintarMosaicos();
-        };
-        e.track.onended = function () {
-          estadoVideo = Fun.registrarVideo(estadoVideo, id, false);
-          pintarMosaicos();
-        };
-        pintarMosaicos();
+        // El video remoto va a su mosaico (cámara o pantalla); el audio, a su altavoz oculto.
+        registrarVideoRemoto(id, e.track, e.streams[0]);
+        vigilarPistaVideoRemota(id, e.track);
         return;
       }
       var el = document.createElement('audio');
@@ -2859,7 +3466,11 @@
     if (par.el) par.el.remove();
     delete paresVoz[id];
     delete flujosRemotos[id];
+    delete flujosPantallaRemotos[id];
+    delete pantallaPistaPorId[id];
+    delete videosPendientes[id];
     estadoVideo = Fun.registrarVideo(estadoVideo, id, false);
+    estadoPantalla = Fun.registrarPantalla(estadoPantalla, id, false);
     pintarMosaicos();
   }
 
@@ -2875,6 +3486,9 @@
       $('#voz-unirse').classList.add('oculto');
       $('#voz-silenciar').classList.remove('oculto');
       $('#voz-camara').classList.remove('oculto');
+      // Compartir pantalla SOLO si el navegador lo soporta (PC/Android).
+      // En iPhone/iPad el botón no aparece nunca.
+      if (Fun.pantallaSoportada()) $('#voz-pantalla').classList.remove('oculto');
       $('#voz-salir').classList.remove('oculto');
       canalVoz.track({ nombre: miPerfil.nombre });
       // Quien llega ofrece la llamada a los que ya están dentro.
@@ -2893,17 +3507,23 @@
   function salirDeLaVoz() {
     if (!enVoz) return;
     apagarCamara(); // avisa y limpia el video antes de salir
+    dejarDeCompartirPantalla(); // y la pantalla, si estaba compartiendo
     enVoz = false;
     pushAvisoEnviado = false; // la próxima llamada vuelve a avisar
     Object.keys(paresVoz).forEach(cerrarConexion);
     if (flujoLocal) { flujoLocal.getTracks().forEach(function (t) { t.stop(); }); flujoLocal = null; }
     if (canalVoz) canalVoz.untrack();
     estadoVideo = {};
+    estadoPantalla = {};
     flujosRemotos = {};
+    flujosPantallaRemotos = {};
+    pantallaPistaPorId = {};
+    videosPendientes = {};
     $('#voz-unirse').classList.remove('oculto');
     $('#voz-silenciar').classList.add('oculto');
     $('#voz-camara').classList.add('oculto');
     $('#voz-cambiar-camara').classList.add('oculto');
+    $('#voz-pantalla').classList.add('oculto');
     $('#voz-salir').classList.add('oculto');
     $('#franja-videos').classList.add('oculto');
     pintarEstadoVoz();
@@ -2994,6 +3614,65 @@
     });
   }
 
+  /* --------------------- COMPARTIR PANTALLA --------------------- */
+  // La pantalla viaja como UNA pista de video más por la misma malla, pero
+  // con su propio MediaStream: así el receptor la distingue de la cámara.
+  // La señalización «pantalla» anuncia quién comparte y el id de su pista.
+  function avisarPantalla(activa) {
+    if (canalVoz) canalVoz.send({ type: 'broadcast', event: 'pantalla', payload: { de: yo.id, activo: activa, pista: activa && pistaPantallaLocal ? pistaPantallaLocal.id : null } });
+  }
+  function actualizarBotonPantalla() {
+    $('#voz-pantalla').textContent = pantallaActiva ? '🛑 Dejar de compartir' : '🖥️ Compartir pantalla';
+  }
+  function alternarPantalla() {
+    if (pantallaActiva) dejarDeCompartirPantalla();
+    else compartirPantalla();
+  }
+  function compartirPantalla() {
+    if (!enVoz) return;
+    if (!Fun.pantallaSoportada()) return; // sin getDisplayMedia no hay botón; esto es el cinturón extra
+    navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }).then(function (flujo) {
+      var pista = flujo.getVideoTracks()[0];
+      if (!pista) throw new Error('sin-pantalla');
+      pistaPantallaLocal = pista;
+      flujoPantallaLocal = flujo;
+      pantallaActiva = true;
+      // Si el sistema corta la captura (su propio botón «Dejar de compartir»), se apaga solo.
+      pista.onended = function () { dejarDeCompartirPantalla(); };
+      Object.keys(paresVoz).forEach(function (id) {
+        paresVoz[id].pc.addTrack(pista, flujo);
+        renegociar(id);
+      });
+      estadoPantalla = Fun.registrarPantalla(estadoPantalla, yo.id, true);
+      avisarPantalla(true);
+      actualizarBotonPantalla();
+      pintarMosaicos();
+      Fun.sonido('turno');
+    }).catch(function () {
+      // Canceló el selector del sistema o no dio permiso: la voz sigue intacta.
+      $('#voz-estado').textContent = 'No se compartió la pantalla 🖥️ Tu voz sigue perfecta 🎙️';
+    });
+  }
+  function dejarDeCompartirPantalla() {
+    if (!pantallaActiva) return;
+    pantallaActiva = false;
+    if (pistaPantallaLocal) {
+      Object.keys(paresVoz).forEach(function (id) {
+        var pc = paresVoz[id].pc;
+        pc.getSenders().forEach(function (s) {
+          if (s.track === pistaPantallaLocal) { pc.removeTrack(s); renegociar(id); }
+        });
+      });
+      try { pistaPantallaLocal.stop(); } catch (e) { /* ya parada */ }
+      pistaPantallaLocal = null;
+    }
+    flujoPantallaLocal = null;
+    estadoPantalla = Fun.registrarPantalla(estadoPantalla, yo.id, false);
+    avisarPantalla(false);
+    actualizarBotonPantalla();
+    pintarMosaicos();
+  }
+
   // Mosaicos: una miniatura por participante. Con cámara = su video;
   // sin cámara = su avatar. Mi vista previa va en espejo, como un espejito.
   function pintarMosaicos() {
@@ -3034,11 +3713,37 @@
       caja.appendChild(nom);
       cont.appendChild(caja);
     });
+    // Mosaicos de pantalla compartida (uno por participante que comparte).
+    Fun.participantesConPantalla(estadoPantalla).forEach(function (id) {
+      var esLocalP = id === yo.id;
+      var flujoP = esLocalP ? flujoPantallaLocal : flujosPantallaRemotos[id];
+      var cajaP = document.createElement('div');
+      cajaP.className = 'mosaico-video mosaico-pantalla';
+      if (flujoP) {
+        var vp = document.createElement('video');
+        vp.autoplay = true;
+        vp.setAttribute('playsinline', '');
+        vp.muted = esLocalP;
+        vp.srcObject = flujoP;
+        cajaP.appendChild(vp);
+      } else {
+        var avP = document.createElement('span');
+        avP.className = 'avatar-grande';
+        avP.textContent = '🖥️';
+        cajaP.appendChild(avP);
+      }
+      var nomP = document.createElement('span');
+      nomP.className = 'mosaico-nombre';
+      nomP.textContent = '🖥️ Pantalla de ' + (esLocalP ? 'ti' : nombreDe(id));
+      cajaP.appendChild(nomP);
+      cont.appendChild(cajaP);
+    });
   }
 
   $('#voz-unirse').addEventListener('click', unirseVoz);
   $('#voz-salir').addEventListener('click', salirDeLaVoz);
   $('#voz-camara').addEventListener('click', alternarCamara);
+  $('#voz-pantalla').addEventListener('click', alternarPantalla);
   $('#voz-cambiar-camara').addEventListener('click', cambiarCamara);
   $('#videos-plegar').addEventListener('click', function () {
     var franja = $('#franja-videos');

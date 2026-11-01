@@ -192,6 +192,29 @@
     return Object.keys(mapa || {}).filter(function (id) { return mapa[id] === 'camara'; });
   }
 
+  /* ------------- COMPARTIR PANTALLA (puro, sin DOM: probado en Node) ------------- */
+  // ¿Este navegador puede capturar la pantalla? getDisplayMedia existe en
+  // computadora y Android; en iPhone/iPad (Safari) NO existe, así que el botón
+  // ni aparece. (En la app nativa de tienda sí se podrá, vía ReplayKit.)
+  function pantallaSoportada(nav) {
+    var n = nav || (typeof navigator !== 'undefined' ? navigator : null);
+    return !!(n && n.mediaDevices && typeof n.mediaDevices.getDisplayMedia === 'function');
+  }
+  // Mapa idParticipante -> 'pantalla' cuando está compartiendo. Nunca muta.
+  function registrarPantalla(mapa, id, activa) {
+    var nuevo = {};
+    Object.keys(mapa || {}).forEach(function (k) { nuevo[k] = mapa[k]; });
+    if (activa) nuevo[id] = 'pantalla';
+    else delete nuevo[id];
+    return nuevo;
+  }
+  function tienePantalla(mapa, id) {
+    return !!(mapa && mapa[id] === 'pantalla');
+  }
+  function participantesConPantalla(mapa) {
+    return Object.keys(mapa || {}).filter(function (id) { return mapa[id] === 'pantalla'; });
+  }
+
   /* ------------- CHAT: EMOJIS Y REACCIONES (puro, probado en Node) ------------- */
   // Las 5 reacciones que se pueden poner a un mensaje (fila rápida).
   var EMOJIS_REACCION_MENSAJE = ['😂', '❤️', '👍', '🎉', '😮'];
@@ -199,10 +222,22 @@
   // Un «emoji» para contar = pictograma (con su tono de piel y su ️),
   // secuencias unidas con ZWJ (👨‍👩‍👧 cuenta 1), banderas (pareja de
   // indicadores regionales) y teclas numéricas (1️⃣).
-  var RE_EMOJI = /(\p{Extended_Pictographic}[\u{1F3FB}-\u{1F3FF}]?[\uFE0F\u20E3]?(?:\u200D\p{Extended_Pictographic}[\u{1F3FB}-\u{1F3FF}]?[\uFE0F\u20E3]?)*|[\u{1F1E6}-\u{1F1FF}]{2}|[0-9#*]\uFE0F?\u20E3)/gu;
+  // SAFARI: la regex se construye con new RegExp dentro de try/catch. Como
+  // literal, \p{…} es un SyntaxError en Safari < 11.1 y tumbaría TODO fun.js
+  // (y con él la app entera). Si falta \p{}, se cae a rangos por pares
+  // subrogados, que cubren la inmensa mayoría de los emojis.
+  var RE_EMOJI = null;
+  try {
+    RE_EMOJI = new RegExp('(\\p{Extended_Pictographic}[\\u{1F3FB}-\\u{1F3FF}]?[\\uFE0F\\u20E3]?(?:\\u200D\\p{Extended_Pictographic}[\\u{1F3FB}-\\u{1F3FF}]?[\\uFE0F\\u20E3]?)*|[\\u{1F1E6}-\\u{1F1FF}]{2}|[0-9#*]\\uFE0F?\\u20E3)', 'gu');
+  } catch (eSinP) {
+    try {
+      RE_EMOJI = new RegExp('([\\uD83C-\\uD83E][\\uDC00-\\uDFFF](?:\\u200D[\\uD83C-\\uD83E][\\uDC00-\\uDFFF])?|[\\u2600-\\u27BF][\\uFE0F\\u20E3]?|[0-9#*]\\uFE0F?\\u20E3)', 'g');
+    } catch (eSinU) { RE_EMOJI = null; }
+  }
 
   function analizarEmojis(texto) {
     var t = String(texto == null ? '' : texto);
+    if (!RE_EMOJI) return { emojis: [], resto: t.replace(/\s+/g, '') };
     var emojis = t.match(RE_EMOJI) || [];
     var resto = t.replace(RE_EMOJI, '').replace(/\s+/g, '');
     return { emojis: emojis, resto: resto };
@@ -297,7 +332,11 @@
     MELODIAS: MELODIAS,
     registrarVideo: registrarVideo,
     tieneVideo: tieneVideo,
-    participantesConVideo: participantesConVideo
+    participantesConVideo: participantesConVideo,
+    pantallaSoportada: pantallaSoportada,
+    registrarPantalla: registrarPantalla,
+    tienePantalla: tienePantalla,
+    participantesConPantalla: participantesConPantalla
   };
 
   global.Fun = API;
