@@ -235,6 +235,81 @@ lista y crearlo de nuevo.
   la partida nueva quedó jugable), y la Memoria Bíblica repitió con su
   mazo. Caché del SW: `nuestro-rincon-v3-4-2`. Sin SQL.
 
+## Versión 3.4.3 (Orden tapado, Simón que escucha, llamadas cómodas y sonidos) — construida, SIN desplegar
+
+Cinco reportes del dueño jugando en vivo (capturas de su iPhone de la
+noche del 2026-10-31), diagnosticados antes de tocar:
+
+- **1 · «Recuerda el Orden» ya no se puede copiar.** La fuga real no
+  era la fila de arriba (que mostraba el avance propio): eran los
+  BOTONES de respuesta, que salían impresos en el orden exacto de la
+  fila. Ahora, en la fase de responder, la fila objetivo se pinta
+  TAPADA (❓ por posición) y los botones salen MEZCLADOS (mezcla
+  Fisher-Yates una sola vez por ronda, estable entre repintados y
+  jamás coincidente con la fila). La fila solo se ve abierta al
+  memorizar y al revelarse el resultado.
+- **2 · «Memoria · animales» — MEDIDO, no desbordaba (caso b).** Con
+  el código actual TODOS los mazos (16 cartas, 4×4) caben: a 390 px el
+  tablero mide 328 px (carta 75×75) y a 440 px, 378 px (carta 87×87),
+  sin desplazamiento horizontal ni boca abajo ni con la primera carta
+  volteada. La captura del dueño era de su sesión vieja sin recargar
+  (su llamada llevaba ~46 min: la sesión nació antes del despliegue de
+  la v3.4.1). Sin cambios de código en Memoria; queda guarda de
+  re-medición en la verificación.
+- **3 · «Simón Dice» no escuchaba los toques rápidos.** En Chromium
+  limpio todo funcionaba; con 600 ms de latencia (lo que tarda un
+  toque en ir y volver de la base) la secuencia CORRECTA tocada rápido
+  ELIMINABA al jugador: el manejador juzgaba cada toque contra la foto
+  vieja del último pintado. Ahora el toque se resuelve contra el
+  estado más fresco, se aplica optimista al instante (destello + nota
+  en el acto) y luego se guarda; y la reproducción de la secuencia
+  tiene un temporizador de seguridad que siempre suelta los paneles.
+- **4 · Llamadas cómodas.** (a) **Cámara grande:** tocar un recuadro
+  (remoto o el propio, también la pantalla compartida) lo pone en
+  grande; tocarlo de nuevo u otro, vuelve a la rejilla — sin cortar la
+  llamada. (b) **Micrófono independiente:** apagar la cámara ahora es
+  solo `enabled = false` en la pista de video — nada de detenerla,
+  quitarla ni renegociar (ese ciclo era el que dejaba la voz tocada
+  en los teléfonos); reencender reutiliza la MISMA pista. La pista de
+  video solo se detiene al colgar. (c) **Botón «📞 Colgar»** rojo,
+  grande y siempre visible — y la causa raíz de que «no hubiera botón
+  de colgar»: en pantallas de ≤680 px la barra de voz iba forzada a
+  una sola fila sin envolver, y con 5–6 controles el Colgar quedaba
+  FUERA de la pantalla (medido: x=497–603 en un viewport de 390). La
+  barra ahora envuelve en filas, con botones compactos, y la franja
+  de videos subió (bottom:308px en celular) para que la barra no la
+  tape ni robe los toques de los recuadros; con escenario, la franja
+  toma 94vw para que lo «grande» se note grande.
+- **5 · Sonidos al interactuar y al ganar.** Motor WebAudio
+  sintetizado (sin archivos): melodías nuevas «toque» (suave, 740 Hz)
+  y «cierre». Un manejador global en el camino compartido suena el
+  toque en botones y recuadros que no tengan sonido propio, con freno
+  anti-doble (si el juego ya sonó hace <150 ms, el toque se calla).
+  Al terminar una partida —detectado en el mismo pintado compartido
+  de la v3.4.2— suena la melodía de VICTORIA si gané yo y el cierre
+  suave si ganó otro, una sola vez por partida. El interruptor 🔊/🔇
+  del encabezado (ya existía) se recuerda en el aparato y empieza
+  encendido; el contexto de audio nace con la primera interacción y
+  los efectos son locales: no tocan el audio de la llamada.
+- **Batería automática: 158/158** (nueva sección v3.4.3).
+  Verificación en navegador real a 390×844 con stub fiel (arnés en
+  `~/workspace/nr-343-harness/`): Orden 9/9 (fila tapada sin ningún
+  emoji de la secuencia en el DOM, botones mezclados y estables,
+  respuesta completa), Simón 3/3 con latencia inyectada de 600 ms
+  (la secuencia correcta rápida SÍ cuenta; el error sigue
+  eliminando), Memoria 2/2 (medidas arriba), «Jugar otra vez» 1/1,
+  Sonidos 11/11 (toque puro, freno anti-doble, victoria/cierre una
+  vez, interruptor que apaga todo y se recuerda tras recargar) y
+  Llamada 14/14 (tarjeta entrante, geometría completa de la barra,
+  cámara apagada con el micrófono vivo, escenario ida y vuelta, y
+  COLGAR con interfaz en reposo, untrack y pistas detenidas).
+  Nota honesta: el plano de medios entre dos pares WebRTC no conecta
+  dentro de la red del arnés (UDP sin retorno); la señalización
+  oferta/respuesta/hielo quedó probada sin rechazos y el recuadro
+  remoto se verificó como avatar — el video remoto es camino
+  preexistente (v2) que la familia ya usa. Caché del SW:
+  `nuestro-rincon-v3-4-3`. Sin SQL.
+
 ## Archivos
 
 ```
