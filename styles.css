@@ -82,17 +82,37 @@ table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius
 .partida-item{display:flex; align-items:center; gap:12px; background:#fff8f1; border:2px solid var(--borde);
   border-radius:14px; padding:12px 14px; margin-bottom:10px; flex-wrap:wrap}
 .partida-item .crece{flex:1; font-weight:700}
-.tablero-gato{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:420px; margin:14px auto}
+.tablero-gato{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; max-width:420px; margin:14px auto}
 .casilla-gato{aspect-ratio:1; font-size:3rem; font-weight:900; background:#fff; border:3px solid var(--borde);
-  border-radius:18px; min-height:96px; display:flex; align-items:center; justify-content:center}
+  border-radius:18px; min-height:96px; min-width:0; display:flex; align-items:center; justify-content:center}
 .casilla-gato.x{color:var(--coral)} .casilla-gato.o{color:var(--azul)}
 .casilla-gato.ganadora{background:#e7fff6; border-color:var(--verde); animation:pulso 1s infinite}
-.tablero-memoria{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; max-width:560px; margin:14px auto}
-@media (min-width:820px){ .tablero-memoria{grid-template-columns:repeat(6,1fr)} }
-.carta-memoria{aspect-ratio:1; font-size:2.2rem; border-radius:16px; background:linear-gradient(135deg,var(--cielo),var(--azul));
-  color:#fff; min-height:70px; display:flex; align-items:center; justify-content:center; transition:transform .25s}
-.carta-memoria.volteada{background:#fff; border:3px solid var(--sol); transform:rotateY(360deg)}
-.carta-memoria.encontrada{background:#e7fff6; border:3px solid var(--verde)}
+/* ===== v3.4.1 · TABLEROS QUE CABEN EN EL CELULAR =====
+   Bug (captura del dueño, 2026-10-31 22:02): en Memoria Bíblica las
+   cartas salían enormes, la rejilla se salía por la derecha y el dibujo
+   revelado se veía diminuto y descentrado. CAUSA: las pistas `1fr` de
+   una rejilla son `minmax(auto,1fr)` — no pueden bajar del contenido
+   mínimo de sus celdas — y las celdas que son <button> heredan la caja
+   del botón base (padding 12px 22px y min-height 56px; con
+   aspect-ratio, ese mínimo de alto se transfiere al ancho). En un
+   celular de 390px la parte de cada pista (≈74px en Memoria, ≈29px en
+   la Sopa) quedaba POR DEBAJO de ese mínimo (≈115px en Memoria) y la
+   rejilla desbordaba la capa (medido: 670px de ancho en un hueco de
+   328px). En pantallas anchas el mínimo sí cabía y el fallo se
+   escondía. ARREGLO EN LA CAUSA, para TODOS los tableros: pistas
+   `minmax(0,1fr)` (pueden encoger por debajo del contenido) y celdas
+   liberadas de la caja heredada (min-width:0 / min-height:0 /
+   padding:0 donde el botón base los imponía). Las columnas de Memoria
+   las manda el CONTEO de cartas (--cols-memoria desde renderMemoria;
+   los mazos de la casa tienen 16 cartas → 4×4), ya no el ancho de
+   pantalla: fuera la media query de 6 columnas. */
+.tablero-memoria{display:grid; grid-template-columns:repeat(var(--cols-memoria,4),minmax(0,1fr)); gap:10px; max-width:560px; margin:14px auto}
+.carta-memoria{aspect-ratio:1; font-size:clamp(1.4rem,9.5vw,3.2rem); border-radius:16px; background:linear-gradient(135deg,var(--cielo),var(--azul));
+  color:#fff; min-width:0; min-height:0; padding:0; overflow:hidden; display:flex; align-items:center; justify-content:center; transition:transform .25s}
+.carta-memoria>span{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; line-height:1.1; max-width:100%}
+.carta-nombre{display:block; font-size:.32em; font-weight:700; line-height:1.15; text-align:center; overflow-wrap:break-word; max-width:100%}
+.carta-memoria.volteada{background:#fff; border:3px solid var(--sol); transform:rotateY(360deg); color:var(--tinta)}
+.carta-memoria.encontrada{background:#e7fff6; border:3px solid var(--verde); color:var(--tinta)}
 .opciones-trivia{display:grid; gap:10px; margin-top:12px}
 .opcion-trivia{background:#fff; border:3px solid var(--borde); text-align:left; border-radius:16px; color:var(--tinta)}
 .opcion-trivia.correcta{background:#e7fff6; border-color:var(--verde)}
@@ -205,10 +225,11 @@ table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius
 /* ---------- Biblioteca de juegos: tableros nuevos ---------- */
 .selector-mazo{display:flex; align-items:center; gap:8px; margin-top:10px; flex-wrap:wrap}
 .selector-mazo select{min-height:44px; border-radius:12px; border:2px solid var(--borde); padding:6px 10px; font-size:1rem; background:#fff}
-.tablero-conecta{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; max-width:440px; margin:10px auto; background:#fdf3e3; padding:10px; border-radius:16px; border:2px solid var(--borde)}
+.tablero-conecta{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; max-width:440px; margin:10px auto; background:#fdf3e3; padding:10px; border-radius:16px; border:2px solid var(--borde)}
 .celda-conecta{aspect-ratio:1; font-size:1.7rem; display:flex; align-items:center; justify-content:center; background:#fff; border-radius:50%}
-.conecta-cols{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; max-width:440px; margin:0 auto}
-.tablero-serpientes{display:grid; grid-template-columns:repeat(10,1fr); gap:3px; max-width:520px; margin:12px auto}
+.conecta-cols{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; max-width:440px; margin:0 auto}
+.conecta-cols button{min-width:0; padding:6px 0}
+.tablero-serpientes{display:grid; grid-template-columns:repeat(10,minmax(0,1fr)); gap:3px; max-width:520px; margin:12px auto}
 .celda-serp{aspect-ratio:1; background:#fff; border:1.5px solid var(--borde); border-radius:7px; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden}
 .celda-serp small{font-size:.52rem; color:var(--suave); line-height:1}
 .celda-serp span{font-size:.78rem; line-height:1.05}
@@ -219,7 +240,7 @@ table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius
 .lienzo-marco{background:#fff; border:3px solid var(--borde); border-radius:16px; overflow:hidden; max-width:640px; margin:10px auto}
 .lienzo-marco canvas{width:100%; height:auto; display:block; touch-action:none; background:#fffdf9}
 .palabra-secreta{color:var(--coral)}
-.tablero-parchis{display:grid; grid-template-columns:repeat(8,1fr); gap:4px; max-width:520px; margin:12px auto}
+.tablero-parchis{display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:4px; max-width:520px; margin:12px auto}
 .celda-parchis{aspect-ratio:1; background:#fff; border:1.5px solid var(--borde); border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden}
 .celda-parchis small{font-size:.55rem; color:var(--suave); line-height:1}
 .celda-parchis span{font-size:.85rem; line-height:1.05}
@@ -230,12 +251,12 @@ table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius
 .mano-domino{display:flex; flex-wrap:wrap; gap:8px}
 .ficha-domino-btn{background:#fff; border:2.5px solid #cbb59a; border-radius:10px; padding:10px 12px; font-weight:900; font-size:1.05rem; min-height:48px; cursor:pointer}
 .ficha-domino-btn.elegida{border-color:var(--coral); background:#ffe9e4; transform:scale(1.06)}
-.tablero-naval{display:grid; grid-template-columns:repeat(8,1fr); gap:3px; max-width:400px; margin:8px auto}
-.celda-naval{aspect-ratio:1; background:#eaf6ff; border:1.5px solid #bcd9f5; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:1.05rem; padding:0}
+.tablero-naval{display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:3px; max-width:400px; margin:8px auto}
+.celda-naval{aspect-ratio:1; background:#eaf6ff; border:1.5px solid #bcd9f5; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:1.05rem; padding:0; min-width:0; min-height:0}
 button.celda-naval.disparo{cursor:pointer; background:#fff}
 button.celda-naval.disparo:disabled{cursor:default; opacity:1}
-.tablero-sopa{display:grid; grid-template-columns:repeat(10,1fr); gap:4px; max-width:440px; margin:12px auto}
-.celda-sopa{aspect-ratio:1; font-size:1.15rem; font-weight:900; background:#fff; border:2px solid var(--borde); border-radius:9px; padding:0; cursor:pointer}
+.tablero-sopa{display:grid; grid-template-columns:repeat(10,minmax(0,1fr)); gap:4px; max-width:440px; margin:12px auto}
+.celda-sopa{aspect-ratio:1; font-size:1.15rem; font-weight:900; background:#fff; border:2px solid var(--borde); border-radius:9px; padding:0; min-width:0; min-height:0; cursor:pointer}
 .celda-sopa.elegida{background:#ffe3ba; border-color:var(--sol); transform:scale(1.1)}
 .celda-sopa.encontrada{background:#e7fff6; border-color:var(--verde); color:#0a7a4d}
 .campo-basta{display:flex; align-items:center; gap:10px; margin:8px 0; font-weight:700}
@@ -243,8 +264,8 @@ button.celda-naval.disparo:disabled{cursor:default; opacity:1}
 .letra-basta{font-size:1.8rem; font-weight:900; color:var(--coral); background:#ffe9e4; border-radius:12px; padding:2px 14px}
 .tabla-basta{width:100%; border-collapse:collapse; margin-top:10px; font-size:.92rem}
 .tabla-basta th,.tabla-basta td{border:1.5px solid var(--borde); padding:7px; text-align:left; background:#fff}
-.tablero-simon{display:grid; grid-template-columns:1fr 1fr; gap:12px; max-width:340px; margin:14px auto}
-.boton-simon{aspect-ratio:1.35; font-size:2.2rem; border-radius:20px; border:3px solid rgba(0,0,0,.08); cursor:pointer; transition:transform .12s, filter .12s}
+.tablero-simon{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; max-width:340px; margin:14px auto}
+.boton-simon{aspect-ratio:1.35; font-size:2.2rem; border-radius:20px; border:3px solid rgba(0,0,0,.08); cursor:pointer; min-width:0; transition:transform .12s, filter .12s}
 .simon-rojo{background:#ffb3ab}.simon-verde{background:#b5e8c8}.simon-azul{background:#a8cdf5}.simon-amarillo{background:#ffe58a}
 .boton-simon.sonando{filter:brightness(1.5) saturate(1.4); transform:scale(1.07)}
 .operacion-grande{font-size:2.6rem; font-weight:900; text-align:center; margin:16px 0; color:var(--coral)}
@@ -308,19 +329,19 @@ button.celda-naval.disparo:disabled{cursor:default; opacity:1}
    dentro de la capa sobrepuesta — ver la sección v3.2 al final.) */
 .historia-img{width:100%; max-height:300px; object-fit:cover; border-radius:14px; margin:10px 0; display:block}
 .biblia-grupo{margin:14px 0 6px; font-size:1.05rem}
-.tablero-damas{display:grid; grid-template-columns:repeat(8,1fr); gap:2px; max-width:360px; margin:10px auto}
-.casilla-damas{aspect-ratio:1; border:none; border-radius:6px; font-size:1.25rem; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0}
+.tablero-damas{display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:2px; max-width:360px; margin:10px auto}
+.casilla-damas{aspect-ratio:1; border:none; border-radius:6px; font-size:1.25rem; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0; min-width:0; min-height:0}
 .casilla-damas.clara{background:#f3e2c7}.casilla-damas.oscura{background:#b07a45}
 .casilla-damas.sel{outline:3px solid #ffd23f; outline-offset:-3px}
-.mapa-tesoro{display:grid; grid-template-columns:repeat(6,1fr); gap:4px; max-width:330px; margin:10px auto}
-.casilla-tesoro{aspect-ratio:1; border:2px solid #e5d5bd; border-radius:10px; background:#fff8ec; font-size:1.15rem; cursor:pointer}
+.mapa-tesoro{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:4px; max-width:330px; margin:10px auto}
+.casilla-tesoro{aspect-ratio:1; border:2px solid #e5d5bd; border-radius:10px; background:#fff8ec; font-size:1.15rem; cursor:pointer; padding:0; min-width:0; min-height:0}
 .casilla-tesoro:disabled{cursor:default; opacity:.85}
-.carton-loteria{display:grid; grid-template-columns:repeat(4,1fr); gap:4px; max-width:300px; margin:8px auto}
+.carton-loteria{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; max-width:300px; margin:8px auto}
 .celda-loteria{aspect-ratio:1; border:2px solid #e5d5bd; border-radius:10px; background:#fff; font-size:1.5rem; display:flex; align-items:center; justify-content:center; position:relative}
 .celda-loteria.marcada{background:#ffe9a8}
 .celda-loteria.marcada::after{content:'🫘'; position:absolute; font-size:1rem; right:2px; bottom:0}
-.puzzle-deslizante{display:grid; grid-template-columns:repeat(3,1fr); gap:4px; max-width:270px; margin:10px auto}
-.pieza-puzzle{aspect-ratio:1; border:none; border-radius:12px; background:#ffe1b3; font-size:2rem; cursor:pointer}
+.puzzle-deslizante{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; max-width:270px; margin:10px auto}
+.pieza-puzzle{aspect-ratio:1; border:none; border-radius:12px; background:#ffe1b3; font-size:2rem; cursor:pointer; padding:0; min-width:0; min-height:0}
 .pieza-puzzle.vacia{background:transparent; cursor:default}
 .carta-guerra{font-size:2.6rem; text-align:center; padding:10px}
 .ordenable{display:flex; flex-direction:column; gap:6px; margin:10px 0}
