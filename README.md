@@ -161,6 +161,44 @@ de «Mamá» llega por broadcast y su quitar también; Netflix abre la capa
 con la regresiva 3→«¡Ya!» y el botón abre el enlace en ventana nueva;
 la ✖ cierra a mitad de cuenta).
 
+## Versión 3.4.1 (tableros que caben en el celular) — construida, SIN desplegar
+
+Corrección del bug que el dueño capturó en su iPhone (2026-10-31 22:02)
+jugando Memoria Bíblica: las cartas salían enormes, la rejilla se salía
+por la derecha y el dibujo revelado se veía diminuto y descentrado.
+
+**Causa (medida, no intuida):** las pistas `1fr` de una rejilla son
+`minmax(auto,1fr)` — no pueden bajar del contenido mínimo de sus
+celdas — y las celdas que son `<button>` heredan la caja del botón base
+(`padding:12px 22px`, `min-height:56px`; con `aspect-ratio` ese mínimo
+de alto se transfiere al ancho). A 390px la parte de cada pista
+(≈74px en Memoria) quedaba por debajo de ese mínimo (≈115px) y el
+tablero medía 670px dentro de un hueco de 328px. En pantallas anchas
+el mínimo sí cabía: por eso solo se veía en el celular. Sumaba un
+segundo fallo en la misma carta: `.carta-nombre` no tenía regla CSS y
+la cara volteada heredaba `color:#fff` (el nombre salía blanco sobre
+blanco, invisible).
+
+**Arreglo en la causa, en los 13 tableros de rejilla de la app:**
+pistas `minmax(0,1fr)` y celdas-botón liberadas de la caja heredada
+(`min-width:0`, `min-height:0`, `padding:0`). En Memoria, además: las
+columnas las manda el conteo de cartas (`--cols-memoria` desde
+`renderMemoria`; los mazos de la casa tienen 16 cartas → 4×4), el
+símbolo se dimensiona relativo al ancho (`clamp()` con `vw`: ≈50% de
+la carta en el celular), el contenido de la cara va en columna
+centrada y el nombre ya es legible (tinta oscura sobre la cara clara).
+
+**Verificación (navegador real, 390×844, réplica fiel del DOM de cada
+renderizador dentro de la capa):** antes de la corrección desbordaban
+Memoria (670px), flechas de Conecta 4 (421), disparos de Batalla Naval
+(469), Sopa de Letras (596), Damas (462), Tesoro (446) y Gato (332);
+después, **ningún tablero desborda** (todos `scrollWidth ==
+clientWidth`, la capa sin scroll horizontal) y la carta volteada mide
+exactamente lo mismo que las demás (74.5×74.5px a 390px; 87×87 en el
+ancho del iPhone del dueño, 440px) con el centro del símbolo en el
+centro exacto de la carta. Batería automática: **143/143** (3 pruebas
+nuevas del patrón). Caché del SW: `nuestro-rincon-v3-4-1`. Sin SQL.
+
 ## Archivos
 
 ```
