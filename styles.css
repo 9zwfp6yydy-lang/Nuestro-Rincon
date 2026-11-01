@@ -396,3 +396,36 @@ body.con-capa{position:fixed; left:0; right:0; width:100%; overflow:hidden}
 .rejilla-biblica{display:grid; grid-template-columns:1fr 1fr; gap:8px}
 .rejilla-biblica .btn-principal{width:100%; min-height:52px; padding:10px 6px;
   font-size:.93rem; line-height:1.2}
+
+/* ================= V3.4 · JUEGOS POR CATEGORÍAS (barras) =================
+   Pedido del dueño: «los juegos, ponlos por categoría y deslizamiento en
+   sus categorías». Mismo idioma visual que las barras de historias de
+   Biblia (v3.3): UNA fila horizontal por categoría que se desliza DENTRO
+   de la pestaña; la página no crece con los 33 juegos. La tarjeta es
+   compacta: icono grande + nombre, y al tocarla se crea la partida y se
+   abre su capa (conducta v3.3). */
+.categoria-titulo{margin:18px 0 2px; font-size:1.05rem}
+.barra-juegos{display:flex; flex-wrap:nowrap; gap:10px; overflow-x:auto; overflow-y:hidden;
+  scroll-snap-type:x proximity; padding:6px 2px 12px; margin-bottom:2px;
+  -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain}
+.barra-juegos::-webkit-scrollbar{height:6px}
+.barra-juegos::-webkit-scrollbar-thumb{background:#f3c9a5; border-radius:3px}
+.juego-tarjeta{flex:0 0 auto; width:98px; scroll-snap-align:start; display:flex; flex-direction:column;
+  align-items:center; gap:6px; text-align:center; padding:12px 6px 10px; border-radius:16px; cursor:pointer;
+  background:#fff; border:2px solid #ffd9ae; box-shadow:0 2px 6px rgba(180,110,40,.10);
+  font:inherit; color:inherit}
+.juego-tarjeta:active{transform:scale(.96)}
+.juego-tarjeta-icono{font-size:2rem; line-height:1}
+.juego-tarjeta-nombre{font-weight:800; font-size:.82rem; line-height:1.2}
+.mazo-fila{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-weight:700; margin-top:6px}
+.mazo-fila select{width:auto; flex:1; min-width:170px}
+
+/* ================= V3.4 · MÁS APPS (enlaces de otras plataformas) =================
+   La tarjeta del reproductor incrustado (Spotify / Apple Music /
+   SoundCloud) y la capa «Abrir para todos» con su cuenta regresiva. */
+.apps-cabecera{margin:2px 0 8px}
+.apps-marco iframe{width:100%; border:0; border-radius:12px; display:block; background:#fff7ef}
+.lanzar-servicio{font-size:1.35rem; font-weight:900; margin:.2em 0}
+.lanzar-enlace{word-break:break-all; margin-bottom:6px}
+.regresiva{font-size:4.4rem; font-weight:900; line-height:1.15; color:var(--coral);
+  min-height:1.15em; margin:6px 0 12px}
