@@ -134,6 +134,25 @@
     $('#btn-sonido').textContent = silencio ? '🔇' : '🔊';
   });
 
+  /* v3.4.3 · SONIDO DE TOQUE EN EL CAMINO COMPARTIDO: cada toque en un
+     botón o pieza de la app suena con un «toque» suave (fun.js), sin
+     cablear juego por juego. Un solo oyente delegado en document, en
+     fase de burbuja: corre DESPUÉS de los manejadores del propio
+     elemento, así que si el juego ya sonó con significado (acierto,
+     error, la nota de un color de Simón…) el toque genérico se calla
+     (Fun.huboSonidoReciente) y nunca hay dos sonidos por un toque.
+     El contexto de audio nace/se reanuda dentro de esta misma
+     interacción (tono() lo reanuda), como manda la política de los
+     navegadores; es reproducción local por WebAudio y jamás toca las
+     pistas de la llamada en curso. */
+  document.addEventListener('click', function (ev) {
+    var t = (ev.target && ev.target.closest) ? ev.target.closest('button, .mosaico-video') : null;
+    if (!t) return;
+    if (t.closest && t.closest('[data-sin-toque]')) return;
+    if (Fun.huboSonidoReciente(150)) return;
+    Fun.sonido('toque');
+  }, false);
+
   /* ------------------------- navegación por pestañas ------------------------- */
   function mostrarPestana(nombre) {
     $$('nav.pestanas button').forEach(function (b) {
@@ -932,6 +951,7 @@
   }
   function cerrarJuegoVista() {
     partidaActualId = null;
+    if (typeof soltarSimon === 'function') soltarSimon(); // v3.4.3: ninguna reproducción queda colgada al salir
     var zona = $('#zona-juego');
     if (zona) zona.innerHTML = '';
     var zonaOV = $('#zona-otra-vez'); // v3.4.2: el «otra vez» se apaga con la vista
@@ -1191,6 +1211,47 @@
     // v3.4.2: el botón «🔁 Jugar otra vez» se decide AQUÍ, en el camino
     // compartido de pintado — ningún juego se lo puede olvidar.
     pintarBotonOtraVez(p);
+    // v3.4.3: y AQUÍ MISMO suena el fin de la partida, una sola vez por
+    // partida y sesión: melodía de VICTORIA si gané yo; el «cierre»
+    // suave y distinto si ganó otro (o nadie). Va coordinado con la
+    // celebración visual (pantallaGanador/confeti) que cada juego
+    // dispara en su propio render: el sonido acompaña a esa misma
+    // pantalla, no la sustituye.
+    sonarFinDePartida(p);
+  }
+
+  /* ----- v3.4.3: sonido de fin de partida (camino compartido) ----- */
+  var finSonado = {}; // partidaId -> true (ya sonó su fin en esta sesión)
+  function ganadorDePartida(p) {
+    var e = (p && p.estado) || {};
+    if (e.ganador) {
+      // El ganador puede venir como id de jugador o como marca ('X'/'O'
+      // en el gato: la marca mapea a la posición en jugadores).
+      if (e.jugadores && e.jugadores.indexOf(e.ganador) !== -1) return e.ganador;
+      if (e.ganador === 'X' && e.jugadores) return e.jugadores[0] || null;
+      if (e.ganador === 'O' && e.jugadores) return e.jugadores[1] || null;
+      return null;
+    }
+    // Ahorcado en grupo: «ganado» = la palabra se salvó entre todos.
+    if (e.ganado === true && e.jugadores && e.jugadores.indexOf(yo.id) !== -1) return yo.id;
+    if (e.puntajes) {
+      // Sin ganador declarado manda el marcador: el mayor puntaje; en
+      // empate arriba, si estoy entre los empatados cuenta como mío.
+      var mejor = null, mejorPts = -Infinity, empateConmigo = false;
+      Object.keys(e.puntajes).forEach(function (id) {
+        var pts = e.puntajes[id] || 0;
+        if (pts > mejorPts) { mejorPts = pts; mejor = id; empateConmigo = (id === yo.id); }
+        else if (pts === mejorPts && id === yo.id) empateConmigo = true;
+      });
+      if (mejor !== null && mejorPts > 0) return empateConmigo ? yo.id : mejor;
+    }
+    return null;
+  }
+  function sonarFinDePartida(p) {
+    if (!p || !p.id || finSonado[p.id]) return;
+    if (!partidaTerminada(p)) return;
+    finSonado[p.id] = true;
+    Fun.sonido(ganadorDePartida(p) === yo.id ? 'victoria' : 'cierre');
   }
 
   /* ----- v3.4.2: «🔁 Jugar otra vez» al terminar, sin salir de la capa -----
@@ -2198,11 +2259,22 @@
   }
 
   /* ----- Simón Dice ----- */
-  var simonReproduciendo = false;
+  // v3.4.3: la reproducción se guarda por PARTIDA y con temporizador de
+  // seguridad. Antes era una bandera pelada que solo se soltaba en el
+  // último paso programado: si ese paso no llegaba (página congelada
+  // por el sistema en plena llamada, un error en el paso), los paneles
+  // quedaban sordos PARA SIEMPRE y sin dar ninguna señal.
+  var simonReproduciendo = null; // partidaId cuya secuencia está sonando
+  var simonSeguridad = null;     // temporizador que SIEMPRE la suelta
+  function soltarSimon() {
+    simonReproduciendo = null;
+    if (simonSeguridad) { clearTimeout(simonSeguridad); simonSeguridad = null; }
+  }
 
   function renderSimon(p) {
     var e = p.estado;
     var zona = $('#zona-juego');
+    if (simonReproduciendo && simonReproduciendo !== p.id) soltarSimon();
     var miIdx = e.jugadores.indexOf(yo.id);
     var esMiTurno = !e.terminado && miIdx === e.turno && e.vivos[yo.id];
     avisoTurno(p, esMiTurno);
@@ -2225,21 +2297,52 @@
     var escuchar = $('#simon-escuchar');
     if (escuchar) escuchar.addEventListener('click', function () {
       if (simonReproduciendo) return;
-      simonReproduciendo = true;
+      simonReproduciendo = p.id;
+      // Red de seguridad: la reproducción suelta los paneles al
+      // cumplirse el tiempo de la secuencia + un margen, pase lo que
+      // pase con los pasos individuales.
+      if (simonSeguridad) clearTimeout(simonSeguridad);
+      simonSeguridad = setTimeout(soltarSimon, e.secuencia.length * 480 + 700);
       e.secuencia.forEach(function (color, i) {
         setTimeout(function () {
-          var pad = document.querySelector('[data-simon="' + color + '"]');
-          if (pad) { pad.classList.add('sonando'); setTimeout(function () { pad.classList.remove('sonando'); }, 320); }
-          Fun.nota(G.NOTAS_SIMON[color], 0.3, 0);
-          if (i === e.secuencia.length - 1) simonReproduciendo = false;
+          try {
+            var pad = document.querySelector('#zona-juego [data-simon="' + color + '"]');
+            if (pad) { pad.classList.add('sonando'); setTimeout(function () { pad.classList.remove('sonando'); }, 320); }
+            Fun.nota(G.NOTAS_SIMON[color], 0.3, 0);
+          } catch (errP) { /* un paso sordo no puede atrapar la partida */ }
+          if (i === e.secuencia.length - 1) soltarSimon();
         }, i * 480);
       });
     });
     $$('#zona-juego [data-simon]').forEach(function (b) {
       b.addEventListener('click', function () {
-        if (!esMiTurno || simonReproduciendo) { if (!esMiTurno) Fun.sonido('error'); return; }
+        /* v3.4.3 · LA CAUSA DEL «NO PODEMOS TOCAR LOS COLORES»:
+           la jugada se aplicaba sobre el estado `e` DEL ÚLTIMO PINTADO.
+           Cada toque tarda un viaje entero en volver (UPDATE + SELECT
+           de todas las partidas), y Simón se juega a toques rápidos:
+           el segundo toque se juzgaba contra el progreso VIEJO — la
+           nota correcta se comparaba con secuencia[0] y el jugador
+           quedaba ELIMINADO por «error» (pasó en vivo: «se equivocó
+           de color y quedó fuera» sin equivocarse), o el turno ya
+           había avanzado y exigirTurno lanzaba y el toque se perdía
+           en silencio. Ahora la jugada se aplica sobre el estado MÁS
+           FRESCO conocido y se pinta AL INSTANTE (optimista): los
+           toques encadenan bien aunque la red vaya lenta, y
+           guardarEstado confirma detrás hasta converger. */
+        var fresca = partidasPorId[p.id] || p;
+        var ef = fresca.estado || e;
+        var miIdxF = ef.jugadores.indexOf(yo.id);
+        var miTurnoF = !ef.terminado && miIdxF !== -1 && miIdxF === ef.turno && !!ef.vivos[yo.id];
+        if (!miTurnoF || simonReproduciendo) { if (!miTurnoF) Fun.sonido('error'); return; }
+        b.classList.add('sonando'); // destello inmediato: el toque SÍ entró
+        setTimeout(function () { b.classList.remove('sonando'); }, 180);
         Fun.nota(G.NOTAS_SIMON[b.dataset.simon], 0.25, 0);
-        try { guardarConPuntos(p, e, G.presionarSimon(e, miIdx, b.dataset.simon)); }
+        try {
+          var nuevo = G.presionarSimon(ef, miIdxF, b.dataset.simon);
+          partidasPorId[p.id] = Object.assign({}, fresca, { estado: nuevo });
+          renderJuego(partidasPorId[p.id]);
+          guardarConPuntos(fresca, ef, nuevo);
+        }
         catch (err) { Fun.sonido('error'); }
       });
     });
@@ -2493,6 +2596,29 @@
 
   /* ----- Recuerda el Orden ----- */
   var ordenLocal = {}; // partidaId:ronda -> emojis que voy tocando
+  var ordenBotonesLocal = {}; // partidaId:ronda -> orden MEZCLADO de los botones
+
+  // v3.4.3: los botones de respuesta se mezclan UNA vez por ronda y ese
+  // orden queda fijo mientras respondo (cada toque repinta la pantalla:
+  // sin esta memoria los botones saltarían de sitio a cada toque). Se
+  // cuida además que el orden mezclado nunca coincida con la fila
+  // verdadera — antes los botones salían EN el orden de la fila y la
+  // respuesta se leía de izquierda a derecha sin memorizar nada.
+  function botonesOrdenDe(clave, fila) {
+    var guardado = ordenBotonesLocal[clave];
+    if (!guardado || guardado.length !== fila.length) {
+      guardado = fila.slice();
+      for (var i = guardado.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = guardado[i]; guardado[i] = guardado[j]; guardado[j] = t;
+      }
+      if (guardado.length > 1 && guardado.join('') === fila.join('')) {
+        var t2 = guardado[0]; guardado[0] = guardado[1]; guardado[1] = t2;
+      }
+      ordenBotonesLocal[clave] = guardado;
+    }
+    return guardado;
+  }
 
   function renderOrden(p) {
     var e = p.estado;
@@ -2509,12 +2635,19 @@
         e.fila.map(function (em) { return '<span>' + em + '</span>'; }).join('') + '</div>';
       if (p.creada_por === yo.id) html += '<button class="btn-suave" id="orden-voltear">🙈 ¡Voltear ya!</button>';
     } else {
+      // v3.4.3: en la fase de respuesta la fila objetivo va TAPADA
+      // (❓): sus iconos solo se ven en la fase de memorizar («viendo»)
+      // y al revelarse el resultado de la ronda (cuando todos
+      // respondieron, abajo). Lo que se ve abierto aquí es MI avance
+      // (lo que yo voy tocando), en su propia fila.
       html += '<p>La fila era un misterio… <strong>repítela tocando en orden:</strong></p>' +
+        '<div class="rejilla-objetos fila-orden fila-tapada">' +
+        e.fila.map(function () { return '<span>❓</span>'; }).join('') + '</div>' +
         '<div class="rejilla-objetos fila-orden">' + (tocados.length
           ? tocados.map(function (em) { return '<span>' + em + '</span>'; }).join('')
           : '<span class="subtitulo">Tu fila va apareciendo aquí…</span>') + '</div>';
       if (!ya) {
-        html += '<div class="botones-juego">' + e.fila.map(function (em) {
+        html += '<div class="botones-juego">' + botonesOrdenDe(clave, e.fila).map(function (em) {
           return '<button class="btn-opcion-objeto" data-orden="' + em + '">' + em + '</button>';
         }).join('') + '</div>' +
           '<div class="botones-juego" style="margin-top:8px"><button class="btn-suave" id="orden-borrar">↩️ Empezar de nuevo</button>' +
@@ -3794,6 +3927,9 @@
   var flujosPantallaRemotos = {}; // id -> MediaStream de SU pantalla
   var pantallaPistaPorId = {};    // id -> track.id de su pantalla (llega por señalización)
   var videosPendientes = {};      // id -> [{track, stream}] por clasificar (¿cámara o pantalla?)
+  // v3.4.3: mosaico en ESCENARIO (grande): clave del recuadro elegido —
+  // el id del participante o 'pantalla:<id>'; null = rejilla normal.
+  var mosaicoGrande = null;
 
   function prepararCanalVoz() {
     if (canalVoz) return;
@@ -4012,9 +4148,11 @@
     apagarCamara(); // avisa y limpia el video antes de salir
     dejarDeCompartirPantalla(); // y la pantalla, si estaba compartiendo
     enVoz = false;
+    mosaicoGrande = null; // v3.4.3: el escenario se suelta al colgar
     pushAvisoEnviado = false; // la próxima llamada vuelve a avisar
     Object.keys(paresVoz).forEach(cerrarConexion);
     if (flujoLocal) { flujoLocal.getTracks().forEach(function (t) { t.stop(); }); flujoLocal = null; }
+    pistaVideoLocal = null; // v3.4.3: su pista ya se detuvo con el stream de arriba
     if (canalVoz) canalVoz.untrack();
     estadoVideo = {};
     estadoPantalla = {};
@@ -4045,6 +4183,19 @@
   function alternarCamara() {
     if (!enVoz || !flujoLocal) return;
     if (videoActivo) { apagarCamara(); return; }
+    // v3.4.3: si la pista de video ya existe (se apagó con enabled), se
+    // REENCIENDE en el acto — sin pedir la cámara otra vez, sin
+    // renegociar y sin tocar la pista de audio.
+    if (pistaVideoLocal && pistaVideoLocal.readyState === 'live') {
+      pistaVideoLocal.enabled = true;
+      videoActivo = true;
+      estadoVideo = Fun.registrarVideo(estadoVideo, yo.id, true);
+      avisarVideo(true);
+      actualizarBotonesVideo();
+      pintarMosaicos();
+      Fun.sonido('turno');
+      return;
+    }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       $('#voz-estado').textContent = 'Este navegador no deja usar la cámara aquí 📷 La voz sigue sin problema 🎙️';
       $('#voz-camara').classList.add('oculto');
@@ -4053,6 +4204,7 @@
     navigator.mediaDevices.getUserMedia({ video: { facingMode: caraCamara }, audio: false }).then(function (flujoVideo) {
       var pista = flujoVideo.getVideoTracks()[0];
       if (!pista) throw new Error('sin-camara');
+      pista.enabled = true;
       pistaVideoLocal = pista;
       flujoLocal.addTrack(pista);
       videoActivo = true;
@@ -4076,17 +4228,17 @@
 
   function apagarCamara() {
     if (!videoActivo) return;
-    if (pistaVideoLocal) {
-      Object.keys(paresVoz).forEach(function (id) {
-        var pc = paresVoz[id].pc;
-        pc.getSenders().forEach(function (s) {
-          if (s.track === pistaVideoLocal) { pc.removeTrack(s); renegociar(id); }
-        });
-      });
-      try { pistaVideoLocal.stop(); } catch (e) { /* ya parada */ }
-      if (flujoLocal) flujoLocal.removeTrack(pistaVideoLocal);
-      pistaVideoLocal = null;
-    }
+    /* v3.4.3 · MICRÓFONO INDEPENDIENTE DE LA CÁMARA (reporte del dueño
+       en plena llamada: «no podemos hablar si la cámara está
+       apagada»). La cámara se apaga SOLO con enabled=false sobre SU
+       pista: no se detiene (stop), no se quita de los pares
+       (removeTrack) y no se renegocia nada. El camino anterior hacía
+       las tres cosas y volvía a pedir la cámara al encenderla; en los
+       teléfonos ese ciclo dejaba la sesión de captura tocada y la voz
+       se perdía. La pista de AUDIO no se nombra en esta función: no
+       es asunto de la cámara. La pista de video solo se detiene de
+       verdad al COLGAR (salirDeLaVoz detiene todas las del stream). */
+    if (pistaVideoLocal) pistaVideoLocal.enabled = false;
     videoActivo = false;
     estadoVideo = Fun.registrarVideo(estadoVideo, yo.id, false);
     avisarVideo(false); // los demás vuelven a ver mi avatar
@@ -4106,6 +4258,7 @@
         return sender ? sender.replaceTrack(nueva) : Promise.resolve();
       });
       return Promise.all(cambios).then(function () {
+        nueva.enabled = true; // v3.4.3: el cambio es de video por video (replaceTrack); el audio ni se entera
         if (flujoLocal) { flujoLocal.removeTrack(vieja); flujoLocal.addTrack(nueva); }
         try { vieja.stop(); } catch (e) { /* ya parada */ }
         pistaVideoLocal = nueva;
@@ -4185,6 +4338,7 @@
     if (!enVoz) { franja.classList.add('oculto'); return; }
     franja.classList.remove('oculto');
     cont.innerHTML = '';
+    var mosaicoGrandeSigue = false; // ¿el recuadro en grande sigue presente?
     var ids = [yo.id].concat(Object.keys(paresVoz));
     // Incluye también a quienes están en presencia aunque su conexión siga naciendo.
     if (canalVoz) {
@@ -4195,7 +4349,9 @@
     ids.forEach(function (id) {
       var esLocal = id === yo.id;
       var caja = document.createElement('div');
-      caja.className = 'mosaico-video';
+      caja.className = 'mosaico-video' + (mosaicoGrande === id ? ' mosaico-grande' : '');
+      caja.dataset.clave = id; // v3.4.3: tocar el recuadro lo pone en grande
+      if (mosaicoGrande === id) mosaicoGrandeSigue = true;
       if (Fun.tieneVideo(estadoVideo, id) && (esLocal ? flujoLocal : flujosRemotos[id])) {
         var v = document.createElement('video');
         v.autoplay = true;
@@ -4221,7 +4377,9 @@
       var esLocalP = id === yo.id;
       var flujoP = esLocalP ? flujoPantallaLocal : flujosPantallaRemotos[id];
       var cajaP = document.createElement('div');
-      cajaP.className = 'mosaico-video mosaico-pantalla';
+      cajaP.className = 'mosaico-video mosaico-pantalla' + (mosaicoGrande === 'pantalla:' + id ? ' mosaico-grande' : '');
+      cajaP.dataset.clave = 'pantalla:' + id; // v3.4.3: también se puede poner en grande
+      if (mosaicoGrande === 'pantalla:' + id) mosaicoGrandeSigue = true;
       if (flujoP) {
         var vp = document.createElement('video');
         vp.autoplay = true;
@@ -4241,7 +4399,24 @@
       cajaP.appendChild(nomP);
       cont.appendChild(cajaP);
     });
+    // v3.4.3: si el recuadro en grande ya no está (esa persona salió o
+    // dejó de compartir), el escenario se suelta solo; si sigue, la
+    // franja entra en modo escenario (el grande manda, los demás en
+    // fila debajo). La llamada NO se toca: es solo cómo se pinta.
+    if (mosaicoGrande && !mosaicoGrandeSigue) mosaicoGrande = null;
+    cont.classList.toggle('con-escenario', !!mosaicoGrande);
   }
+
+  // v3.4.3 · CÁMARA GRANDE: tocar un recuadro lo pone en el escenario;
+  // tocarlo otra vez (u otro recuadro) vuelve a la rejilla o cambia el
+  // protagonista. Delegado: los mosaicos se repintan a cada cambio y
+  // el oyente sobrevive a todos los repintados.
+  $('#videos-mosaicos').addEventListener('click', function (ev) {
+    var caja = (ev.target && ev.target.closest) ? ev.target.closest('.mosaico-video') : null;
+    if (!caja || !caja.dataset.clave) return;
+    mosaicoGrande = (mosaicoGrande === caja.dataset.clave) ? null : caja.dataset.clave;
+    pintarMosaicos();
+  });
 
   $('#voz-unirse').addEventListener('click', unirseVoz);
   $('#voz-salir').addEventListener('click', salirDeLaVoz);
