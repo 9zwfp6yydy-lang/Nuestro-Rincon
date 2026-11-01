@@ -299,6 +299,14 @@
     <div class="capa-cuerpo">
       <div class="tarjeta tarjeta-en-capa" id="tarjeta-juego">
         <div id="zona-juego"></div>
+        <!-- v3.4.2: al terminar la partida, «🔁 Jugar otra vez» SIN salir
+             de la capa: se crea otra partida igual aquí mismo. La zona
+             nace oculta; la muestra el camino compartido de pintado
+             (pintarBotonOtraVez en app.js) solo con la partida en su FIN. -->
+        <div id="zona-otra-vez" class="oculto">
+          <button type="button" class="btn-principal" id="btn-otra-vez">🔁 Jugar otra vez</button>
+          <p class="subtitulo">Otra partida igual, aquí mismo, sin salir del juego.</p>
+        </div>
       </div>
     </div>
   </div>
