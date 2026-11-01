@@ -45,13 +45,30 @@
     turno:    [[440, 0, 0.09, 'triangle', 0.1]],
     error:    [[330, 0, 0.14, 'triangle', 0.1], [262, 0.13, 0.2, 'triangle', 0.1]],     // bajada simpática, sin castigo
     pop:      [[880, 0, 0.07, 'square', 0.05]],
-    mensaje:  [[659, 0, 0.1], [880, 0.08, 0.14]]
+    mensaje:  [[659, 0, 0.1], [880, 0.08, 0.14]],
+    // v3.4.3: el toque suave de CADA interacción (botones y piezas). Una
+    // sola nota senoidal, cortísima y bajita: acompaña, nunca estorba.
+    toque:    [[740, 0, 0.05, 'sine', 0.05]],
+    // v3.4.3: el cierre suave cuando la partida la ganó OTRO (o nadie):
+    // dos notas tranquilas que bajan, la mitad de volumen que la
+    // victoria — se distingue sin castigar.
+    cierre:   [[392, 0, 0.14, 'triangle', 0.08], [330, 0.13, 0.24, 'triangle', 0.08]]
   };
+
+  // v3.4.3: última vez que sonó algo. El manejador global de toques de
+  // app.js lo consulta para NO duplicar: si el propio juego ya sonó
+  // (acierto, error, la nota de un color de Simón…), el toque genérico
+  // se calla y manda el sonido con significado.
+  var ultimaEmision = 0;
+  function huboSonidoReciente(ms) {
+    return (Date.now() - ultimaEmision) < (ms || 150);
+  }
 
   function sonido(nombre) {
     if (silenciado) return;
     var notas = MELODIAS[nombre];
     if (!notas) return;
+    ultimaEmision = Date.now();
     notas.forEach(function (n) { tono(n[0], n[1], n[2], n[3], n[4]); });
   }
 
@@ -63,6 +80,7 @@
 
   // Nota suelta con retardo: la usa Simón Dice para sonar sus colores.
   function nota(freq, duracionSeg, retardoSeg) {
+    if (!silenciado) ultimaEmision = Date.now();
     tono(freq, retardoSeg || 0, duracionSeg || 0.28, 'triangle', 0.16);
   }
 
@@ -457,6 +475,7 @@
   var API = {
     sonido: sonido,
     nota: nota,
+    huboSonidoReciente: huboSonidoReciente,
     alternarSilencio: alternarSilencio,
     estaSilenciado: function () { return silenciado; },
     iniciarTonoLlamada: iniciarTonoLlamada,
