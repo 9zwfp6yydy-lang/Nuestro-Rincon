@@ -716,6 +716,58 @@
     Fun.sonido('pop');
   });
 
+  /* ==================== CAPAS SOBREPUESTAS (v3.2) ====================
+     Pedido del dueño: nada de que tocar algo «envíe abajo» — el juego, la
+     historia y el versículo se SOBREPOBEN sobre la pantalla. La capa es
+     fija y cubre todo; la página de debajo NO se mueve ni se desplaza
+     jamás en la apertura (cero desplazamiento programático de la ventana).
+     El fondo se bloquea fijando el <body> en su punto exacto (técnica
+     segura en iOS: overflow:hidden solo no basta en Safari) y al cerrar
+     la última capa se restaura ESE MISMO punto: la lista queda donde
+     estaba, sin saltos. Cada capa se cierra SOLO con su ✖ (nada de
+     cerrar tocando fuera: el niño no pierde la partida sin querer). */
+  var capasAbiertas = {};        // id de capa -> true
+  var fondoBloqueado = false;
+  var scrollFondoGuardado = 0;
+
+  function bloquearFondo() {
+    if (fondoBloqueado) return;  // ya guardado por la primera capa
+    fondoBloqueado = true;
+    try {
+      scrollFondoGuardado = window.pageYOffset ||
+        (document.documentElement ? document.documentElement.scrollTop : 0) || 0;
+      document.body.style.top = (-scrollFondoGuardado) + 'px';
+      document.body.classList.add('con-capa');
+    } catch (e) { /* si algo falla, la capa se abre igual */ }
+  }
+  function desbloquearFondo() {
+    if (!fondoBloqueado) return;
+    fondoBloqueado = false;
+    try {
+      document.body.classList.remove('con-capa');
+      document.body.style.top = '';
+      // Restaurar el punto EXACTO: esto es la ruta de CIERRE, no de apertura.
+      window.scrollTo(0, scrollFondoGuardado);
+    } catch (e) { /* nada: cerrar nunca se cae */ }
+  }
+  function abrirCapa(id) {
+    var capa = document.getElementById(id);
+    if (!capa) return;
+    if (!capasAbiertas[id]) { capasAbiertas[id] = true; bloquearFondo(); }
+    capa.classList.remove('oculto');
+    var cuerpo = capa.querySelector('.capa-cuerpo');
+    if (cuerpo) { try { cuerpo.scrollTop = 0; } catch (e) { /* la capa nace arriba (su scroll INTERNO) */ } }
+  }
+  function cerrarCapa(id) {
+    var capa = document.getElementById(id);
+    if (capa) capa.classList.add('oculto');
+    if (!capasAbiertas[id]) return;
+    delete capasAbiertas[id];
+    var quedaAlguna = false;
+    for (var k in capasAbiertas) { if (capasAbiertas[k]) { quedaAlguna = true; break; } }
+    if (!quedaAlguna) desbloquearFondo();
+  }
+
   /* ============================ JUEGOS EN LÍNEA ============================ */
   var partidasPorId = {};
   var partidaActualId = null;
@@ -796,75 +848,22 @@
     misterio: { icono: '🕵️', nombre: 'Personaje Misterioso', tope: 3 }
   };
 
-  // Llevar el tablero a la vista A PRUEBA DE iOS (v3.1): un solo
-  // scrollIntoView({behavior:'smooth'}) a los 80 ms NO bastaba — en el
-  // iPhone del dueño el tablero «seguía sin abrir» aunque la partida se
-  // creaba (en Chromium de escritorio sí se veía). Aquí se encadenan
-  // estrategias con caídas y se reintenta tras el pintado (0/120/380/750 ms,
-  // para sobrevivir a la animación de la sección y a los repintados de
-  // Realtime), y ningún paso puede lanzar un error que rompa la cadena:
-  //   1) window.scrollTo calculado (rect de la tarjeta − barra sticky),
-  //   2) scrollIntoView() sin opciones (el de mayor soporte),
-  //   3) asignar scrollTop al elemento que desplaza.
-  // Si la persona toca la pantalla o gira la rueda, los reintentos se
-  // cancelan: nadie le pelea el scroll al dueño de la pantalla. Y como
-  // última red, la tarjeta va PRIMERA en la sección Juegos (index.html).
-  var scrollJuegoGen = 0;
-  var scrollJuegoEscuchas = false;
-  function cancelarScrollJuego() { scrollJuegoGen++; }
-  function intentarLlevarJuegoALaVista(t) {
-    if (!t || t.classList.contains('oculto')) return;
-    try {
-      var barra = document.querySelector('header.barra');
-      var alto = barra ? barra.getBoundingClientRect().height : 0;
-      var flujo = window.pageYOffset;
-      if (typeof flujo !== 'number') flujo = document.documentElement ? document.documentElement.scrollTop : 0;
-      window.scrollTo(0, Fun.destinoScroll(t.getBoundingClientRect().top, flujo, alto));
-    } catch (e) { /* plan B abajo */ }
-    try {
-      var rect = t.getBoundingClientRect();
-      var barra2 = document.querySelector('header.barra');
-      var alto2 = barra2 ? barra2.getBoundingClientRect().height : 0;
-      if (rect.top < alto2 + 12 || rect.top > window.innerHeight) {
-        // El scroll calculado no dejó la tarjeta a la vista: plan B.
-        try { t.scrollIntoView(); } catch (e2) { /* plan C abajo */ }
-        var rect2 = t.getBoundingClientRect();
-        if (rect2.top < alto2 + 12 || rect2.top > window.innerHeight) {
-          var desplaza = document.scrollingElement || document.documentElement;
-          if (desplaza) desplaza.scrollTop = Fun.destinoScroll(rect2.top, window.pageYOffset || 0, alto2);
-        }
-      }
-    } catch (e3) { /* sin scroll la app sigue: la tarjeta va primera en su sección */ }
-  }
-  function llevarJuegoALaVista() {
-    var t = $('#tarjeta-juego');
-    if (!t) return;
-    if (!scrollJuegoEscuchas) {
-      scrollJuegoEscuchas = true;
-      try {
-        window.addEventListener('touchstart', cancelarScrollJuego, { passive: true });
-        window.addEventListener('wheel', cancelarScrollJuego, { passive: true });
-      } catch (e) { /* navegadores muy viejos: sin cancelación, no pasa nada */ }
-    }
-    var gen = ++scrollJuegoGen;
-    [0, 120, 380, 750].forEach(function (ms) {
-      setTimeout(function () {
-        if (gen !== scrollJuegoGen) return; // la persona ya se movió por su cuenta
-        intentarLlevarJuegoALaVista(t);
-      }, ms);
-    });
-  }
+  // v3.2: el tablero se abre en la CAPA sobrepuesta (#capa-juego), encima
+  // de todo y sin mover la página de debajo (ni cambio de pestaña, ni
+  // scroll de ningún tipo). El mecanismo de scroll de la v3/v3.1 quedó
+  // RETIRADO: la capa lo sustituye. Al cerrar con ✖ se vuelve exactamente
+  // a donde se estaba (ver cerrarCapa/desbloquearFondo).
   function abrirYMostrar(p) {
-    mostrarPestana('juegos');
-    renderJuego(p); // desoculta #tarjeta-juego (ahora va PRIMERO en la sección) y dibuja
-    llevarJuegoALaVista();
+    var titulo = $('#capa-juego-titulo');
+    if (titulo) titulo.textContent = iconoJuego(p.tipo) + ' ' + nombreJuego(p);
+    renderJuego(p); // dibuja el tablero dentro de la capa
+    abrirCapa('capa-juego');
   }
   function cerrarJuegoVista() {
     partidaActualId = null;
     var zona = $('#zona-juego');
     if (zona) zona.innerHTML = '';
-    var t = $('#tarjeta-juego');
-    if (t) t.classList.add('oculto');
+    cerrarCapa('capa-juego');
     Fun.sonido('pop');
   }
 
@@ -929,8 +928,7 @@
         if (res.error) { Fun.sonido('error'); return; }
         Fun.sonido('turno');
         partidasPorId[res.data.id] = res.data;
-        try { abrirYMostrar(res.data); } catch (eAbrir) { /* el tablero se intenta igual abajo */ }
-        llevarJuegoALaVista(); // el tablero se abre solo y a la vista, sin bajar a buscarlo
+        try { abrirYMostrar(res.data); } catch (eAbrir) { /* la capa se abre igual: ver abrirYMostrar */ }
         cargarPartidas();
       });
   }
@@ -992,15 +990,15 @@
     if (dentro) { abrirYMostrar(p); return; }
     var estado = JSON.parse(JSON.stringify(p.estado));
     estado.jugadores = (estado.jugadores || []).concat([yo.id]);
-    // Se muestra al instante (optimista) y queda a la vista; el guardado confirma la unión.
+    // Se muestra al instante (optimista) en la capa sobrepuesta; el guardado confirma la unión.
     try { abrirYMostrar({ id: p.id, tipo: p.tipo, estado: estado, creada_por: p.creada_por }); }
-    catch (eAbrir) { llevarJuegoALaVista(); }
+    catch (eAbrir) { abrirCapa('capa-juego'); }
     guardarEstado(p, estado).then(function () { Fun.sonido('turno'); });
   }
 
   function renderJuego(p) {
-    var tarjetaJ = $('#tarjeta-juego');
-    if (tarjetaJ) tarjetaJ.classList.remove('oculto');
+    // v3.2: pinta dentro de #zona-juego, que vive en la capa sobrepuesta;
+    // la visibilidad la manda la capa (abrirCapa/cerrarCapa), no la tarjeta.
     partidaActualId = p.id;
     try {
     switch (p.tipo) {
@@ -1038,10 +1036,10 @@
       default: $('#zona-juego').innerHTML = '<p>Este juego todavía no tiene pantalla. 🙈</p>';
     }
     } catch (eRender) {
-      // Que un juego se trabe al pintarse NUNCA deje la tarjeta vacía ni
-      // rompa la cadena de abrir: se pinta el aviso y el scroll sigue.
+      // Que un juego se trabe al pintarse NUNCA deje la capa vacía ni
+      // rompa la cadena de abrir: se pinta el aviso y la capa se abre igual.
       var zonaR = $('#zona-juego');
-      if (zonaR) zonaR.innerHTML = '<p>Uy, este juego se trabó al abrirse 🙈 Ciérralo con «✖ Cerrar juego» y vuelve a tocar «Abrir».</p>';
+      if (zonaR) zonaR.innerHTML = '<p>Uy, este juego se trabó al abrirse 🙈 Ciérralo con la ✖ de arriba y vuelve a tocar «Abrir».</p>';
     }
   }
 
@@ -2887,14 +2885,37 @@
       if (canalSala) canalSala.send({ type: 'broadcast', event: 'versiculo', payload: payload });
       Fun.sonido('mensaje');
     });
+    // v3.2: el versículo del día se toca y se lee en la capa sobrepuesta.
+    var tocable = $('#versiculo-dia-tocable');
+    if (tocable) {
+      var abrirElDelDia = function () { abrirVersiculoEnCapa(v.texto, v.cita, '📖 Versículo del día', ''); };
+      tocable.addEventListener('click', abrirElDelDia);
+      tocable.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrirElDelDia(); }
+      });
+    }
+    // Las ✖ grandes de las capas de Biblia (solo cierran con su botón).
+    var cerrarHistoria = $('#btn-cerrar-historia');
+    if (cerrarHistoria) cerrarHistoria.addEventListener('click', function () { cerrarCapa('capa-historia'); Fun.sonido('pop'); });
+    var cerrarVersiculo = $('#btn-cerrar-versiculo');
+    if (cerrarVersiculo) cerrarVersiculo.addEventListener('click', function () { cerrarCapa('capa-versiculo'); Fun.sonido('pop'); });
+  }
+
+  // v3.2: TODA lectura de versículo se hace en la capa sobrepuesta, en
+  // grande y encima de la pantalla (antes se pintaba dentro de la página).
+  function abrirVersiculoEnCapa(texto, cita, titulo, deTexto) {
+    var t = $('#capa-versiculo-titulo'); if (t) t.textContent = titulo || '📖 Versículo';
+    var x = $('#capa-versiculo-texto'); if (x) x.textContent = '«' + texto + '»';
+    var c = $('#capa-versiculo-cita'); if (c) c.textContent = '— ' + cita;
+    var d = $('#capa-versiculo-de'); if (d) d.textContent = deTexto || '';
+    abrirCapa('capa-versiculo');
   }
 
   function mostrarVersiculoCompartido(payload, propio) {
-    var caja = $('#biblia-versiculo-compartido');
-    if (!caja) return;
-    caja.classList.remove('oculto');
-    caja.innerHTML = (propio ? '📣 Compartiste con la familia' : '📣 ' + escapar(nombreDe(payload.de)) + ' compartió con todos') +
-      ': <em>«' + escapar(payload.texto) + '»</em> — <strong>' + escapar(payload.cita) + '</strong>';
+    abrirVersiculoEnCapa(payload.texto, payload.cita,
+      propio ? '📣 Compartiste este versículo' : '📣 Un versículo para todos',
+      propio ? 'Toda la familia lo está viendo ahora mismo 💛'
+             : 'Lo compartió ' + nombreDe(payload.de) + ' para toda la familia 💛');
     if (!propio) Fun.sonido('mensaje');
   }
 
@@ -2914,6 +2935,9 @@
       if (canalSala) canalSala.send({ type: 'broadcast', event: 'historia', payload: { idx: idx, de: yo.id } });
       Fun.sonido('mensaje');
     });
+    // v3.2: la historia se lee en la capa sobrepuesta (con su ilustración),
+    // tanto al tocarla como cuando llega por «Leer para todos».
+    abrirCapa('capa-historia');
     Fun.sonido('pop');
   }
 
