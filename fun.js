@@ -308,6 +308,17 @@
     return m + ':' + (r < 10 ? '0' : '') + r;
   }
 
+  /* ------------- SCROLL AL TABLERO (puro, probado en Node) ------------- */
+  // A dónde debe ir el scroll de la ventana para que la tarjeta del juego
+  // quede justo bajo la barra superior (que es sticky): posición actual +
+  // lo que le falta a la tarjeta para subir − alto de la barra − un respiro.
+  // Nunca negativo; lo que no sea número cuenta como 0.
+  function destinoScroll(rectTop, scrollActual, altoBarra) {
+    function num(x) { var n = Number(x); return isFinite(n) ? n : 0; }
+    var destino = num(scrollActual) + num(rectTop) - num(altoBarra) - 10;
+    return destino > 0 ? Math.round(destino) : 0;
+  }
+
   var API = {
     sonido: sonido,
     nota: nota,
@@ -336,7 +347,8 @@
     pantallaSoportada: pantallaSoportada,
     registrarPantalla: registrarPantalla,
     tienePantalla: tienePantalla,
-    participantesConPantalla: participantesConPantalla
+    participantesConPantalla: participantesConPantalla,
+    destinoScroll: destinoScroll
   };
 
   global.Fun = API;
