@@ -796,16 +796,63 @@
     misterio: { icono: '🕵️', nombre: 'Personaje Misterioso', tope: 3 }
   };
 
-  // Abre el tablero AL INSTANTE y lo deja A LA VISTA (arreglo «ningún juego abre»:
-  // antes el tablero se pintaba debajo de la lista, fuera de pantalla, y al crear
-  // una partida ni siquiera se abría).
+  // Llevar el tablero a la vista A PRUEBA DE iOS (v3.1): un solo
+  // scrollIntoView({behavior:'smooth'}) a los 80 ms NO bastaba — en el
+  // iPhone del dueño el tablero «seguía sin abrir» aunque la partida se
+  // creaba (en Chromium de escritorio sí se veía). Aquí se encadenan
+  // estrategias con caídas y se reintenta tras el pintado (0/120/380/750 ms,
+  // para sobrevivir a la animación de la sección y a los repintados de
+  // Realtime), y ningún paso puede lanzar un error que rompa la cadena:
+  //   1) window.scrollTo calculado (rect de la tarjeta − barra sticky),
+  //   2) scrollIntoView() sin opciones (el de mayor soporte),
+  //   3) asignar scrollTop al elemento que desplaza.
+  // Si la persona toca la pantalla o gira la rueda, los reintentos se
+  // cancelan: nadie le pelea el scroll al dueño de la pantalla. Y como
+  // última red, la tarjeta va PRIMERA en la sección Juegos (index.html).
+  var scrollJuegoGen = 0;
+  var scrollJuegoEscuchas = false;
+  function cancelarScrollJuego() { scrollJuegoGen++; }
+  function intentarLlevarJuegoALaVista(t) {
+    if (!t || t.classList.contains('oculto')) return;
+    try {
+      var barra = document.querySelector('header.barra');
+      var alto = barra ? barra.getBoundingClientRect().height : 0;
+      var flujo = window.pageYOffset;
+      if (typeof flujo !== 'number') flujo = document.documentElement ? document.documentElement.scrollTop : 0;
+      window.scrollTo(0, Fun.destinoScroll(t.getBoundingClientRect().top, flujo, alto));
+    } catch (e) { /* plan B abajo */ }
+    try {
+      var rect = t.getBoundingClientRect();
+      var barra2 = document.querySelector('header.barra');
+      var alto2 = barra2 ? barra2.getBoundingClientRect().height : 0;
+      if (rect.top < alto2 + 12 || rect.top > window.innerHeight) {
+        // El scroll calculado no dejó la tarjeta a la vista: plan B.
+        try { t.scrollIntoView(); } catch (e2) { /* plan C abajo */ }
+        var rect2 = t.getBoundingClientRect();
+        if (rect2.top < alto2 + 12 || rect2.top > window.innerHeight) {
+          var desplaza = document.scrollingElement || document.documentElement;
+          if (desplaza) desplaza.scrollTop = Fun.destinoScroll(rect2.top, window.pageYOffset || 0, alto2);
+        }
+      }
+    } catch (e3) { /* sin scroll la app sigue: la tarjeta va primera en su sección */ }
+  }
   function llevarJuegoALaVista() {
     var t = $('#tarjeta-juego');
     if (!t) return;
-    setTimeout(function () {
-      try { t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-      catch (err) { t.scrollIntoView(true); }
-    }, 80);
+    if (!scrollJuegoEscuchas) {
+      scrollJuegoEscuchas = true;
+      try {
+        window.addEventListener('touchstart', cancelarScrollJuego, { passive: true });
+        window.addEventListener('wheel', cancelarScrollJuego, { passive: true });
+      } catch (e) { /* navegadores muy viejos: sin cancelación, no pasa nada */ }
+    }
+    var gen = ++scrollJuegoGen;
+    [0, 120, 380, 750].forEach(function (ms) {
+      setTimeout(function () {
+        if (gen !== scrollJuegoGen) return; // la persona ya se movió por su cuenta
+        intentarLlevarJuegoALaVista(t);
+      }, ms);
+    });
   }
   function abrirYMostrar(p) {
     mostrarPestana('juegos');
@@ -882,7 +929,8 @@
         if (res.error) { Fun.sonido('error'); return; }
         Fun.sonido('turno');
         partidasPorId[res.data.id] = res.data;
-        abrirYMostrar(res.data); // el tablero se abre solo y a la vista, sin bajar a buscarlo
+        try { abrirYMostrar(res.data); } catch (eAbrir) { /* el tablero se intenta igual abajo */ }
+        llevarJuegoALaVista(); // el tablero se abre solo y a la vista, sin bajar a buscarlo
         cargarPartidas();
       });
   }
@@ -945,13 +993,16 @@
     var estado = JSON.parse(JSON.stringify(p.estado));
     estado.jugadores = (estado.jugadores || []).concat([yo.id]);
     // Se muestra al instante (optimista) y queda a la vista; el guardado confirma la unión.
-    abrirYMostrar({ id: p.id, tipo: p.tipo, estado: estado, creada_por: p.creada_por });
+    try { abrirYMostrar({ id: p.id, tipo: p.tipo, estado: estado, creada_por: p.creada_por }); }
+    catch (eAbrir) { llevarJuegoALaVista(); }
     guardarEstado(p, estado).then(function () { Fun.sonido('turno'); });
   }
 
   function renderJuego(p) {
-    $('#tarjeta-juego').classList.remove('oculto');
+    var tarjetaJ = $('#tarjeta-juego');
+    if (tarjetaJ) tarjetaJ.classList.remove('oculto');
     partidaActualId = p.id;
+    try {
     switch (p.tipo) {
       case 'gato': renderGato(p); break;
       case 'trivia': renderTrivia(p); break;
@@ -985,6 +1036,12 @@
       case 'ordenab': renderOrdena(p); break;
       case 'misterio': renderMisterio(p); break;
       default: $('#zona-juego').innerHTML = '<p>Este juego todavía no tiene pantalla. 🙈</p>';
+    }
+    } catch (eRender) {
+      // Que un juego se trabe al pintarse NUNCA deje la tarjeta vacía ni
+      // rompa la cadena de abrir: se pinta el aviso y el scroll sigue.
+      var zonaR = $('#zona-juego');
+      if (zonaR) zonaR.innerHTML = '<p>Uy, este juego se trabó al abrirse 🙈 Ciérralo con «✖ Cerrar juego» y vuelve a tocar «Abrir».</p>';
     }
   }
 
@@ -3128,9 +3185,42 @@
   // aquí: vive solo como secreto de la función.
   var pushAvisoEnviado = false; // el aviso sale UNA vez por sesión de llamada
 
+  var swRecargaHecha = false;
   function registrarServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.register('sw.js').catch(function () { /* sin SW la app funciona igual */ });
+    // (v3.1) Toma de control AGRESIVA: en el iPhone la app instalada podía
+    // quedarse con la versión vieja por días — la comprobación de sw.js se
+    // servía de la caché HTTP, nadie pedía «update» al reanudar la app y,
+    // aunque el SW nuevo tomaba el control, la página abierta seguía con el
+    // código viejo en memoria. Ahora: la comprobación salta la caché HTTP,
+    // se pide actualización al abrir y al volver a la app, y cuando el
+    // control cambia de manos la página se recarga UNA sola vez.
+    var habiaControlador = !!navigator.serviceWorker.controller;
+    try {
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (!habiaControlador || swRecargaHecha) return; // la 1ª instalación no recarga
+        try {
+          if (sessionStorage.getItem('nr_sw_recargado') === '1') return; // anti-bucle
+          sessionStorage.setItem('nr_sw_recargado', '1');
+        } catch (e) { /* sin sessionStorage manda la variable */ }
+        swRecargaHecha = true;
+        window.location.reload();
+      });
+    } catch (e) { /* sin eventos de SW: la app sigue igual */ }
+    var promesa = null;
+    try { promesa = navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }); }
+    catch (eReg) {
+      try { promesa = navigator.serviceWorker.register('sw.js'); } catch (eReg2) { promesa = null; }
+    }
+    if (!promesa || !promesa.then) return;
+    promesa.then(function (reg) {
+      function pedirActualizacion() { try { reg.update(); } catch (e) { /* ya se pedirá luego */ } }
+      pedirActualizacion();
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) pedirActualizacion();
+      });
+      window.addEventListener('pageshow', pedirActualizacion);
+    }).catch(function () { /* sin SW la app funciona igual */ });
   }
 
   function urlBase64ABytes(base64) {
