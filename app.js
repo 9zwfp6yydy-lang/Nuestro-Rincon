@@ -771,6 +771,7 @@
   /* ============================ JUEGOS EN LÍNEA ============================ */
   var partidasPorId = {};
   var partidaActualId = null;
+  var intencionRevisada = false; // v3.3: la intención de abrir tras crear se revisa una sola vez
   var celebraciones = {};
   var eraMiTurno = {};
   var resolviendoMemoria = {};
@@ -797,6 +798,10 @@
       (res.data || []).forEach(function (p) { partidasPorId[p.id] = p; });
       pintarListaPartidas(res.data || []);
       if (partidaActualId && partidasPorId[partidaActualId]) renderJuego(partidasPorId[partidaActualId]);
+      // v3.3: si una creación quedó a medias por una recarga de la página
+      // (la única del service worker al actualizarse), su intención de
+      // abrir se cumple ahora, con la lista ya cargada.
+      if (!intencionRevisada) { intencionRevisada = true; reabrirSiQuedoIntencion(); }
     });
   }
 
@@ -867,6 +872,52 @@
     Fun.sonido('pop');
   }
 
+  /* ----- v3.3: crear abre AL TOQUE (apertura optimista + red de seguridad) -----
+     Diagnóstico en vivo (v3.2): al tocar «❌⭕ Gato» la partida se creaba y
+     aparecía en «Partidas abiertas», pero la capa NO se abría sola: había
+     que tocar «Abrir». La apertura dependía por entero del viaje asíncrono
+     del insert (insert → select → abrir), y en vivo ese viaje se puede
+     cortar a mitad: la recarga única de la propia app cuando un service
+     worker nuevo toma el control (controllerchange → location.reload)
+     mata la página con el insert en vuelo — la fila queda creada, la
+     promesa jamás vuelve —; y si el RETURNING del insert diera error con
+     la fila ya creada, el camino de error también volvía sin abrir nada.
+     En local no se veía: el Supabase simulado no tiene service worker ni
+     Realtime de verdad y su insert siempre resuelve al instante.
+     La corrección tiene tres capas:
+     1) OPTIMISTA: la capa se abre en el mismo toque, con una partida
+        provisional (id «creando-…») cuyo tablero ya es el de verdad; la
+        fila devuelta solo CONFIRMA: adopta el id real y repinta con él.
+     2) INTENCIÓN: al tocar se anota la intención de abrir; si la página
+        muere antes de confirmar (la recarga del SW), al volver a cargar
+        la app encuentra la partida recién creada y la abre sola.
+     3) GUARDA: guardarEstado ignora las provisionales (aún no hay fila
+        que actualizar; los movimientos se guardan al adoptar la real). */
+  var INTENCION_ABRIR_KEY = 'nr_abrir_tras_crear';
+  function anotarIntencionAbrir(tipo) {
+    try { localStorage.setItem(INTENCION_ABRIR_KEY, JSON.stringify({ tipo: tipo, en: Date.now() })); } catch (e) { /* sin storage manda la apertura optimista */ }
+  }
+  function borrarIntencionAbrir() {
+    try { localStorage.removeItem(INTENCION_ABRIR_KEY); } catch (e) { /* nada */ }
+  }
+  function reabrirSiQuedoIntencion() {
+    var cruda = null;
+    try { cruda = localStorage.getItem(INTENCION_ABRIR_KEY); } catch (e) { return; }
+    if (!cruda) return;
+    borrarIntencionAbrir(); // se consume siempre: una sola oportunidad
+    var datos = null;
+    try { datos = JSON.parse(cruda); } catch (e) { return; }
+    if (!datos || !datos.tipo || !yo || (Date.now() - (datos.en || 0)) > 90000) return;
+    var mejor = null;
+    for (var id in partidasPorId) {
+      var p = partidasPorId[id];
+      if (!p || p.tipo !== datos.tipo || p.creada_por !== yo.id) continue;
+      if (p.creada_en && Math.abs(new Date(p.creada_en).getTime() - datos.en) > 120000) continue;
+      if (!mejor || (p.creada_en || '') >= (mejor.creada_en || '')) mejor = p;
+    }
+    if (mejor) abrirPartida(mejor, true);
+  }
+
   function crearPartida(tipo) {
     var estado, tipoReal = tipo;
     switch (tipo) {
@@ -923,17 +974,45 @@
       case 'misterio': estado = G.crearMisterio([yo.id]); break;
       default: return;
     }
+    // v3.3: la capa se abre AL TOQUE con la partida provisional; el insert
+    // viaja detrás y su fila solo confirma (ver la nota de diagnóstico).
+    var provisional = { id: 'creando-' + Date.now(), tipo: tipoReal, estado: estado, creada_por: yo.id, provisional: true };
+    partidasPorId[provisional.id] = provisional;
+    anotarIntencionAbrir(tipoReal);
+    try { abrirYMostrar(provisional); } catch (eAbrir) { abrirCapa('capa-juego'); }
+    Fun.sonido('turno');
     supa.from('partidas').insert({ tipo: tipoReal, estado: estado, creada_por: yo.id })
       .select().single().then(function (res) {
-        if (res.error) { Fun.sonido('error'); return; }
-        Fun.sonido('turno');
+        if (res.error || !res.data) {
+          // La confirmación falló: la capa ya abierta avisa sin cerrarse;
+          // si la fila sí se creó, estará en la lista para tocar «Abrir»
+          // (y la intención la reabrirá sola si la página se recarga).
+          Fun.sonido('error');
+          if (partidaActualId === provisional.id) {
+            var zonaE = $('#zona-juego');
+            if (zonaE) zonaE.innerHTML = '<p>Uy, la partida no se pudo confirmar 🙈 Revisa tu conexión y cierra con la ✖: si aparece en «Partidas abiertas», tócala con «Abrir».</p>';
+          }
+          return;
+        }
+        borrarIntencionAbrir();
+        delete partidasPorId[provisional.id];
         partidasPorId[res.data.id] = res.data;
-        try { abrirYMostrar(res.data); } catch (eAbrir) { /* la capa se abre igual: ver abrirYMostrar */ }
+        if (partidaActualId === provisional.id) {
+          // La capa sigue abierta con el provisional: se adopta la fila
+          // real y se repinta con ella (desde aquí todo guarda bien).
+          partidaActualId = res.data.id;
+          renderJuego(res.data);
+        }
         cargarPartidas();
       });
   }
 
   function guardarEstado(partida, nuevoEstado) {
+    if (!partida || !partida.id || String(partida.id).indexOf('creando-') === 0) {
+      // Partida provisional (creándose): aún no hay fila que actualizar;
+      // el estado real se adopta al confirmar y desde ahí todo guarda.
+      return Promise.resolve();
+    }
     return supa.from('partidas')
       .update({ estado: nuevoEstado, actualizada_en: new Date().toISOString() })
       .eq('id', partida.id)
@@ -2860,24 +2939,35 @@
     $('#biblia-versiculo-cita').textContent = '— ' + v.cita;
     var lista = $('#lista-biblia-historias');
     lista.innerHTML = '';
-    // v3: las 36 historias en orden bíblico, agrupadas por testamento.
+    // v3.3: las 36 historias ya NO se listan en vertical (esa lista larguísima
+    // enterraba los juegos bíblicos al fondo de la pestaña). Ahora cada
+    // testamento es una BARRA DE DESLIZAMIENTO INTERNO: una sola fila que se
+    // desliza de lado a lado (swipe) DENTRO de la pestaña, con altura fija y
+    // compacta. Cada historia es una tarjeta con su ilustración de portada
+    // (biblia-img/<slug>.jpg), su título y su cita corta; al tocarla se abre
+    // en la capa sobrepuesta de siempre (abrirHistoria, v3.2).
     [['antiguo', '📜 Antiguo Testamento'], ['nuevo', '🌟 Nuevo Testamento']].forEach(function (grupo) {
       var cab = document.createElement('h3');
       cab.className = 'biblia-grupo';
       cab.textContent = grupo[1];
       lista.appendChild(cab);
-      var fila = document.createElement('div');
-      fila.className = 'botones-juego';
+      var barra = document.createElement('div');
+      barra.className = 'barra-historias';
+      barra.setAttribute('data-barra', grupo[0]);
       G.HISTORIAS_BIBLICAS.forEach(function (h, i) {
         if (h.testamento !== grupo[0]) return;
         var b = document.createElement('button');
         b.type = 'button';
-        b.className = 'btn-suave';
-        b.textContent = h.emoji + ' ' + h.titulo;
+        b.className = 'historia-tarjeta';
+        b.setAttribute('data-historia', String(i));
+        b.innerHTML =
+          (h.slug ? '<img class="historia-portada" src="biblia-img/' + escapar(h.slug) + '.jpg" alt="" loading="lazy">' : '') +
+          '<span class="historia-tarjeta-titulo">' + h.emoji + ' ' + escapar(h.titulo) + '</span>' +
+          (h.cita ? '<span class="historia-tarjeta-cita">📖 ' + escapar(h.cita) + '</span>' : '');
         b.addEventListener('click', function () { abrirHistoria(i); });
-        fila.appendChild(b);
+        barra.appendChild(b);
       });
-      lista.appendChild(fila);
+      lista.appendChild(barra);
     });
     $('#btn-compartir-versiculo').addEventListener('click', function () {
       var payload = { texto: v.texto, cita: v.cita, de: yo.id };
