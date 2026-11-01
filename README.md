@@ -199,6 +199,42 @@ ancho del iPhone del dueño, 440px) con el centro del símbolo en el
 centro exacto de la carta. Batería automática: **143/143** (3 pruebas
 nuevas del patrón). Caché del SW: `nuestro-rincon-v3-4-1`. Sin SQL.
 
+## Versión 3.4.2 («🔁 Jugar otra vez» al terminar) — construida, SIN desplegar
+
+Pedido directo de la familia: al terminar una partida (la captura que
+lo motivó era un Personaje Misterioso ya revelado) no había manera de
+seguir jugando ahí mismo; tocaba cerrar la capa, buscar el juego en la
+lista y crearlo de nuevo.
+
+- **El botón vive en el camino compartido de pintado** (`renderJuego`),
+  no juego por juego: al final de cada pintado, si la partida está
+  terminada, aparece bajo el tablero un botón grande a todo el ancho,
+  **«🔁 Jugar otra vez»**, con su línea «Otra partida igual, aquí mismo,
+  sin salir del juego». Terminar una partida es `estado.terminado ===
+  true` o `estado.fase === 'final'` (la trivia solo marca la fase),
+  así que vale para los 33 juegos, incluidos tableros por turnos y
+  bíblicos.
+- **Al tocarlo se crea al instante otra partida del mismo tipo** con
+  el camino de creación de siempre (la capa nunca se cierra: la
+  apertura optimista de la v3.3 pasa a mostrar la partida nueva). Las
+  variantes se conservan: la Trivia Bíblica vuelve bíblica, la Memoria
+  Bíblica vuelve con el mazo de la Biblia y la Memoria con tema vuelve
+  con ese mismo tema.
+- **La partida terminada no se toca:** queda en «Partidas abiertas»
+  exactamente como quedó, con sus puntos ya aplicados una sola vez (la
+  bandera `puntosAplicados` sigue mandando). La nueva nace aparte, con
+  quien toca el botón como primer jugador, igual que al crearla desde
+  las categorías; si dos personas tocan «otra vez» a la vez, cada una
+  crea la suya, como pasaría creando desde la lista.
+- **Sin cambios en las reglas de los juegos ni en la base de datos.**
+  Batería automática: **149/149** (nueva sección v3.4.2: el detector de
+  fin probado contra los estados finales reales de gato, trivia,
+  memoria y misterio, y el mapa de variantes de los 33 tipos).
+  Verificación en navegador real a 390×844: Misterio, Memoria y Gato
+  terminados jugando y repetidos desde el botón (la capa no se cerró y
+  la partida nueva quedó jugable), y la Memoria Bíblica repitió con su
+  mazo. Caché del SW: `nuestro-rincon-v3-4-2`. Sin SQL.
+
 ## Archivos
 
 ```
