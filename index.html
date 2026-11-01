@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nuestro Rincón</title>
+<meta name="description" content="Nuestro Rincón: el rincón de la familia para jugar, ver videos, escuchar música y hablar, juntos a la distancia.">
+<meta name="theme-color" content="#ff8a5c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Aviso de configuración (visible solo si faltan las claves) -->
+<div id="vista-config" class="vista-centro oculto">
+  <div class="tarjeta-entrada">
+    <div class="logo-grande">🧰</div>
+    <h1 class="titulo-app">Nuestro Rincón</h1>
+    <p class="subtitulo">¡Casi listo! Falta conectar el rincón con su casita en internet.</p>
+    <div class="aviso">
+      <strong>Falta configurar:</strong> <span id="config-faltan"></span><br>
+      Quien armó la app debe rellenar <code>config.js</code> siguiendo los pasos del <code>README.md</code>.
+      Ningún dato se pierde: la app queda esperando aquí, tranquilita. 🙂
+    </div>
+  </div>
+</div>
+
+<!-- Entrada (login) -->
+<div id="vista-login" class="vista-centro oculto">
+  <div class="tarjeta-entrada">
+    <div class="logo-grande"><img src="icono-512.png" alt="Logo de Nuestro Rincón" style="width:112px;height:112px;border-radius:28px;box-shadow:0 8px 22px rgba(214,120,60,.25)"></div>
+    <h1 class="titulo-app">Nuestro Rincón</h1>
+    <p class="subtitulo">El rincón de la familia: jugar, ver, escuchar y hablar… ¡juntos aunque estemos lejos! 💛</p>
+    <form id="form-login">
+      <label>Correo
+        <input type="email" id="login-email" autocomplete="username" required placeholder="tu@correo.com">
+      </label>
+      <label>Contraseña
+        <input type="password" id="login-pass" autocomplete="current-password" required placeholder="••••••••">
+      </label>
+      <div id="login-error" class="aviso aviso-error oculto"></div>
+      <button type="submit" class="btn-principal">Entrar al rincón 🚪</button>
+    </form>
+    <p class="subtitulo" style="margin-top:14px">Solo entra la familia: no hay registro público. 🔒</p>
+  </div>
+</div>
+
+<!-- Primera vez: nombre y avatar divertido -->
+<div id="vista-perfil" class="vista-centro oculto">
+  <div class="tarjeta-entrada">
+    <div class="logo-grande">🎭</div>
+    <h1 class="titulo-app">¿Quién eres tú?</h1>
+    <p class="subtitulo">Elige tu nombre y tu avatar divertido. ¡Así te reconocemos en la Sala!</p>
+    <form id="form-perfil">
+      <label>Tu nombre
+        <input type="text" id="perfil-nombre" maxlength="30" required placeholder="Ej.: Papá, Mamá, Campeón…">
+      </label>
+      <div class="avatares-elegir" id="perfil-avatares"></div>
+      <button type="submit" class="btn-principal">¡Ese soy yo! 🎉</button>
+    </form>
+  </div>
+</div>
+
+<!-- La app -->
+<div id="vista-app" class="oculto">
+  <header class="barra">
+    <span class="titulo">🏡 Nuestro Rincón</span>
+    <div class="presencia" id="presencia"></div>
+    <button id="btn-sonido" class="btn-suave btn-chico" title="Silenciar / activar sonidos">🔊</button>
+    <button id="btn-salir" class="btn-suave btn-chico">Salir</button>
+  </header>
+
+  <nav class="pestanas">
+    <button data-pestana="sala" class="activa">🏠 Sala</button>
+    <button data-pestana="juegos">🎮 Juegos</button>
+    <button data-pestana="biblia">📖 Biblia</button>
+    <button data-pestana="cine">🎬 Ver y escuchar</button>
+    <button data-pestana="chat">💬 Chat</button>
+  </nav>
+
+  <main>
+    <!-- SALA -->
+    <section id="sec-sala" class="seccion">
+      <div class="dos-columnas">
+        <div class="tarjeta">
+          <h2>👋 ¿Quién anda por aquí?</h2>
+          <div id="lista-miembros"></div>
+          <p class="subtitulo" style="margin-top:10px">Cuando el puntito está verde, esa persona está en el rincón ahora mismo.</p>
+        </div>
+        <div class="tarjeta">
+          <h2>🏆 Tabla de campeones</h2>
+          <table class="campeones"><tbody id="tabla-campeones"></tbody></table>
+          <p class="subtitulo" style="margin-top:10px">Los puntos se suman jugando: trivia, memoria y gato. ¡A defender la corona! 👑</p>
+        </div>
+      </div>
+      <div class="tarjeta">
+        <h2>🎲 ¿A qué jugamos?</h2>
+        <p>Salta a los juegos, pon un video para todos o escríbele a la familia. Todo pasa aquí mismo, sin salir del rincón.</p>
+        <div class="botones-juego">
+          <button class="btn-principal" data-ir="juegos">🎮 Ir a los juegos</button>
+          <button class="btn-verde" data-ir="cine">🎬 Ver y escuchar juntos</button>
+          <button class="btn-suave" data-ir="chat">💬 Abrir el chat</button>
+        </div>
+      </div>
+      <div class="tarjeta">
+        <h2>🔔 Ajustes: avisos de llamada</h2>
+        <p class="subtitulo">Si activas los avisos en ESTE aparato, cuando alguien de la familia entre a la voz te llegará una notificación que suena, aunque tengas la app cerrada. (En iPhone/iPad: primero agrega la app a la pantalla de inicio 📲 y ábrela desde ahí.)</p>
+        <div class="botones-juego">
+          <button class="btn-principal" id="btn-avisos">🔔 Activar avisos de llamada</button>
+        </div>
+        <p id="avisos-estado" class="subtitulo" style="margin-top:10px">Revisando este aparato…</p>
+      </div>
+    </section>
+
+    <!-- JUEGOS -->
+    <section id="sec-juegos" class="seccion oculto">
+      <div class="tarjeta">
+        <h2>🎮 Juegos en línea</h2>
+        <p class="subtitulo">Crea una partida y quien esté conectado se une con un toque. ¡Sin filas ni esperas!</p>
+        <h3>⭐ Los de siempre</h3>
+        <div class="botones-juego">
+          <button class="btn-principal" id="crear-gato">❌⭕ Gato (tres en raya)</button>
+          <button class="btn-principal" id="crear-trivia">🧠 Trivia familiar</button>
+          <button class="btn-principal" id="crear-memoria">🃏 Memoria de parejas</button>
+        </div>
+        <h3 style="margin-top:16px">🃏 Memoria con temas</h3>
+        <div class="buscador" style="align-items:center">
+          <select id="mazo-memoria" aria-label="Mazo de memoria">
+            <option value="animales">🦁 Animales</option>
+            <option value="comida">🍕 Comida</option>
+            <option value="vehiculos">🚗 Vehículos</option>
+            <option value="espacio">🚀 Espacio</option>
+          </select>
+          <button class="btn-principal" data-crear="memoria-tema">Crear con este mazo</button>
+        </div>
+        <h3 style="margin-top:16px">🎲 Más juegos</h3>
+        <div class="botones-juego">
+          <button class="btn-principal" data-crear="conecta">🔴 Conecta 4</button>
+          <button class="btn-principal" data-crear="serpientes">🐍 Serpientes y Escaleras</button>
+          <button class="btn-principal" data-crear="ahorcado">🔤 Ahorcado</button>
+          <button class="btn-principal" data-crear="dibujo">🎨 Dibujo y Adivina</button>
+          <button class="btn-principal" data-crear="parchis">🎲 Parchís</button>
+          <button class="btn-principal" data-crear="domino">🁢 Dominó</button>
+          <button class="btn-principal" data-crear="naval">🚢 Batalla Naval</button>
+          <button class="btn-principal" data-crear="sopa">🔎 Sopa de Letras</button>
+          <button class="btn-principal" data-crear="basta">✋ ¡Basta! (Stop)</button>
+          <button class="btn-principal" data-crear="simon">🔴 Simón Dice</button>
+          <button class="btn-principal" data-crear="calculo">➕ Cálculo Rápido</button>
+          <button class="btn-principal" data-crear="ppt">✊ Piedra, Papel o Tijera</button>
+          <button class="btn-principal" data-crear="adivina">🔢 Adivina el Número</button>
+        </div>
+        <h3 style="margin-top:16px">🧠 Juegos de memoria</h3>
+        <div class="botones-juego">
+          <button class="btn-principal" data-crear="quef">🤔 ¿Qué falta?</button>
+          <button class="btn-principal" data-crear="orden">🔢 Recuerda el Orden</button>
+          <button class="btn-principal" data-crear="numeros">🧮 Memoria de Números</button>
+        </div>
+        <h3 style="margin-top:16px">📖 Juegos bíblicos</h3>
+        <div class="botones-juego">
+          <button class="btn-principal" data-crear="trivia-biblica">📖 Trivia Bíblica</button>
+          <button class="btn-principal" data-crear="memoria-biblica">🕊️ Memoria Bíblica</button>
+          <button class="btn-principal" data-crear="versiculo">✍️ Completa el Versículo</button>
+        </div>
+      </div>
+      <div class="tarjeta">
+        <h3>🚪 Partidas abiertas</h3>
+        <div id="lista-partidas"><p class="subtitulo">No hay partidas todavía. ¡Crea la primera!</p></div>
+      </div>
+      <div class="tarjeta oculto" id="tarjeta-juego">
+        <div id="zona-juego"></div>
+      </div>
+    </section>
+
+    <!-- BIBLIA -->
+    <section id="sec-biblia" class="seccion oculto">
+      <div class="tarjeta">
+        <h2>📖 Versículo del día</h2>
+        <p class="versiculo-texto" id="biblia-versiculo-texto">Cargando el versículo de hoy…</p>
+        <p class="versiculo-cita" id="biblia-versiculo-cita"></p>
+        <div class="botones-juego">
+          <button class="btn-verde" id="btn-compartir-versiculo">📣 Compartir con todos</button>
+        </div>
+        <div id="biblia-versiculo-compartido" class="aviso oculto" style="margin-top:12px"></div>
+      </div>
+      <div class="tarjeta">
+        <h2>📚 Historias para leer juntos</h2>
+        <p class="subtitulo">Toca una historia para leerla aquí. Con «Leer para todos» se abre en la pantalla de toda la familia a la vez. 💛</p>
+        <div id="biblia-aviso-lectura" class="aviso oculto" style="margin-bottom:12px"></div>
+        <div class="botones-juego" id="lista-biblia-historias"></div>
+        <div id="biblia-historia-contenido" style="margin-top:14px"></div>
+      </div>
+      <div class="tarjeta">
+        <h2>🎲 Juegos bíblicos</h2>
+        <p class="subtitulo">Se crean como partidas: aparecen en la lista de Juegos para que se una la familia.</p>
+        <div class="botones-juego">
+          <button class="btn-principal" data-crear="trivia-biblica">📖 Trivia Bíblica</button>
+          <button class="btn-principal" data-crear="memoria-biblica">🕊️ Memoria Bíblica</button>
+          <button class="btn-principal" data-crear="versiculo">✍️ Completa el Versículo</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CINE -->
+    <section id="sec-cine" class="seccion oculto">
+      <div class="dos-columnas cine-grid">
+        <div class="tarjeta">
+          <h2>🎬 Ver y escuchar juntos</h2>
+          <div id="aviso-yt-config" class="aviso oculto">Este módulo necesita la clave de YouTube en <code>config.js</code> (es gratuita; pasos en el README). Mientras tanto, la Sala, los juegos y el chat funcionan felices. 🙂</div>
+          <form class="buscador" id="form-buscar">
+            <input type="search" id="buscar-texto" placeholder="Busca una canción o un video… 🔎" aria-label="Buscar en YouTube">
+            <button type="submit" class="btn-principal">Buscar</button>
+          </form>
+          <div class="resultados" id="resultados"></div>
+        </div>
+        <div class="tarjeta">
+          <h3>📺 Ahora en el rincón</h3>
+          <div class="reproductor-marco"><div id="yt-player"></div></div>
+          <div id="aviso-embed" class="aviso oculto" style="margin-top:10px">Este video no permite verse dentro de otras apps 🙈 (lo decidió su dueño en YouTube). Prueba con otro de la lista: ¡hay millones!</div>
+          <div class="controles-cine">
+            <button class="btn-verde" id="cine-play">▶️ Reproducir para todos</button>
+            <button class="btn-suave" id="cine-pause">⏸️ Pausa para todos</button>
+            <button class="btn-suave" id="cine-siguiente">⏭️ Siguiente</button>
+          </div>
+          <h3 style="margin-top:18px">🎶 Cola compartida</h3>
+          <div id="cola"><p class="subtitulo">La cola está vacía. Busca algo rico y agrégalo.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHAT -->
+    <section id="sec-chat" class="seccion oculto">
+      <div class="tarjeta">
+        <h2>💬 Chat de la familia</h2>
+        <div class="chat-caja" id="chat-caja"></div>
+        <div id="audio-aviso" class="aviso oculto" style="margin-bottom:10px"></div>
+        <div id="panel-emojis" class="panel-emojis oculto"></div>
+        <div id="barra-grabacion" class="barra-grabacion oculto">
+          <span class="punto-grabando"></span>
+          <span id="grab-tiempo" class="grab-tiempo">0:00</span>
+          <span id="grab-texto" class="subtitulo" style="margin:0">Grabando tu nota de voz…</span>
+          <button type="button" id="grab-cancelar" class="btn-suave btn-chico">❌ Descartar</button>
+          <button type="button" id="grab-enviar" class="btn-verde btn-chico">✅ Enviar</button>
+        </div>
+        <form class="chat-enviar" id="form-chat">
+          <button type="button" id="btn-emojis" class="btn-suave btn-emoji" title="Emojis">😀</button>
+          <input type="text" id="chat-texto" maxlength="500" placeholder="Escribe algo bonito… ✍️" autocomplete="off">
+          <button type="button" id="btn-grabar" class="btn-suave btn-emoji" title="Grabar una nota de voz">🎤</button>
+          <button type="submit" class="btn-principal">Enviar 💌</button>
+        </form>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Barra de voz flotante (funciona en cualquier pestaña) -->
+<div id="barra-voz" class="barra-voz oculto">
+  <button id="voz-unirse" class="btn-verde">🎙️ Unirse a la voz</button>
+  <button id="voz-silenciar" class="btn-suave oculto">🔇 Silenciarme</button>
+  <button id="voz-camara" class="btn-suave oculto">📹 Activar cámara</button>
+  <button id="voz-cambiar-camara" class="btn-suave oculto">🔄 Cambiar cámara</button>
+  <button id="voz-salir" class="btn-suave oculto">👋 Salir de la voz</button>
+  <span class="quien-voz" id="voz-estado">La voz está tranquila… por ahora 😴</span>
+</div>
+<div id="audios-voz" class="oculto"></div>
+
+<!-- Franja de videos (voz + video): mosaicos plegables, no tapa el juego -->
+<div id="franja-videos" class="franja-videos oculto">
+  <div class="videos-cabecera">
+    <span>📹 Video de la familia</span>
+    <button id="videos-plegar" class="btn-suave btn-chico">➖ Ocultar</button>
+  </div>
+  <div id="videos-mosaicos" class="videos-mosaicos"></div>
+</div>
+
+<!-- Barra de reacciones -->
+<div id="barra-reacciones" class="barra-reacciones oculto"></div>
+<div id="zona-reacciones"></div>
+
+<!-- Capa de ganador -->
+<div id="capa-ganador">
+  <div class="ganador-caja">
+    <div class="logo-grande">🏆</div>
+    <div class="ganador-titulo">¡Ganaste!</div>
+    <p class="ganador-sub"></p>
+    <button class="btn-principal" onclick="document.getElementById('capa-ganador').classList.remove('visible')">¡A seguir jugando! 🎮</button>
+  </div>
+</div>
+
+<!-- Tarjeta de llamada entrante (alguien está en la voz y yo no) -->
+<div id="tarjeta-llamada" class="oculto">
+  <div class="llamada-caja">
+    <div class="logo-grande">📹</div>
+    <div class="llamada-titulo" id="llamada-titulo">Alguien te está llamando… 📹</div>
+    <p class="subtitulo">Está en la voz del rincón ahora mismo. ¡Únete!</p>
+    <div class="botones-juego" style="justify-content:center">
+      <button class="btn-verde" id="llamada-contestar">📞 Contestar</button>
+      <button class="btn-suave" id="llamada-ahora-no">Ahora no</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="logic.js"></script>
+<script src="games.js"></script>
+<script src="fun.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

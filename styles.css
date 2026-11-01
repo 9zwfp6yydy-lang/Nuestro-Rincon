@@ -1,0 +1,304 @@
+/* ============ Nuestro Rincón — estilos (tablet primero, cálido y alegre) ============ */
+:root{
+  --fondo:#fff7ed; --tarjeta:#ffffff; --tinta:#3d2c29; --suave:#8a6f66;
+  --coral:#ff6b6b; --naranja:#ff8a5c; --sol:#feca57; --verde:#1dd1a1;
+  --cielo:#48dbfb; --azul:#54a0ff; --rosa:#f368e0; --borde:#f3ddcb;
+  --radio:18px; --sombra:0 6px 18px rgba(214,120,60,.14);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,Roboto,'Helvetica Neue',sans-serif;
+  background:linear-gradient(180deg,#fff7ed 0%,#ffefe0 55%,#ffe9f3 100%);
+  color:var(--tinta); min-height:100vh;
+}
+button{font-family:inherit; cursor:pointer; border:none; border-radius:999px;
+  min-height:56px; padding:12px 22px; font-size:1.05rem; font-weight:700;
+  transition:transform .12s ease, box-shadow .12s ease, background .2s}
+button:active{transform:scale(.96)}
+button:disabled{opacity:.45; cursor:not-allowed}
+.btn-principal{background:linear-gradient(135deg,var(--naranja),var(--coral)); color:#fff; box-shadow:var(--sombra)}
+.btn-principal:hover{transform:translateY(-2px)}
+.btn-suave{background:#fff; color:var(--tinta); border:2px solid var(--borde)}
+.btn-verde{background:linear-gradient(135deg,#2fe0b8,var(--verde)); color:#063d30}
+.btn-chico{min-height:44px; padding:8px 16px; font-size:.95rem}
+input,select{font-family:inherit; font-size:1.05rem; padding:14px 16px; border-radius:14px;
+  border:2px solid var(--borde); background:#fff; min-height:56px; width:100%}
+input:focus,select:focus{outline:3px solid var(--sol); border-color:var(--sol)}
+h1,h2,h3{margin:.2em 0 .4em}
+.oculto{display:none !important}
+
+/* ---------- Vistas de entrada ---------- */
+.vista-centro{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px}
+.tarjeta-entrada{background:var(--tarjeta); border-radius:26px; box-shadow:var(--sombra);
+  padding:34px 30px; width:min(520px,94vw); text-align:center; animation:aparecer .45s ease}
+.logo-grande{font-size:3.4rem; animation:flotar 3s ease-in-out infinite}
+.titulo-app{font-size:2.1rem; background:linear-gradient(90deg,var(--coral),var(--naranja),var(--rosa));
+  -webkit-background-clip:text; background-clip:text; color:transparent}
+.subtitulo{color:var(--suave); margin-bottom:18px}
+.tarjeta-entrada form{display:grid; gap:12px; text-align:left}
+.aviso{background:#fff4d6; border:2px solid var(--sol); border-radius:14px; padding:14px 16px; font-size:.98rem}
+.aviso-error{background:#ffe1e1; border-color:var(--coral)}
+.avatares-elegir{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:10px 0}
+.avatar-opcion{font-size:2rem; width:64px; height:64px; min-height:64px; border-radius:50%;
+  background:#fff7ed; border:3px solid var(--borde); display:flex; align-items:center; justify-content:center; padding:0}
+.avatar-opcion.elegido{border-color:var(--coral); background:#ffe9e4; transform:scale(1.1)}
+
+/* ---------- Encabezado de la app ---------- */
+header.barra{position:sticky; top:0; z-index:30; background:rgba(255,247,237,.92); backdrop-filter:blur(8px);
+  border-bottom:2px solid var(--borde); padding:10px 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+header .titulo{font-size:1.35rem; font-weight:800}
+.presencia{display:flex; gap:8px; align-items:center; flex:1; flex-wrap:wrap}
+.chip-presencia{display:flex; align-items:center; gap:7px; background:#fff; border:2px solid var(--borde);
+  border-radius:999px; padding:5px 13px 5px 6px; font-weight:700; font-size:.95rem}
+.chip-presencia .avatar{font-size:1.4rem}
+.punto{width:11px;height:11px;border-radius:50%;background:#cfc4bd}
+.punto.en-linea{background:var(--verde); box-shadow:0 0 0 4px rgba(29,209,161,.22); animation:pulso 1.8s infinite}
+
+/* ---------- Navegación por pestañas ---------- */
+nav.pestanas{display:flex; gap:8px; padding:12px 16px 4px; flex-wrap:wrap; max-width:1200px; margin:0 auto}
+nav.pestanas button{background:#fff; border:2px solid var(--borde); color:var(--tinta); flex:1; min-width:130px}
+nav.pestanas button.activa{background:linear-gradient(135deg,var(--naranja),var(--coral)); color:#fff; border-color:transparent}
+main{max-width:1200px; margin:0 auto; padding:14px 16px 130px}
+.seccion{animation:aparecer .3s ease}
+.tarjeta{background:var(--tarjeta); border-radius:var(--radio); box-shadow:var(--sombra); padding:20px; margin-bottom:16px}
+.dos-columnas{display:grid; grid-template-columns:1fr; gap:16px}
+@media (min-width:820px){
+  .dos-columnas{grid-template-columns:1fr 1fr}
+  .cine-grid{grid-template-columns:1.5fr 1fr}
+}
+
+/* ---------- Sala / campeones ---------- */
+.miembro{display:flex; align-items:center; gap:14px; padding:10px 6px; border-bottom:1px dashed var(--borde)}
+.miembro:last-child{border-bottom:none}
+.miembro .avatar-grande{font-size:2.6rem; width:64px; height:64px; border-radius:50%;
+  background:#fff1e3; display:flex; align-items:center; justify-content:center}
+table.campeones{width:100%; border-collapse:collapse; font-size:1.02rem}
+table.campeones td, table.campeones th{padding:9px 8px; text-align:left; border-bottom:1px dashed var(--borde)}
+table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius:10px}
+
+/* ---------- Juegos ---------- */
+.botones-juego{display:flex; gap:10px; flex-wrap:wrap}
+.partida-item{display:flex; align-items:center; gap:12px; background:#fff8f1; border:2px solid var(--borde);
+  border-radius:14px; padding:12px 14px; margin-bottom:10px; flex-wrap:wrap}
+.partida-item .crece{flex:1; font-weight:700}
+.tablero-gato{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:420px; margin:14px auto}
+.casilla-gato{aspect-ratio:1; font-size:3rem; font-weight:900; background:#fff; border:3px solid var(--borde);
+  border-radius:18px; min-height:96px; display:flex; align-items:center; justify-content:center}
+.casilla-gato.x{color:var(--coral)} .casilla-gato.o{color:var(--azul)}
+.casilla-gato.ganadora{background:#e7fff6; border-color:var(--verde); animation:pulso 1s infinite}
+.tablero-memoria{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; max-width:560px; margin:14px auto}
+@media (min-width:820px){ .tablero-memoria{grid-template-columns:repeat(6,1fr)} }
+.carta-memoria{aspect-ratio:1; font-size:2.2rem; border-radius:16px; background:linear-gradient(135deg,var(--cielo),var(--azul));
+  color:#fff; min-height:70px; display:flex; align-items:center; justify-content:center; transition:transform .25s}
+.carta-memoria.volteada{background:#fff; border:3px solid var(--sol); transform:rotateY(360deg)}
+.carta-memoria.encontrada{background:#e7fff6; border:3px solid var(--verde)}
+.opciones-trivia{display:grid; gap:10px; margin-top:12px}
+.opcion-trivia{background:#fff; border:3px solid var(--borde); text-align:left; border-radius:16px; color:var(--tinta)}
+.opcion-trivia.correcta{background:#e7fff6; border-color:var(--verde)}
+.opcion-trivia.incorrecta{background:#ffe9e9; border-color:var(--coral)}
+.barra-tiempo{height:14px; border-radius:99px; background:#f7e4d2; overflow:hidden; margin:10px 0}
+.barra-tiempo>div{height:100%; background:linear-gradient(90deg,var(--sol),var(--coral)); transition:width 1s linear}
+.marcador{display:flex; gap:10px; flex-wrap:wrap; margin:10px 0}
+.marcador .chip-presencia{background:#fff8f1}
+
+/* ---------- Cine / música ---------- */
+.buscador{display:flex; gap:10px} .buscador input{flex:1}
+.resultados{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-top:14px}
+.resultado{background:#fff; border:2px solid var(--borde); border-radius:14px; overflow:hidden; text-align:left; padding:0; min-height:0}
+.resultado img{width:100%; display:block; aspect-ratio:16/9; object-fit:cover}
+.resultado .tit{padding:10px 12px; font-weight:700; font-size:.95rem}
+.resultado .acciones{display:flex; gap:8px; padding:0 12px 12px; flex-wrap:wrap}
+.reproductor-marco{position:relative; width:100%; aspect-ratio:16/9; background:#14100e; border-radius:16px; overflow:hidden}
+.reproductor-marco iframe,.reproductor-marco #yt-player{position:absolute; inset:0; width:100%; height:100%}
+.controles-cine{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
+.cola-item{display:flex; gap:10px; align-items:center; padding:8px 6px; border-bottom:1px dashed var(--borde)}
+.cola-item img{width:86px; border-radius:8px}
+
+/* ---------- Chat ---------- */
+.chat-caja{height:46vh; min-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:6px}
+.mensaje{max-width:80%; padding:10px 14px; border-radius:18px; background:#fff4e8; align-self:flex-start; box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.mensaje.mio{background:linear-gradient(135deg,#ffe3ba,#ffd1dc); align-self:flex-end}
+.mensaje .quien{font-size:.78rem; font-weight:800; color:var(--suave)}
+.chat-enviar{display:flex; gap:10px; margin-top:10px} .chat-enviar input{flex:1}
+
+/* ---------- Chat v2: emojis grandes, reacciones, selector y notas de voz ---------- */
+.mensaje{cursor:pointer}
+.mensaje.solo-emojis{background:transparent; box-shadow:none; padding:4px 8px}
+.emoji-grande{font-size:2.6rem; line-height:1.25; letter-spacing:.08em}
+.reacciones-msg{display:flex; gap:5px; flex-wrap:wrap; margin-top:5px}
+.chip-reaccion{background:#fff; border:2px solid var(--borde); border-radius:999px;
+  min-height:34px; padding:2px 10px; font-size:.88rem; font-weight:700; box-shadow:0 2px 5px rgba(0,0,0,.06)}
+.selector-reaccion{display:flex; gap:4px; margin-top:8px; background:#fff; border:2px solid var(--borde);
+  border-radius:999px; padding:5px 8px; box-shadow:var(--sombra); width:max-content; max-width:100%}
+.selector-reaccion button{background:transparent; font-size:1.45rem; min-height:44px; padding:2px 8px}
+.btn-emoji{min-width:56px; font-size:1.35rem; padding:10px 0}
+.panel-emojis{background:#fff; border:2px solid var(--borde); border-radius:16px; margin-top:10px;
+  padding:12px; max-height:300px; overflow-y:auto; box-shadow:var(--sombra)}
+.panel-emojis-titulo{font-weight:800; font-size:.9rem; color:var(--suave); margin:8px 0 6px}
+.rejilla-emojis{display:grid; grid-template-columns:repeat(auto-fill,minmax(52px,1fr)); gap:4px}
+.emoji-opcion{background:transparent; font-size:1.7rem; min-height:52px; padding:4px}
+.emoji-opcion:active{background:#fff1e3}
+.reproductor-audio{display:flex; align-items:center; gap:10px; min-width:220px; padding:2px 0}
+.btn-play-audio{width:52px; height:52px; min-height:52px; border-radius:50%; padding:0; font-size:1.25rem;
+  background:linear-gradient(135deg,var(--naranja),var(--coral)); color:#fff; box-shadow:var(--sombra); flex:none}
+.barra-progreso{flex:1; height:9px; border-radius:99px; background:rgba(61,44,41,.14); overflow:hidden}
+.barra-progreso>div{height:100%; width:0%; background:linear-gradient(90deg,var(--naranja),var(--coral)); transition:width .2s linear}
+.audio-duracion{font-size:.85rem; font-weight:700; color:var(--suave); white-space:nowrap}
+.barra-grabacion{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px;
+  background:#fff; border:2px solid var(--coral); border-radius:16px; padding:10px 12px; box-shadow:var(--sombra)}
+.punto-grabando{width:14px; height:14px; border-radius:50%; background:#e02424; flex:none; animation:pulso 1s infinite}
+.grab-tiempo{font-size:1.15rem; font-weight:800; min-width:52px}
+
+/* ---------- Llamada entrante (tarjeta grande dentro de la app) ---------- */
+#tarjeta-llamada{position:fixed; inset:0; z-index:85; display:flex; align-items:center; justify-content:center;
+  background:rgba(61,44,41,.5); padding:20px}
+.llamada-caja{background:#fff; border-radius:26px; padding:36px 30px; text-align:center; max-width:460px; width:94vw;
+  box-shadow:0 18px 50px rgba(0,0,0,.3); animation:rebote .6s ease}
+.llamada-titulo{font-size:1.7rem; font-weight:900; margin:.3em 0}
+
+/* ---------- Voz (barra flotante) ---------- */
+.barra-voz{position:fixed; left:50%; transform:translateX(-50%); bottom:76px; z-index:40;
+  background:#2d2320; color:#fff; border-radius:999px; padding:8px 10px; display:flex; gap:8px; align-items:center;
+  box-shadow:0 10px 26px rgba(0,0,0,.28); max-width:94vw; flex-wrap:wrap; justify-content:center}
+.barra-voz button{min-height:46px; padding:8px 16px}
+.barra-voz .quien-voz{font-size:.9rem; opacity:.9}
+
+/* ---------- Reacciones ---------- */
+.barra-reacciones{position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:40;
+  background:rgba(255,255,255,.94); border:2px solid var(--borde); border-radius:999px; padding:6px 10px;
+  display:flex; gap:4px; box-shadow:var(--sombra)}
+.barra-reacciones button{background:transparent; font-size:1.5rem; min-height:48px; padding:4px 10px}
+#zona-reacciones{position:fixed; inset:0; pointer-events:none; z-index:60; overflow:hidden}
+.reaccion-flotante{position:absolute; bottom:70px; font-size:2.6rem; animation:subir 3s ease-out forwards}
+#confeti-canvas{position:fixed; inset:0; pointer-events:none; z-index:70; display:none}
+
+/* ---------- Capa de ganador ---------- */
+#capa-ganador{position:fixed; inset:0; z-index:80; display:none; align-items:center; justify-content:center;
+  background:rgba(61,44,41,.45); padding:20px}
+#capa-ganador.visible{display:flex}
+.ganador-caja{background:#fff; border-radius:26px; padding:36px 30px; text-align:center; max-width:440px; width:92vw;
+  animation:rebote .6s ease}
+.ganador-titulo{font-size:2.2rem; font-weight:900}
+.ganador-sub{color:var(--suave); font-size:1.1rem}
+
+/* ---------- Ajustes para celular (pantalla angosta) ---------- */
+@media (max-width:680px){
+  header.barra{padding:8px 10px; gap:8px}
+  header .titulo{font-size:1.08rem}
+  .presencia{flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none}
+  .presencia::-webkit-scrollbar{display:none}
+  .chip-presencia{padding:3px 9px 3px 4px; font-size:.8rem; white-space:nowrap}
+  .chip-presencia .avatar{font-size:1.05rem}
+  header .btn-chico{min-height:40px; padding:6px 12px; font-size:.88rem}
+  nav.pestanas{padding:10px 10px 2px; gap:6px}
+  nav.pestanas button{min-width:100px; min-height:50px; font-size:.97rem; padding:10px 8px}
+  main{padding:10px 10px 178px}
+  .tarjeta{padding:16px 14px}
+  .barra-voz{bottom:64px; flex-wrap:nowrap; padding:6px 8px; max-width:96vw}
+  .barra-voz button{min-height:44px; padding:6px 13px; font-size:.95rem; white-space:nowrap}
+  .barra-voz .quien-voz{font-size:.78rem; max-width:96px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .barra-reacciones{bottom:10px; padding:4px 8px}
+  .barra-reacciones button{font-size:1.3rem; min-height:42px; padding:2px 7px}
+}
+
+/* ---------- Biblioteca de juegos: tableros nuevos ---------- */
+.selector-mazo{display:flex; align-items:center; gap:8px; margin-top:10px; flex-wrap:wrap}
+.selector-mazo select{min-height:44px; border-radius:12px; border:2px solid var(--borde); padding:6px 10px; font-size:1rem; background:#fff}
+.tablero-conecta{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; max-width:440px; margin:10px auto; background:#fdf3e3; padding:10px; border-radius:16px; border:2px solid var(--borde)}
+.celda-conecta{aspect-ratio:1; font-size:1.7rem; display:flex; align-items:center; justify-content:center; background:#fff; border-radius:50%}
+.conecta-cols{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; max-width:440px; margin:0 auto}
+.tablero-serpientes{display:grid; grid-template-columns:repeat(10,1fr); gap:3px; max-width:520px; margin:12px auto}
+.celda-serp{aspect-ratio:1; background:#fff; border:1.5px solid var(--borde); border-radius:7px; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden}
+.celda-serp small{font-size:.52rem; color:var(--suave); line-height:1}
+.celda-serp span{font-size:.78rem; line-height:1.05}
+.celda-serp.meta{background:#e7fff6; border-color:var(--verde)}
+.palabra-ahorcado{font-size:2rem; letter-spacing:.35em; text-align:center; font-weight:900; margin:14px 0; word-break:break-all}
+.teclado-ahorcado{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; max-width:560px; margin:0 auto}
+.teclado-ahorcado button{min-width:44px; min-height:44px; font-weight:800}
+.lienzo-marco{background:#fff; border:3px solid var(--borde); border-radius:16px; overflow:hidden; max-width:640px; margin:10px auto}
+.lienzo-marco canvas{width:100%; height:auto; display:block; touch-action:none; background:#fffdf9}
+.palabra-secreta{color:var(--coral)}
+.tablero-parchis{display:grid; grid-template-columns:repeat(8,1fr); gap:4px; max-width:520px; margin:12px auto}
+.celda-parchis{aspect-ratio:1; background:#fff; border:1.5px solid var(--borde); border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden}
+.celda-parchis small{font-size:.55rem; color:var(--suave); line-height:1}
+.celda-parchis span{font-size:.85rem; line-height:1.05}
+.celda-parchis.segura{background:#fff7d6}
+.celda-parchis.salida{background:#e7fff6}
+.mesa-domino{display:flex; flex-wrap:wrap; gap:6px; background:#fdf3e3; border:2px solid var(--borde); border-radius:14px; padding:12px; min-height:56px; align-items:center; margin:10px 0}
+.ficha-domino{background:#fff; border:2px solid #cbb59a; border-radius:8px; padding:6px 9px; font-weight:900; letter-spacing:.06em}
+.mano-domino{display:flex; flex-wrap:wrap; gap:8px}
+.ficha-domino-btn{background:#fff; border:2.5px solid #cbb59a; border-radius:10px; padding:10px 12px; font-weight:900; font-size:1.05rem; min-height:48px; cursor:pointer}
+.ficha-domino-btn.elegida{border-color:var(--coral); background:#ffe9e4; transform:scale(1.06)}
+.tablero-naval{display:grid; grid-template-columns:repeat(8,1fr); gap:3px; max-width:400px; margin:8px auto}
+.celda-naval{aspect-ratio:1; background:#eaf6ff; border:1.5px solid #bcd9f5; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:1.05rem; padding:0}
+button.celda-naval.disparo{cursor:pointer; background:#fff}
+button.celda-naval.disparo:disabled{cursor:default; opacity:1}
+.tablero-sopa{display:grid; grid-template-columns:repeat(10,1fr); gap:4px; max-width:440px; margin:12px auto}
+.celda-sopa{aspect-ratio:1; font-size:1.15rem; font-weight:900; background:#fff; border:2px solid var(--borde); border-radius:9px; padding:0; cursor:pointer}
+.celda-sopa.elegida{background:#ffe3ba; border-color:var(--sol); transform:scale(1.1)}
+.celda-sopa.encontrada{background:#e7fff6; border-color:var(--verde); color:#0a7a4d}
+.campo-basta{display:flex; align-items:center; gap:10px; margin:8px 0; font-weight:700}
+.campo-basta input{flex:1; min-height:46px}
+.letra-basta{font-size:1.8rem; font-weight:900; color:var(--coral); background:#ffe9e4; border-radius:12px; padding:2px 14px}
+.tabla-basta{width:100%; border-collapse:collapse; margin-top:10px; font-size:.92rem}
+.tabla-basta th,.tabla-basta td{border:1.5px solid var(--borde); padding:7px; text-align:left; background:#fff}
+.tablero-simon{display:grid; grid-template-columns:1fr 1fr; gap:12px; max-width:340px; margin:14px auto}
+.boton-simon{aspect-ratio:1.35; font-size:2.2rem; border-radius:20px; border:3px solid rgba(0,0,0,.08); cursor:pointer; transition:transform .12s, filter .12s}
+.simon-rojo{background:#ffb3ab}.simon-verde{background:#b5e8c8}.simon-azul{background:#a8cdf5}.simon-amarillo{background:#ffe58a}
+.boton-simon.sonando{filter:brightness(1.5) saturate(1.4); transform:scale(1.07)}
+.operacion-grande{font-size:2.6rem; font-weight:900; text-align:center; margin:16px 0; color:var(--coral)}
+.btn-ppt{font-size:1.15rem}
+.historial-adivina{margin-top:12px; max-height:220px; overflow-y:auto}
+.versiculo-texto{font-size:1.25rem; font-style:italic; line-height:1.5; margin:12px 0 4px}
+.versiculo-cita{font-weight:800; color:var(--suave)}
+.rejilla-objetos{display:flex; flex-wrap:wrap; gap:12px; font-size:2.3rem; margin:12px 0; justify-content:center}
+.fila-orden{font-size:2.6rem}
+.btn-opcion-objeto{font-size:2rem; background:#fff; border:2.5px solid var(--borde); border-radius:14px; padding:8px 14px; min-height:60px; cursor:pointer}
+.btn-opcion-objeto.elegida{border-color:var(--verde); background:#e7fff6}
+.numero-grande{font-size:3rem; font-weight:900; letter-spacing:.12em; text-align:center; margin:16px 0; color:var(--azul)}
+.numero-grande-inline{font-size:1.5rem; letter-spacing:.08em}
+
+/* ---------- Biblia ---------- */
+.historias-grid{display:flex; flex-wrap:wrap; gap:8px}
+.historias-grid button{min-height:48px}
+#biblia-historia-contenido p{line-height:1.6}
+#biblia-historia-contenido .aviso{margin-top:12px}
+
+/* ---------- Franja de videos (voz + video) ---------- */
+.franja-videos{position:fixed; left:50%; transform:translateX(-50%); bottom:150px; z-index:39;
+  background:rgba(255,252,247,.96); border:2px solid var(--borde); border-radius:18px;
+  box-shadow:0 8px 24px rgba(120,70,20,.18); padding:8px 10px; max-width:min(96vw,720px)}
+.franja-videos.plegada .videos-mosaicos{display:none}
+.videos-cabecera{display:flex; align-items:center; justify-content:space-between; gap:10px; font-weight:800; font-size:.9rem; margin-bottom:6px}
+.videos-mosaicos{display:flex; gap:8px; overflow-x:auto; padding-bottom:2px}
+.mosaico-video{position:relative; width:132px; height:96px; flex:0 0 auto; border-radius:12px; overflow:hidden;
+  background:linear-gradient(135deg,#ffe3ba,#ffd1dc); display:flex; align-items:center; justify-content:center}
+.mosaico-video video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover}
+.mosaico-video video.espejo{transform:scaleX(-1)}
+.mosaico-video .avatar-grande{font-size:2.4rem}
+.mosaico-nombre{position:absolute; left:6px; bottom:4px; background:rgba(20,16,14,.55); color:#fff;
+  font-size:.72rem; font-weight:700; padding:1px 7px; border-radius:99px}
+
+@media (max-width:680px){
+  .tablero-serpientes,.tablero-parchis{max-width:96vw}
+  .celda-serp span{font-size:.66rem}
+  .celda-parchis span{font-size:.72rem}
+  .palabra-ahorcado{font-size:1.45rem; letter-spacing:.22em}
+  .operacion-grande{font-size:2.1rem}
+  .numero-grande{font-size:2.2rem}
+  .franja-videos{bottom:118px; padding:6px 8px}
+  .mosaico-video{width:92px; height:70px}
+  .mosaico-video .avatar-grande{font-size:1.7rem}
+  .tabla-basta{font-size:.8rem}
+  .tabla-basta th,.tabla-basta td{padding:5px}
+  .campo-basta{flex-direction:column; align-items:stretch; gap:4px}
+  nav.pestanas button{min-width:86px}
+}
+
+/* ---------- Animaciones ---------- */
+@keyframes aparecer{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+@keyframes flotar{0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)}}
+@keyframes pulso{0%,100%{transform:scale(1)} 50%{transform:scale(1.06)}}
+@keyframes subir{0%{transform:translateY(0) scale(.7); opacity:0} 12%{opacity:1} 100%{transform:translateY(-46vh) scale(1.25) rotate(10deg); opacity:0}}
+@keyframes rebote{0%{transform:scale(.6)} 60%{transform:scale(1.08)} 100%{transform:scale(1)}}
