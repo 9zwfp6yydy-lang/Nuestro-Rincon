@@ -8,7 +8,7 @@
    ===================================================================== */
 'use strict';
 
-var CACHE = 'nuestro-rincon-v3';
+var CACHE = 'nuestro-rincon-v3-1';
 var ARCHIVOS_APP = [
   './',
   './index.html',
@@ -52,6 +52,25 @@ self.addEventListener('fetch', function (evento) {
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  // La página misma (navegaciones): PRIMERO LA RED, para que una versión
+  // nueva se note en cuanto se abre la app instalada (en iOS la copia en
+  // caché se empeñaba en quedarse). Sin red, la copia guardada.
+  if (req.mode === 'navigate') {
+    evento.respondWith(
+      fetch(req).then(function (resp) {
+        if (resp && resp.ok) {
+          var copiaNav = resp.clone();
+          caches.open(CACHE).then(function (cache) { cache.put(req, copiaNav); });
+        }
+        return resp;
+      }).catch(function () {
+        return caches.match(req, { ignoreSearch: true }).then(function (m) {
+          return m || caches.match('./index.html', { ignoreSearch: true });
+        });
+      })
+    );
+    return;
+  }
   evento.respondWith(
     caches.match(req, { ignoreSearch: true }).then(function (enCache) {
       var enRed = fetch(req).then(function (resp) {
