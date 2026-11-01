@@ -1167,9 +1167,9 @@ prueba('crear y unirse no se caen si mostrar falla: la cadena llega a cargarPart
     'crearPartida protege la apertura optimista (caída: al menos la capa)');
   assert.ok(app.includes("catch (eAbrir) { abrirCapa('capa-juego'); }"), 'abrirPartida protege la muestra optimista (caída: al menos la capa)');
 });
-prueba('SW v3.4.3: caché nuevo, navegación red-primero y toma de control', () => {
+prueba('SW v3.5.0: caché nuevo, navegación red-primero y toma de control', () => {
   const sw = fs.readFileSync(path.join(RAIZ, 'sw.js'), 'utf8');
-  assert.ok(sw.includes("var CACHE = 'nuestro-rincon-v3-4-3';"), 'la caché debe subir a nuestro-rincon-v3-4-3');
+  assert.ok(sw.includes("var CACHE = 'nuestro-rincon-v3-5-0';"), 'la caché debe subir a nuestro-rincon-v3-5-0');
   assert.ok(sw.includes("req.mode === 'navigate'"), 'las navegaciones van red-primero');
   assert.ok(sw.includes('self.skipWaiting()'), 'el SW nuevo no espera: toma el control ya');
   assert.ok(sw.includes('self.clients.claim()'), 'y reclama las páginas abiertas');
@@ -1789,6 +1789,42 @@ prueba('CSS de llamada en celular: la barra ENVUELVE (Colgar no se sale) y la fr
   assert.ok(!css.includes('.barra-voz{bottom:64px; flex-wrap:nowrap'), 'fuera el nowrap que empujaba «Colgar» fuera de pantalla (x=497–603 medido)');
   assert.ok(css.includes('.barra-voz{bottom:64px; flex-wrap:wrap'), 'la barra envuelve en filas y todo se ve');
   assert.ok(css.includes('.franja-videos{bottom:308px'), 'la franja sube por encima de la barra envuelta');
+});
+
+console.log('— V3.5 · ARCHIVOS EN EL CHAT, RESCATE DEL REPRODUCTOR Y BOTÓN DE TELÉFONO —');
+prueba('Chat con archivos: botón 📎, entrada de archivo y envío al bucket «archivos»', () => {
+  const html = fs.readFileSync(path.join(RAIZ, 'index.html'), 'utf8');
+  assert.ok(html.includes('id="btn-archivo"'), 'el formulario del chat tiene el botón 📎');
+  assert.ok(html.includes('id="chat-archivo"'), 'y la entrada de archivo oculta');
+  const app = fs.readFileSync(path.join(RAIZ, 'app.js'), 'utf8');
+  assert.ok(app.includes('prepararBotonArchivo();'), 'iniciarChat prepara el botón de archivo');
+  assert.ok(app.includes(".from('archivos').upload("), 'el archivo sube al bucket «archivos»');
+  assert.ok(app.includes('archivo_path: ruta'), 'el mensaje guarda la ruta del archivo');
+  assert.ok(app.includes('TOPE_ARCHIVO = 25 * 1024 * 1024'), 'hay tope de 25 MB');
+  assert.ok(app.includes('createSignedUrl(m.archivo_path, 3600)'), 'los archivos se abren con URL firmada');
+  assert.ok(app.includes('pintarArchivo(zonaA, m)'), 'los mensajes con archivo se pintan como archivo');
+});
+prueba('Rescate del reproductor: arranque en silencio y botón grande de toque', () => {
+  const app = fs.readFileSync(path.join(RAIZ, 'app.js'), 'utf8');
+  assert.ok(app.includes('function rescateToque()'), 'existe el rescate de reproducción');
+  assert.ok(app.includes('ytPlayer.mute(); ytPlayer.playVideo();'), 'el rescate arranca en silencio (lo que iOS sí permite)');
+  assert.ok(app.includes("mostrarToca('▶️ Toca para ver el video')"), 'si ni en silencio arranca, el botón pide el toque para ver');
+  assert.ok(app.includes("id=\"cine-toca\"") || fs.readFileSync(path.join(RAIZ, 'index.html'), 'utf8').includes('id="cine-toca"'), 'el botón grande vive sobre el reproductor');
+  assert.ok(app.includes("$('#cine-youtube')"), 'hay salida «Ver en YouTube» para el video actual');
+  assert.ok(app.includes('aviso-yt-carga'), 'si la API de YouTube no carga, se avisa con claridad');
+});
+prueba('Voz: fuera el «unirse» flotante; la puerta es el 📞 de arriba', () => {
+  const html = fs.readFileSync(path.join(RAIZ, 'index.html'), 'utf8');
+  assert.ok(!html.includes('voz-unirse'), 'ya no existe el botón «Unirse a la voz»');
+  assert.ok(!html.includes('Unirse a la voz'), 'ni su texto en la barra flotante');
+  assert.ok(html.includes('id="btn-llamar"'), 'la barra de arriba tiene el botón de teléfono 📞');
+  const app = fs.readFileSync(path.join(RAIZ, 'app.js'), 'utf8');
+  assert.ok(app.includes("$('#btn-llamar').addEventListener('click'"), 'el 📞 une y cuelga según el estado');
+  const unirse = app.slice(app.indexOf('function unirseVoz'), app.indexOf('function salirDeLaVoz'));
+  assert.ok(unirse.includes("$('#barra-voz').classList.remove('oculto')"), 'la barra de controles aparece solo DURANTE la llamada');
+  const salir = app.slice(app.indexOf('function salirDeLaVoz'), app.indexOf('function avisarVideo'));
+  assert.ok(salir.includes("$('#barra-voz').classList.add('oculto')"), 'al colgar la barra se esconde');
+  assert.ok(!app.includes("$('#barra-voz').classList.toggle('oculto', !dentro)"), 'mostrarVista ya no muestra la barra por estar dentro de la app');
 });
 
 console.log('\n========================================');
