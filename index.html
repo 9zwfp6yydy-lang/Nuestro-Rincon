@@ -116,68 +116,22 @@
 
     <!-- JUEGOS -->
     <section id="sec-juegos" class="seccion oculto">
-      <!-- v3.2: el tablero ya NO vive en esta sección: se abre en la capa
-           sobrepuesta #capa-juego (al final del body), encima de todo. -->
+      <!-- v3.4: el tablero sigue en la capa sobrepuesta #capa-juego.
+           Los juegos se eligen por CATEGORÍAS: cada una es una barra
+           horizontal deslizable de tarjetas (icono + nombre) que se
+           genera desde CATEGORIAS_JUEGOS (app.js). -->
       <div class="tarjeta">
         <h2>🎮 Juegos en línea</h2>
-        <p class="subtitulo">Crea una partida y quien esté conectado se une con un toque. ¡Sin filas ni esperas!</p>
-        <h3>⭐ Los de siempre</h3>
-        <div class="botones-juego">
-          <button class="btn-principal" id="crear-gato">❌⭕ Gato (tres en raya)</button>
-          <button class="btn-principal" id="crear-trivia">🧠 Trivia familiar</button>
-          <button class="btn-principal" id="crear-memoria">🃏 Memoria de parejas</button>
-        </div>
-        <h3 style="margin-top:16px">🃏 Memoria con temas</h3>
-        <div class="buscador" style="align-items:center">
+        <p class="subtitulo">Desliza cada categoría hacia el lado 👉 y toca un juego: se crea al instante y se abre encima, para que se una quien esté conectado. ¡Sin filas ni esperas!</p>
+        <label class="mazo-fila">🎨 Mazo para «Memoria con temas»:
           <select id="mazo-memoria" aria-label="Mazo de memoria">
             <option value="animales">🦁 Animales</option>
             <option value="comida">🍕 Comida</option>
             <option value="vehiculos">🚗 Vehículos</option>
             <option value="espacio">🚀 Espacio</option>
           </select>
-          <button class="btn-principal" data-crear="memoria-tema">Crear con este mazo</button>
-        </div>
-        <h3 style="margin-top:16px">🎲 Más juegos</h3>
-        <div class="botones-juego">
-          <button class="btn-principal" data-crear="conecta">🔴 Conecta 4</button>
-          <button class="btn-principal" data-crear="serpientes">🐍 Serpientes y Escaleras</button>
-          <button class="btn-principal" data-crear="ahorcado">🔤 Ahorcado</button>
-          <button class="btn-principal" data-crear="dibujo">🎨 Dibujo y Adivina</button>
-          <button class="btn-principal" data-crear="parchis">🎲 Parchís</button>
-          <button class="btn-principal" data-crear="domino">🁢 Dominó</button>
-          <button class="btn-principal" data-crear="naval">🚢 Batalla Naval</button>
-          <button class="btn-principal" data-crear="sopa">🔎 Sopa de Letras</button>
-          <button class="btn-principal" data-crear="basta">✋ ¡Basta! (Stop)</button>
-          <button class="btn-principal" data-crear="simon">🔴 Simón Dice</button>
-          <button class="btn-principal" data-crear="calculo">➕ Cálculo Rápido</button>
-          <button class="btn-principal" data-crear="ppt">✊ Piedra, Papel o Tijera</button>
-          <button class="btn-principal" data-crear="adivina">🔢 Adivina el Número</button>
-          <button class="btn-principal" data-crear="damas">🔴 Damas</button>
-          <button class="btn-principal" data-crear="loteria">🎴 Lotería</button>
-          <button class="btn-principal" data-crear="guerra">⚔️ Guerra de Cartas</button>
-          <button class="btn-principal" data-crear="tesoro">🗺️ El Tesoro Escondido</button>
-          <button class="btn-principal" data-crear="verdad">💬 Verdad o Reto</button>
-          <button class="btn-principal" data-crear="carrera">🎲 Carrera de Dados</button>
-          <button class="btn-principal" data-crear="encadenada">🔤 Palabra Encadenada</button>
-          <button class="btn-principal" data-crear="puzzle">🧩 Rompecabezas Deslizante</button>
-        </div>
-        <h3 style="margin-top:16px">🧠 Juegos de memoria</h3>
-        <div class="botones-juego">
-          <button class="btn-principal" data-crear="quef">🤔 ¿Qué falta?</button>
-          <button class="btn-principal" data-crear="orden">🔢 Recuerda el Orden</button>
-          <button class="btn-principal" data-crear="numeros">🧮 Memoria de Números</button>
-        </div>
-        <h3 style="margin-top:16px">📖 Juegos bíblicos</h3>
-        <div class="botones-juego">
-          <button class="btn-principal" data-crear="trivia-biblica">📖 Trivia Bíblica</button>
-          <button class="btn-principal" data-crear="memoria-biblica">🕊️ Memoria Bíblica</button>
-          <button class="btn-principal" data-crear="versiculo">✍️ Completa el Versículo</button>
-          <button class="btn-principal" data-crear="quien">🗣️ ¿Quién lo Dijo?</button>
-          <button class="btn-principal" data-crear="vf">✅ Verdadero o Falso</button>
-          <button class="btn-principal" data-crear="encuentra">🔍 Encuentra el Versículo</button>
-          <button class="btn-principal" data-crear="ordenab">📜 Ordena la Historia</button>
-          <button class="btn-principal" data-crear="misterio">🕵️ Personaje Misterioso</button>
-        </div>
+        </label>
+        <div id="categorias-juegos"></div>
       </div>
       <div class="tarjeta">
         <h3>🚪 Partidas abiertas</h3>
@@ -244,6 +198,18 @@
           <h3 style="margin-top:18px">🎶 Cola compartida</h3>
           <div id="cola"><p class="subtitulo">La cola está vacía. Busca algo rico y agrégalo.</p></div>
         </div>
+      </div>
+      <!-- v3.4 · MÁS APPS: compartir enlaces de otras plataformas -->
+      <div class="tarjeta">
+        <h2>🎧 Más apps: música y series de otros lados</h2>
+        <p class="subtitulo">¿La canción está en Spotify o la serie en Netflix? Pega aquí su enlace (en la otra app toca Compartir → Copiar enlace) y se comparte con toda la familia.</p>
+        <div class="aviso" style="margin-bottom:12px">🎵 <strong>Spotify, Apple Music y SoundCloud SÍ suenan aquí dentro</strong>, con su reproductor oficial: pega el enlace y dale play. 📺 <strong>Netflix, Disney+, Prime Video, Max, TikTok y demás NO dejan sonar dentro de otras apps</strong> (lo bloquean ellos, no nosotros): con esos, a cada quien se le abre en SU app, con SU cuenta — y una cuenta regresiva de 3 segundos ayuda a empezar todos a la vez. 💛</div>
+        <form class="buscador" id="form-apps">
+          <input type="text" inputmode="url" id="apps-enlace" placeholder="Pega el enlace aquí… 🔗" aria-label="Enlace de otra app para compartir">
+          <button type="submit" class="btn-principal">Compartir 💌</button>
+        </form>
+        <div id="apps-aviso" class="aviso aviso-error oculto" style="margin-top:10px"></div>
+        <div id="apps-zona" style="margin-top:12px"><p class="subtitulo">Todavía no suena nada de otras apps. ¡Pega el primer enlace!</p></div>
       </div>
     </section>
 
@@ -363,6 +329,31 @@
         <p class="versiculo-texto" id="capa-versiculo-texto"></p>
         <p class="versiculo-cita" id="capa-versiculo-cita"></p>
         <p class="subtitulo" id="capa-versiculo-de"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== v3.4 · CAPA «ABRIR PARA TODOS» =====
+     Cuando un familiar comparte el enlace de una app que NO suena aquí
+     dentro (Netflix, Disney+…), esta capa avisa a todos a la vez, con
+     cuenta regresiva sincronizada de 3 segundos y el botón de abrir el
+     enlace en la app de cada quien. Se cierra solo con su ✖. -->
+<div id="capa-lanzar" class="capa oculto" role="dialog" aria-modal="true" aria-label="Abrir para todos">
+  <div class="capa-panel">
+    <div class="capa-cabecera">
+      <span class="capa-titulo">📺 Abrir para todos</span>
+      <button type="button" class="btn-cerrar-capa" id="btn-cerrar-lanzar" aria-label="Cerrar">✖</button>
+    </div>
+    <div class="capa-cuerpo">
+      <div class="tarjeta tarjeta-en-capa" style="text-align:center">
+        <div class="logo-grande" id="lanzar-icono">📺</div>
+        <p><strong id="lanzar-de">Alguien</strong> quiere ver esto con ustedes:</p>
+        <p class="lanzar-servicio" id="lanzar-servicio">Otra app</p>
+        <p class="subtitulo lanzar-enlace" id="lanzar-enlace"></p>
+        <div class="regresiva" id="lanzar-cuenta">3</div>
+        <button type="button" class="btn-principal" id="lanzar-abrir" disabled>⏳ ¡Prepárate…!</button>
+        <p class="subtitulo" style="margin-top:10px">Al tocar «¡Abrir ahora!» se abre en la app de ese servicio en TU aparato, con TU cuenta. La cuenta regresiva es para empezar todos a la vez. 💛</p>
       </div>
     </div>
   </div>
