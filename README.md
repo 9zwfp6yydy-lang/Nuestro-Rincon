@@ -79,6 +79,88 @@ Cómo funciona, sin magia:
 - **El formato depende del navegador que graba** (MediaRecorder): **Safari graba MP4/AAC, que suena en todos**; **Chrome graba WebM/Opus, que puede NO sonar en Safari/iPad**. En la práctica: las notas grabadas desde el iPad/iPhone se escuchan en todas partes; las grabadas en Chrome se escuchan en Chrome/Android, y en el iPad podrían fallar (la app lo avisa si pasa). Convertir formatos en el servidor queda fuera de esta versión.
 - Sin permiso de micrófono o sin MediaRecorder, la app lo dice claro y el botón de grabar se esconde; el resto del chat no se afecta.
 
+## Versión 3.4 (juegos por categorías + «Más apps») — construida, SIN desplegar
+
+Dos pedidos del dueño, construidos sobre la v3.3 (caché
+`nuestro-rincon-v3-4`; **cero SQL**: todo lo nuevo viaja por el broadcast
+del canal de cine, sin tocar la base).
+
+**A) Juegos por categorías con deslizamiento** — la pestaña Juegos ya no
+es una lista larga: los 33 juegos se reparten en **6 categorías**, cada
+una una **barra horizontal deslizable** (scroll-x interno con snap) de
+tarjetas compactas (icono + nombre), el mismo patrón visual que las
+barras de historias de Biblia. Reparto (cada clave de creación en UNA
+sola categoría; 36 tarjetas = 33 juegos + 3 variantes de creación que
+apuntan al mismo juego con otro banco/mazo):
+
+| Categoría | Juegos |
+|---|---|
+| 🎲 Mesa clásica (7) | Gato, Conecta 4, Serpientes y Escaleras, Dominó, Batalla Naval, Damas, El Tesoro Escondido |
+| 🃏 Cartas y dados (4) | Parchís, Lotería, Guerra de Cartas, Carrera de Dados |
+| 🔤 Mente y palabras (7) | Trivia, Ahorcado, Sopa de Letras, ¡Basta!, Cálculo Rápido, Adivina el Número, Palabra Encadenada |
+| 🧠 Memoria y reflejos (6) | Memoria, Memoria con temas, Simón Dice, ¿Qué falta?, Recuerda el Orden, Memoria de Números |
+| 😂 Para reírse (4) | Dibujo y Adivina, Verdad o Reto, Rompecabezas Deslizante, Piedra, Papel o Tijera |
+| 📖 Bíblicos (8) | Trivia Bíblica, Memoria Bíblica, Completa el Versículo, ¿Quién lo Dijo?, Verdadero o Falso, Encuentra el Versículo, Ordena la Historia, Personaje Misterioso |
+
+Los datos viven en `CATEGORIAS_JUEGOS` (app.js) y las tarjetas se
+generan al iniciar la pestaña (antes de cablear `[data-crear]`, así
+nacen con su toque puesto). Tocar una tarjeta crea la partida y abre su
+capa **al instante** (conducta optimista de la v3.3 intacta). El
+selector de mazo de «Memoria con temas» sigue en la pestaña, encima de
+las barras. «Partidas abiertas» queda debajo, como siempre. Los 8
+bíblicos conservan además su rejilla propia en la pestaña Biblia (ya
+vivían en ambas antes de la v3.4).
+
+**B) Panel «Más apps» en Ver y escuchar** — compartir enlaces de otras
+plataformas, con la conducta honesta de cada una:
+
+1. **Suenan AQUÍ DENTRO** (Spotify, Apple Music, SoundCloud): se pega
+   el enlace y aparece su **reproductor oficial incrustado** en la zona
+   de la tarjeta, para TODOS los presentes (broadcast `apps-embed`),
+   con botón «⏹️ Parar y quitar (para todos)» (broadcast `apps-quitar`).
+   La conversión enlace→reproductor es función pura probada
+   (`Fun.enlaceIncrustable`): Spotify (canción/álbum/lista/episodio,
+   incl. enlaces `spotify:` y con `/intl-…/`), Apple Music (al mismo
+   camino en `embed.music.apple.com`) y SoundCloud (pista/lista por
+   `w.soundcloud.com/player`). SIN búsqueda interna para estas: su
+   buscador exige credenciales de desarrollador de cada plataforma; el
+   de YouTube sigue siendo el integrado de siempre. Matiz honesto: el
+   reproductor incrustado suena en el aparato de cada quien (cada uno
+   le da play); la sincronía fina tipo YouTube no la permite la
+   plataforma y no se finge.
+2. **«Abrir para todos»** (Netflix, Disney+, Prime Video —incl.
+   amazon.com con `/video`—, Max/HBO Max, TikTok, Twitch, Hulu,
+   Paramount+, Peacock, Vimeo, Facebook, Instagram y cualquier otro
+   enlace válido): esos servicios **no permiten reproducirse dentro de
+   otras apps**, y la propia vista lo dice con todas las letras. Al
+   compartir, a todos les salta la **capa sobrepuesta** «{nombre}
+   quiere ver esto con ustedes» con el servicio, el enlace y una
+   **cuenta regresiva sincronizada de 3 segundos** (un instante
+   absoluto compartido —`abrirEn`— calculado con `Fun.restanteRegresiva`);
+   al llegar a cero se enciende «▶️ ¡Abrir ahora!», que abre el enlace
+   en el aparato de cada quien (su app si la tiene, con su cuenta),
+   para empezar a la vez. Se cierra con su ✖ grande, como todas las
+   capas.
+3. Un enlace de **YouTube** pegado en «Más apps» se manda solo al
+   reproductor de YouTube de la casa. Lo que no es enlace muestra un
+   aviso amable.
+
+Sin persistencia: quien entra tarde no ve el embed que ya sonaba (es
+broadcast, como la sincronía del cine); documentado y aceptado — a
+cambio, cero migración de base de datos.
+
+Verificado: batería automática **140/140** (126 previas + 14 nuevas:
+categorías completas y sin duplicados —los 33 por categoría contados
+desde los datos reales—, los 3 reproductores convertidos, el
+reconocimiento de servicios, la regresiva y las aserciones de fuente de
+la capa y los broadcasts) y **verificación en navegador real a 390×844
+y 820×1180 sin fallos** (6 barras con 36 tarjetas y deslizamiento
+interno real; crear desde tarjeta de tres categorías distintas abre la
+capa al instante; Spotify/SoundCloud/Apple incrustados en la zona; lo
+de «Mamá» llega por broadcast y su quitar también; Netflix abre la capa
+con la regresiva 3→«¡Ya!» y el botón abre el enlace en ventana nueva;
+la ✖ cierra a mitad de cuenta).
+
 ## Archivos
 
 ```
