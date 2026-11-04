@@ -1002,7 +1002,13 @@
     tycoon: { icono: '🏗️', nombre: 'Mi Tycoon', tope: 3 },
     mascotas: { icono: '🐾', nombre: 'Mascotas Monederas', tope: 3 },
     torre: { icono: '🎈', nombre: 'Defiende la Torre', tope: 3 },
-    impostor: { icono: '🕵️', nombre: 'El Impostor', tope: 3 }
+    impostor: { icono: '🕵️', nombre: 'El Impostor', tope: 3 },
+    jonas: { icono: '🐳', nombre: 'Jonás y la Ballena', tope: 3 },
+    arca: { icono: '🦁', nombre: 'El Arca de Noé', tope: 3 },
+    goliat: { icono: '🪨', nombre: 'David y Goliat', tope: 3 },
+    cohete: { icono: '🚀', nombre: 'Carrera Espacial', tope: 3 },
+    blanco: { icono: '🎯', nombre: 'Tiro al Blanco', tope: 3 },
+    granja: { icono: '🌻', nombre: 'Granja de Monedas', tope: 3 }
   };
 
   /* ----- v3.4: los juegos POR CATEGORÍAS, en barras que se deslizan -----
@@ -1035,9 +1041,9 @@
     { id: 'cartas', icono: '🃏', nombre: 'Cartas y dados', juegos: ['parchis', 'loteria', 'guerra', 'carrera'] },
     { id: 'mente', icono: '🔤', nombre: 'Mente y palabras', juegos: ['trivia', 'ahorcado', 'sopa', 'basta', 'calculo', 'adivina', 'encadenada'] },
     { id: 'memoria', icono: '🧠', nombre: 'Memoria y reflejos', juegos: ['memoria', 'memoria-tema', 'simon', 'quef', 'orden', 'numeros'] },
-    { id: 'risas', icono: '😂', nombre: 'Para reírse', juegos: ['dibujo', 'verdad', 'puzzle', 'ppt', 'impostor'] },
-    { id: 'roblox', icono: '🕹️', nombre: 'Mundo Roblox', juegos: ['obby', 'tycoon', 'mascotas', 'torre'] },
-    { id: 'biblicos', icono: '📖', nombre: 'Bíblicos', juegos: ['trivia-biblica', 'memoria-biblica', 'versiculo', 'quien', 'vf', 'encuentra', 'ordenab', 'misterio'] }
+    { id: 'risas', icono: '😂', nombre: 'Para reírse', juegos: ['dibujo', 'verdad', 'puzzle', 'ppt', 'impostor', 'blanco'] },
+    { id: 'roblox', icono: '🕹️', nombre: 'Mundo Roblox', juegos: ['obby', 'tycoon', 'mascotas', 'torre', 'cohete', 'granja'] },
+    { id: 'biblicos', icono: '📖', nombre: 'Bíblicos', juegos: ['trivia-biblica', 'memoria-biblica', 'versiculo', 'quien', 'vf', 'encuentra', 'ordenab', 'misterio', 'jonas', 'arca', 'goliat'] }
   ];
   function infoCrear(clave) { return CATALOGO[clave] || EXTRA_CREAR[clave] || { icono: '🎮', nombre: clave }; }
 
@@ -1198,6 +1204,12 @@
       case 'mascotas': estado = G.crearMascotas([yo.id]); break;
       case 'torre': estado = G.crearTorre([yo.id]); break;
       case 'impostor': estado = G.crearImpostor([yo.id]); break;
+      case 'jonas': estado = G.crearJonas([yo.id]); break;
+      case 'arca': estado = G.crearArca([yo.id]); break;
+      case 'goliat': estado = G.crearGoliat([yo.id]); break;
+      case 'cohete': estado = G.crearCohete([yo.id]); break;
+      case 'blanco': estado = G.crearBlanco([yo.id]); break;
+      case 'granja': estado = G.crearGranja([yo.id]); break;
       default: return;
     }
     // v3.3: la capa se abre AL TOQUE con la partida provisional; el insert
@@ -1343,6 +1355,12 @@
       case 'mascotas': renderMascotas(p); break;
       case 'torre': renderTorre(p); break;
       case 'impostor': renderImpostor(p); break;
+      case 'jonas': renderJonas(p); break;
+      case 'arca': renderArca(p); break;
+      case 'goliat': renderGoliat(p); break;
+      case 'cohete': renderCohete(p); break;
+      case 'blanco': renderBlanco(p); break;
+      case 'granja': renderGranja(p); break;
       default: $('#zona-juego').innerHTML = '<p>Este juego todavía no tiene pantalla. 🙈</p>';
     }
     } catch (eRender) {
@@ -3402,6 +3420,265 @@
       if (e.descubierto) celebrarSiGane(p, yo.id !== e.impostor, '¡Impostor descubierto! 🕵️🎉', 'La familia lo cazó');
       else celebrarSiGane(p, yo.id === e.impostor, '¡El impostor se escapó! 🕵️💨', 'Nadie lo descubrió');
     }
+  }
+
+  /* ----- v3.7 · 🐳 Jonás y la Ballena ----- */
+  function renderJonas(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    var esMiTurno = !e.terminado && miIdx !== -1 && e.turno === miIdx;
+    avisoTurno(p, esMiTurno);
+    var html = tituloJuego(p, e, '🐳 Jonás y la Ballena') +
+      '<p>Del puerto a <strong>Nínive</strong> por el mar 🌊: la tormenta 🌩️ te atrasa, la ola te empuja, la ballena 🐳 es un atajo ¡y las conchas 🐚 valen puntos!</p>';
+    html += '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:8px 0">';
+    for (var c = 0; c <= G.JONAS_META; c++) {
+      var fondo = c === G.JONAS_META ? '#ffe066' : G.JONAS_TORMENTA.indexOf(c) !== -1 ? '#d0bfff' : '#fff';
+      var dentro = '';
+      if (c === G.JONAS_META) dentro = '🏁';
+      else if (G.JONAS_BALLENA[c]) dentro = '🐳';
+      else if (G.JONAS_OLA[c]) dentro = '🌊';
+      else if (G.JONAS_TORMENTA.indexOf(c) !== -1) dentro = '🌩️';
+      else if (G.JONAS_CONCHAS[c]) dentro = '🐚';
+      var fichas = e.jugadores.filter(function (uid) { return (e.posiciones[uid] || 0) === c; })
+        .map(function (uid) { return emojiDe(uid); }).join('');
+      html += '<div style="background:' + fondo + ';border:2px solid var(--borde);border-radius:8px;min-height:44px;text-align:center;padding:2px">' +
+        '<small>' + c + '</small><br>' + (fichas || dentro || '') + '</div>';
+    }
+    html += '</div>';
+    html += e.jugadores.map(function (uid) {
+      return '<p>' + emojiDe(uid) + ' ' + escapar(nombreDe(uid)) + ': casilla <strong>' + (e.posiciones[uid] || 0) + '</strong> · 🐚 <strong>' + (e.conchas[uid] || 0) + '</strong></p>';
+    }).join('');
+    if (e.dado) html += '<p style="font-size:1.6rem;text-align:center">🎲 ' + e.dado + '</p>';
+    if (e.evento) html += '<p class="subtitulo">' + escapar(e.evento) + '</p>';
+    if (e.terminado) {
+      html += '<p><strong>🏆 ¡' + escapar(nombreDe(e.ganador)) + ' llegó a Nínive!</strong></p>' + rankingFinalHTML(e);
+    } else {
+      html += '<p>Turno de ' + emojiDe(e.jugadores[e.turno]) + ' <strong>' + escapar(nombreDe(e.jugadores[e.turno])) + '</strong></p>';
+      if (esMiTurno) html += '<div class="botones-juego"><button class="btn-principal" id="jonas-tirar">🎲 ¡Navegar!</button></div>';
+    }
+    zona.innerHTML = html;
+    var bj = $('#jonas-tirar');
+    if (bj) bj.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.tirarJonas(e, miIdx)); Fun.sonido('pop'); } catch (err) { Fun.sonido('error'); }
+    });
+    celebrarPorPuntajes(p, e, '¡Llegó a Nínive! 🐳🏆', 'Ni la ballena lo detuvo');
+  }
+
+  /* ----- v3.7 · 🦁 El Arca de Noé ----- */
+  function renderArca(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    var esMiTurno = !e.terminado && miIdx !== -1 && e.turno === miIdx;
+    avisoTurno(p, esMiTurno);
+    var html = tituloJuego(p, e, '🦁 El Arca de Noé') +
+      '<p>Busquen animales y completen sus <strong>parejas</strong> (+10 pts) antes de que el agua tape el arca. ¡Con ' + G.ARCA_PAREJAS_META + ' parejas el arca queda lista y ganas al instante!</p>' +
+      '<p style="font-size:1.2rem">💧 Agua: <strong>' + (e.agua || 0) + ' / ' + G.ARCA_AGUA_MAX + '</strong> · Ronda ' + (e.ronda || 1) + '</p>' +
+      '<div class="barra-tiempo"><div style="width:' + Math.min(100, (e.agua || 0) / G.ARCA_AGUA_MAX * 100) + '%;background:#4dabf7"></div></div>';
+    html += e.jugadores.map(function (uid) {
+      var par = ((e.parejas || {})[uid] || []).map(function (id) { var a = G.animalArca(id); return a ? a.icono + a.icono : ''; }).join(' ');
+      var sue = ((e.sueltos || {})[uid] || []).map(function (id) { var a = G.animalArca(id); return a ? a.icono : ''; }).join(' ');
+      return '<p>' + emojiDe(uid) + ' ' + escapar(nombreDe(uid)) + ': <strong>' + ((e.puntajes || {})[uid] || 0) + ' pts</strong><br>' +
+        (par || '<small>Sin parejas todavía</small>') + (sue ? '<br><small>Esperando pareja: ' + sue + '</small>' : '') + '</p>';
+    }).join('');
+    if (e.evento) html += '<p style="font-size:1.15rem;text-align:center">' + escapar(e.evento) + '</p>';
+    if (e.terminado) {
+      html += '<h3>🏁 ¡El arca zarpó!</h3>' + rankingFinalHTML(e);
+    } else {
+      html += '<p>Turno de ' + emojiDe(e.jugadores[e.turno]) + ' <strong>' + escapar(nombreDe(e.jugadores[e.turno])) + '</strong></p>';
+      if (esMiTurno) html += '<div class="botones-juego"><button class="btn-principal" id="arca-buscar">🔍 ¡Buscar animales!</button></div>';
+    }
+    zona.innerHTML = html;
+    var ba = $('#arca-buscar');
+    if (ba) ba.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.buscarArca(e, miIdx)); Fun.sonido('pop'); } catch (err) { Fun.sonido('error'); }
+    });
+    celebrarPorPuntajes(p, e, '¡El arca está lista! 🦁🏆', 'Reunió las parejas a tiempo');
+  }
+
+  /* ----- v3.7 · 🪨 David y Goliat ----- */
+  var goliatPiedra = 'mediana', goliatFuerza = 5;
+  function renderGoliat(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    var esMiTurno = !e.terminado && miIdx !== -1 && e.turno === miIdx;
+    avisoTurno(p, esMiTurno);
+    var vientoTxt = e.viento > 0 ? '💨 Viento a favor: +' + e.viento : e.viento < 0 ? '💨 Viento en contra: ' + e.viento : '🍃 Sin viento';
+    var html = tituloJuego(p, e, '🪨 David y Goliat') +
+      '<p>Goliat está a <strong>' + G.GOLIAT_DISTANCIA + ' pasos</strong>. El tiro llega a <strong>6 + tu fuerza</strong>, ajustado por la piedra y el viento. ¡Justo en la frente = 50 pts!</p>' +
+      '<p style="font-size:1.3rem;text-align:center"><strong>Tiro ' + Math.min(e.ronda || 1, G.GOLIAT_RONDAS) + ' de ' + G.GOLIAT_RONDAS + '</strong> · ' + vientoTxt + '</p>' +
+      marcadorPuntos(e, ' pts');
+    if (e.ultimoTiro) {
+      html += '<p class="subtitulo">Último tiro de ' + escapar(nombreDe(e.ultimoTiro.jugador)) + ': cayó a ' + e.ultimoTiro.impacto +
+        ' pasos (' + (e.ultimoTiro.error === 0 ? '🎯 ¡EN LA FRENTE!' : 'a ' + e.ultimoTiro.error + ' de la frente') + ') → ' + e.ultimoTiro.puntos + ' pts</p>';
+    }
+    if (e.evento) html += '<p class="subtitulo">' + escapar(e.evento) + '</p>';
+    if (e.terminado) {
+      html += '<h3>🏁 ¡Se acabaron los tiros!</h3>' + rankingFinalHTML(e);
+    } else if (esMiTurno) {
+      html += '<p><strong>Elige tu piedra:</strong></p><div class="botones-juego">';
+      G.PIEDRAS_GOLIAT.forEach(function (pd) {
+        html += '<button class="' + (goliatPiedra === pd.id ? 'btn-principal' : 'btn-suave') + '" data-piedra="' + pd.id + '">' +
+          pd.icono + ' ' + escapar(pd.nombre) + '<br><small>' + escapar(pd.nota) + '</small></button>';
+      });
+      html += '</div><p><strong>Fuerza: <span id="goliat-fuerza-txt">' + goliatFuerza + '</span> 💪</strong></p>' +
+        '<input type="range" id="goliat-fuerza" min="1" max="10" step="1" value="' + goliatFuerza + '" style="width:100%">' +
+        '<div class="botones-juego"><button class="btn-principal" id="goliat-lanzar">🪨 ¡Lanzar!</button></div>';
+    } else {
+      html += '<p>Turno de ' + emojiDe(e.jugadores[e.turno]) + ' <strong>' + escapar(nombreDe(e.jugadores[e.turno])) + '</strong>…</p>';
+    }
+    zona.innerHTML = html;
+    $$('#zona-juego [data-piedra]').forEach(function (b) {
+      b.addEventListener('click', function () { goliatPiedra = b.dataset.piedra; renderGoliat(p); });
+    });
+    var desl = $('#goliat-fuerza');
+    if (desl) desl.addEventListener('input', function () {
+      goliatFuerza = Number(desl.value);
+      var t = $('#goliat-fuerza-txt'); if (t) t.textContent = goliatFuerza;
+    });
+    var bl2 = $('#goliat-lanzar');
+    if (bl2) bl2.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.lanzarGoliat(e, miIdx, goliatPiedra, goliatFuerza)); Fun.sonido('pop'); }
+      catch (err) { Fun.sonido('error'); }
+    });
+    celebrarPorPuntajes(p, e, '¡Puntería de David! 🪨🏆', 'Goliat no tuvo chance');
+  }
+
+  /* ----- v3.7 · 🚀 Carrera Espacial ----- */
+  function renderCohete(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    var esMiTurno = !e.terminado && miIdx !== -1 && e.turno === miIdx;
+    avisoTurno(p, esMiTurno);
+    var html = tituloJuego(p, e, '🚀 Carrera Espacial') +
+      '<p>¡A la <strong>Luna</strong> 🌕! Tú eliges: propulsor <strong>seguro</strong> (1–3, sin sustos) o <strong>TURBO</strong> (1–8… pero el 1 se sobrecalienta 🔥 y el 8 salta +2). Las ⭐ valen puntos; el 🕳️ te devuelve a tu estación 🚩.</p>';
+    html += '<div style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin:8px 0">';
+    for (var c = 0; c <= G.COHETE_META; c++) {
+      var fondoC = c === G.COHETE_META ? '#ffe066' : G.COHETE_AGUJERO.indexOf(c) !== -1 ? '#e599f7' : (c % 12 === 0 && c > 0) ? '#d3f9d8' : '#fff';
+      var dentroC = '';
+      if (c === G.COHETE_META) dentroC = '🌕';
+      else if (G.COHETE_AGUJERO.indexOf(c) !== -1) dentroC = '🕳️';
+      else if (G.COHETE_RECARGA[c]) dentroC = '⛽';
+      else if (G.COHETE_ESTRELLAS[c]) dentroC = '⭐';
+      else if (c % 12 === 0 && c > 0) dentroC = '🚩';
+      var fichasC = e.jugadores.filter(function (uid) { return (e.posiciones[uid] || 0) === c; })
+        .map(function (uid) { return emojiDe(uid); }).join('');
+      html += '<div style="background:' + fondoC + ';border:2px solid var(--borde);border-radius:8px;min-height:40px;text-align:center;padding:2px">' +
+        '<small>' + c + '</small><br>' + (fichasC || dentroC || '') + '</div>';
+    }
+    html += '</div>';
+    html += e.jugadores.map(function (uid) {
+      return '<p>' + emojiDe(uid) + ' ' + escapar(nombreDe(uid)) + ': casilla <strong>' + (e.posiciones[uid] || 0) + '</strong> · ⭐ <strong>' + (e.estrellas[uid] || 0) + '</strong></p>';
+    }).join('');
+    if (e.dado) html += '<p style="font-size:1.6rem;text-align:center">🎲 ' + e.dado + (e.ultimoModo === 'turbo' ? ' 🚀' : ' 🛡️') + '</p>';
+    if (e.evento) html += '<p class="subtitulo">' + escapar(e.evento) + '</p>';
+    if (e.terminado) {
+      html += '<p><strong>🏆 ¡' + escapar(nombreDe(e.ganador)) + ' llegó a la Luna!</strong></p>' + rankingFinalHTML(e);
+    } else {
+      html += '<p>Turno de ' + emojiDe(e.jugadores[e.turno]) + ' <strong>' + escapar(nombreDe(e.jugadores[e.turno])) + '</strong></p>';
+      if (esMiTurno) html += '<div class="botones-juego"><button class="btn-principal" id="cohete-seguro">🛡️ Seguro (1–3)</button>' +
+        '<button class="btn-verde" id="cohete-turbo">🚀 ¡TURBO! (1–8, con riesgo)</button></div>';
+    }
+    zona.innerHTML = html;
+    var bs = $('#cohete-seguro'), bt2 = $('#cohete-turbo');
+    if (bs) bs.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.despegarCohete(e, miIdx, 'seguro')); Fun.sonido('pop'); } catch (err) { Fun.sonido('error'); }
+    });
+    if (bt2) bt2.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.despegarCohete(e, miIdx, 'turbo')); Fun.sonido('turno'); } catch (err) { Fun.sonido('error'); }
+    });
+    celebrarPorPuntajes(p, e, '¡Llegó a la Luna! 🚀🏆', 'Astronauta de la familia');
+  }
+
+  /* ----- v3.7 · 🎯 Tiro al Blanco ----- */
+  function renderBlanco(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    var esMiTurno = !e.terminado && miIdx !== -1 && e.turno === miIdx;
+    avisoTurno(p, esMiTurno);
+    var html = tituloJuego(p, e, '🎯 Tiro al Blanco') +
+      '<p style="font-size:2.2rem;text-align:center">🎯</p>' +
+      '<p>Hasta <strong>3 dardos</strong> por turno: centro 50, anillos 25/10/5. Lo sumado queda <strong>sin guardar</strong>: si un dardo sale del blanco, ¡lo pierdes todo! El 3.er acierto seguido paga <strong>doble</strong> 🔥. <strong>Ronda ' + (e.ronda || 1) + ' de ' + G.BLANCO_RONDAS + '</strong></p>' +
+      marcadorPuntos(e, ' pts guardados');
+    if (esMiTurno || (e.turno === miIdx && !e.terminado)) {
+      html += '<p style="font-size:1.2rem;text-align:center">Sin guardar: <strong>' + (e.parcial || 0) + ' pts</strong> · Dardos: <strong>' + (e.dardos || 0) + '/3</strong></p>';
+    }
+    if (e.ultimoDardo) html += '<p class="subtitulo">Último dardo de ' + escapar(nombreDe(e.ultimoDardo.jugador)) + ': ' + escapar(e.ultimoDardo.anillo) + ' (' + e.ultimoDardo.puntos + ' pts)</p>';
+    if (e.evento) html += '<p class="subtitulo">' + escapar(e.evento) + '</p>';
+    if (e.terminado) {
+      html += '<h3>🏁 ¡Se acabaron las rondas!</h3>' + rankingFinalHTML(e);
+    } else if (esMiTurno) {
+      html += '<div class="botones-juego"><button class="btn-principal" id="blanco-lanzar">🎯 ¡Lanzar dardo!</button>' +
+        '<button class="btn-verde" id="blanco-plantar"' + ((e.dardos || 0) === 0 ? ' disabled' : '') + '>🏦 Plantarme y guardar</button></div>';
+    } else {
+      html += '<p>Turno de ' + emojiDe(e.jugadores[e.turno]) + ' <strong>' + escapar(nombreDe(e.jugadores[e.turno])) + '</strong>…</p>';
+    }
+    zona.innerHTML = html;
+    var blz = $('#blanco-lanzar');
+    if (blz) blz.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.lanzarBlanco(e, miIdx)); Fun.sonido('pop'); } catch (err) { Fun.sonido('error'); }
+    });
+    var bpl = $('#blanco-plantar');
+    if (bpl) bpl.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.plantarseBlanco(e, miIdx)); Fun.sonido('acierto'); } catch (err) { Fun.sonido('error'); }
+    });
+    celebrarPorPuntajes(p, e, '¡Tiro al Blanco ganado! 🎯🏆', 'Puntería y nervios de acero');
+  }
+
+  /* ----- v3.7 · 🌻 Granja de Monedas ----- */
+  function renderGranja(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    var esMiTurno = !e.terminado && miIdx !== -1 && e.turno === miIdx;
+    avisoTurno(p, esMiTurno);
+    var clima = G.climaDeGranja(e.clima);
+    var climaTxt = {
+      sol: 'Tus cultivos crecen +1 al empezar tu turno.',
+      lluvia: '¡Tus cultivos crecen el DOBLE al empezar tu turno!',
+      tormenta: '¡Cuidado! La tormenta se lleva tu cultivo más viejo.',
+      arcoiris: 'Hoy la cosecha paga 15 🪙 en vez de 12.'
+    }[clima.id] || '';
+    var html = tituloJuego(p, e, '🌻 Granja de Monedas') +
+      '<p style="font-size:1.3rem;text-align:center">Clima de hoy: ' + clima.icono + ' <strong>' + escapar(clima.nombre) + '</strong><br><small>' + climaTxt + '</small></p>' +
+      '<p><strong>Ronda ' + (e.ronda || 1) + ' de ' + G.GRANJA_RONDAS + '</strong> · Al empezar tu turno tus cultivos sienten el clima, y luego haces <strong>UNA</strong> acción. El cultivo 🌾 dorado (2+ turnos) ya se puede cosechar.</p>';
+    html += e.jugadores.map(function (uid) {
+      var cultivos = ((e.cultivos || {})[uid] || []).map(function (edad) {
+        return edad >= 2 ? '🌾' : edad === 1 ? '🌿' : '🌱';
+      }).join(' ');
+      return '<p>' + emojiDe(uid) + ' ' + escapar(nombreDe(uid)) + ': 🪙 <strong>' + ((e.monedas || {})[uid] || 0) + '</strong>' +
+        ' · 🚜 ' + ((e.parcelas || {})[uid] || 1) + ' parcela(s) · Patrimonio <strong>' + G.patrimonioGranja(e, uid) + '</strong><br>' +
+        (cultivos || '<small>Sin cultivos</small>') + '</p>';
+    }).join('');
+    if (e.evento) html += '<p class="subtitulo">' + escapar(e.evento) + '</p>';
+    if (e.terminado) {
+      html += '<h3>🏁 ¡Se acabó la temporada!</h3>' + rankingFinalHTML(e);
+    } else if (esMiTurno) {
+      html += '<div class="botones-juego">' +
+        '<button class="btn-principal" data-accion-granja="plantar">🌱 Plantar (5 🪙)</button>' +
+        '<button class="btn-verde" data-accion-granja="cosechar">🧺 Cosechar maduros</button>' +
+        '<button class="btn-suave" data-accion-granja="parcela">🚜 Parcela nueva (15 🪙)</button>' +
+        '<button class="btn-suave" data-accion-granja="pasar">⏭️ Pasar</button></div>' +
+        '<p class="subtitulo" id="granja-error"></p>';
+    } else {
+      html += '<p>Turno de ' + emojiDe(e.jugadores[e.turno]) + ' <strong>' + escapar(nombreDe(e.jugadores[e.turno])) + '</strong>…</p>';
+    }
+    zona.innerHTML = html;
+    $$('#zona-juego [data-accion-granja]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        try { guardarConPuntos(p, e, G.jugarGranja(e, miIdx, b.dataset.accionGranja)); Fun.sonido('acierto'); }
+        catch (err) {
+          Fun.sonido('error');
+          var er = $('#granja-error');
+          if (er) er.textContent = err.message;
+        }
+      });
+    });
+    celebrarPorPuntajes(p, e, '¡Granja de Monedas ganada! 🌻🏆', 'El mejor granjero de la familia');
   }
 
   /* ----- Palabra Encadenada ----- */
