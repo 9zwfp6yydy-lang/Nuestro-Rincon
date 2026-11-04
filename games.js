@@ -1729,6 +1729,15 @@
           if (estado.ganado) estado.jugadores.forEach(function (uid) { dar(uid, 20); });
         }
         break;
+      case 'jonas': case 'arca': case 'cohete': // v3.7: su puntaje + 50 a quien ganó la carrera
+        if (estado.terminado) { copiarPuntajes(0); dar(estado.ganador, 50); }
+        break;
+      case 'goliat': case 'granja': // v3.7: suma su propio puntaje
+        if (estado.terminado) copiarPuntajes(0);
+        break;
+      case 'blanco': // v3.7: su puntaje + 20 a quien más sumó
+        if (estado.terminado) copiarPuntajes(20);
+        break;
     }
     return suma;
   }
@@ -2970,6 +2979,523 @@
     return estadoRondaImpostor(estado.jugadores, Object.assign({}, estado.puntajes), estado.ronda + 1, rng);
   }
 
+  /* ================= v3.7: BÍBLICOS NUEVOS + DIVERSIÓN =================
+     Segunda tanda pedida por el dueño: tres bíblicos con mecánicas
+     DISTINTAS a los de preguntas y memoria que ya había (aventura con
+     dado, carrera de recolección contra el agua y puntería con viento)
+     y tres de diversión arcade (carrera espacial con riesgo a elegir,
+     dardos de «sigue o te plantas» y granja con clima). Mismo patrón
+     de la casa: estado JSON compartido, funciones puras que devuelven
+     un estado NUEVO y lanzan Error si la jugada no vale; los mapas por
+     jugador se completan solos con conMapa para quien se une tarde. */
+
+  /* ----- 🐳 Jonás y la Ballena (aventura con dado por el mar) -----
+     Del puerto a Nínive por un camino de 24 casillas: la tormenta 🌩️
+     te hace retroceder, la ola 🌊 te empuja, la ballena 🐳 es un atajo
+     rapidísimo y las conchas 🐚 valen puntos. Primero a Nínive gana. */
+  var JONAS_META = 24;
+  var JONAS_CONCHAS = { 4: 5, 10: 5, 16: 10, 22: 10 };
+  var JONAS_TORMENTA = [5, 12];
+  var JONAS_OLA = { 8: 11, 17: 20 };
+  var JONAS_BALLENA = { 14: 20 };
+
+  function crearJonas(jugadores) {
+    var posiciones = {}, conchas = {}, puntajes = {};
+    (jugadores || []).forEach(function (id) {
+      posiciones[id] = 0; conchas[id] = 0; puntajes[id] = 0;
+    });
+    return {
+      tipo: 'jonas', jugadores: (jugadores || []).slice(0, 3),
+      posiciones: posiciones, conchas: conchas, puntajes: puntajes,
+      turno: 0, dado: null,
+      evento: '¡A navegar! Del puerto a Nínive: el primero en llegar gana. 🐳',
+      ganador: null, terminado: false
+    };
+  }
+
+  function tirarJonas(estado, jugadorIdx, rng) {
+    exigirTurno(estado, jugadorIdx);
+    var r = rng || Math.random;
+    var uid = estado.jugadores[jugadorIdx];
+    var posiciones = conMapa(estado, 'posiciones', 0);
+    var conchas = conMapa(estado, 'conchas', 0);
+    var dado = 1 + Math.floor(r() * 6);
+    var destino = posiciones[uid] + dado;
+    var evento = '🎲 Salió un ' + dado + '. ';
+    var gano = destino >= JONAS_META;
+    if (gano) {
+      destino = JONAS_META;
+      evento += '¡Llegaste a NÍNIVE! 🎉 La ciudad te escucha. ¡Ganaste!';
+    } else if (JONAS_BALLENA[destino]) {
+      destino = JONAS_BALLENA[destino];
+      evento += '🐳 ¡LA BALLENA! Te tragó… ¡y te escupió rapidísimo hasta la casilla ' + destino + '! ';
+    } else if (JONAS_OLA[destino]) {
+      destino = JONAS_OLA[destino];
+      evento += '🌊 ¡Una ola gigante te empujó hasta la casilla ' + destino + '! ';
+    } else if (JONAS_TORMENTA.indexOf(destino) !== -1) {
+      destino = Math.max(0, destino - 2);
+      evento += '🌩️ ¡TORMENTA! El barco se sacudió y retrocediste a la casilla ' + destino + '. ';
+    }
+    if (!gano && JONAS_CONCHAS[destino]) {
+      conchas[uid] += JONAS_CONCHAS[destino];
+      evento += '¡Agarraste ' + JONAS_CONCHAS[destino] + ' conchas! 🐚';
+    }
+    posiciones[uid] = destino;
+    return Object.assign({}, estado, {
+      posiciones: posiciones, conchas: conchas,
+      puntajes: Object.assign({}, conchas),
+      dado: dado, evento: evento,
+      turno: gano ? estado.turno : siguienteTurno(estado),
+      ganador: gano ? uid : null, terminado: gano
+    });
+  }
+
+  /* ----- 🦁 El Arca de Noé (a reunir parejas antes de que suba el agua) --
+     Por turnos se buscan animales en el bosque: juntar la pareja de una
+     especie vale 10 pts. Cada vuelta completa el agua sube un nivel y
+     la lluvia lo sube más: quien complete 4 parejas deja el arca lista
+     y gana; si el agua llega arriba, gana quien más puntos tenga. */
+  var ANIMALES_ARCA = [
+    { id: 'leon', icono: '🦁', nombre: 'León' },
+    { id: 'elefante', icono: '🐘', nombre: 'Elefante' },
+    { id: 'jirafa', icono: '🦒', nombre: 'Jirafa' },
+    { id: 'cebra', icono: '🦓', nombre: 'Cebra' },
+    { id: 'mono', icono: '🐒', nombre: 'Mono' },
+    { id: 'oso', icono: '🐻', nombre: 'Oso' }
+  ];
+  var ARCA_PAREJAS_META = 4;
+  var ARCA_AGUA_MAX = 9;
+  function animalArca(id) {
+    for (var i = 0; i < ANIMALES_ARCA.length; i++) if (ANIMALES_ARCA[i].id === id) return ANIMALES_ARCA[i];
+    return null;
+  }
+
+  function crearArca(jugadores) {
+    var parejas = {}, sueltos = {}, puntajes = {};
+    (jugadores || []).forEach(function (id) {
+      parejas[id] = []; sueltos[id] = []; puntajes[id] = 0;
+    });
+    return {
+      tipo: 'arca', jugadores: (jugadores || []).slice(0, 3),
+      parejas: parejas, sueltos: sueltos, puntajes: puntajes,
+      agua: 0, ronda: 1, turno: 0,
+      evento: '¡A buscar animales de dos en dos! El agua va subiendo… 🌧️',
+      ganador: null, ganadoArca: false, terminado: false
+    };
+  }
+
+  function buscarArca(estado, jugadorIdx, rng) {
+    exigirTurno(estado, jugadorIdx);
+    var r = rng || Math.random;
+    var uid = estado.jugadores[jugadorIdx];
+    var parejas = conMapa(estado, 'parejas', function () { return []; });
+    var sueltos = conMapa(estado, 'sueltos', function () { return []; });
+    var puntajes = conMapa(estado, 'puntajes', 0);
+    var agua = estado.agua || 0;
+    var evento = '';
+    var suerte = r();
+    if (suerte < 0.60) {
+      var an = ANIMALES_ARCA[Math.floor(r() * ANIMALES_ARCA.length)];
+      if (parejas[uid].indexOf(an.id) !== -1) {
+        puntajes[uid] += 4;
+        evento = an.icono + ' ¡Otro ' + an.nombre + '! Su pareja ya está en el arca: trae comida para todos. +4 pts';
+      } else if (sueltos[uid].indexOf(an.id) !== -1) {
+        sueltos[uid] = sueltos[uid].filter(function (x) { return x !== an.id; });
+        parejas[uid] = parejas[uid].concat([an.id]);
+        puntajes[uid] += 10;
+        evento = an.icono + an.icono + ' ¡PAREJA DE ' + an.nombre.toUpperCase() + ' COMPLETA! Entran al arca juntitos. +10 pts 🎉';
+      } else {
+        sueltos[uid] = sueltos[uid].concat([an.id]);
+        puntajes[uid] += 2;
+        evento = an.icono + ' Encontraste un ' + an.nombre + '. Ahora a buscarle su pareja… +2 pts';
+      }
+    } else if (suerte < 0.70) {
+      agua += 1;
+      evento = '🌧️ ¡Lluvia fuerte! El agua sube a nivel ' + agua + ' de ' + ARCA_AGUA_MAX + '. ¡Apúrense!';
+    } else if (suerte < 0.88) {
+      puntajes[uid] += 5;
+      evento = '🕊️ ¡Una paloma con una ramita! Buena señal de Dios. +5 pts';
+    } else {
+      evento = '🙈 ¡Un mono travieso se escondió entre los árboles! Esta vez no encontraste nada.';
+    }
+    var cambios = {
+      parejas: parejas, sueltos: sueltos, puntajes: puntajes, agua: agua, evento: evento
+    };
+    if (parejas[uid].length >= ARCA_PAREJAS_META) {
+      cambios.terminado = true;
+      cambios.ganador = uid;
+      cambios.ganadoArca = true;
+      cambios.evento = evento + ' 🚢🎉 ¡EL ARCA ESTÁ LISTA! Reuniste ' + ARCA_PAREJAS_META + ' parejas antes de que subiera el agua.';
+      return Object.assign({}, estado, cambios);
+    }
+    var turnoNuevo = siguienteTurno(estado);
+    cambios.turno = turnoNuevo;
+    if (turnoNuevo === 0) {
+      agua += 1;
+      cambios.agua = agua;
+      cambios.ronda = (estado.ronda || 1) + 1;
+    }
+    if (agua >= ARCA_AGUA_MAX) {
+      cambios.terminado = true;
+      var fin = Object.assign({}, estado, cambios);
+      cambios.ganador = ganadorPorPuntajes(fin);
+      cambios.evento = evento + ' 🌊 ¡El agua llegó a lo más alto! El arca zarpó con lo reunido: gana quien más puntos juntó.';
+    }
+    return Object.assign({}, estado, cambios);
+  }
+
+  /* ----- 🪨 David y Goliat (puntería con honda: piedra, fuerza y viento) --
+     Goliat está a 12 pasos. En tu turno eliges la piedra y la fuerza de
+     tu honda; el viento empuja el tiro según lo pesada que sea la
+     piedra. Mientras más cerca de la frente, más puntos. 3 tiros cada
+     uno: el mejor puntero gana. */
+  var PIEDRAS_GOLIAT = [
+    { id: 'chica', icono: '🪨', nombre: 'Piedra chica', ajuste: 1, vientoMult: 2, nota: 'Vuela lejos, pero el viento la mueve MUCHO' },
+    { id: 'mediana', icono: '🪨', nombre: 'Piedra mediana', ajuste: 0, vientoMult: 1, nota: 'Equilibrada: el viento la mueve normal' },
+    { id: 'grande', icono: '🪨', nombre: 'Piedra grande', ajuste: -1, vientoMult: 0, nota: 'Pesa mucho: el viento ni la mueve, pero cae más cerca' }
+  ];
+  var GOLIAT_DISTANCIA = 12;
+  var GOLIAT_RONDAS = 3;
+  var PUNTOS_GOLIAT = [50, 25, 15, 8, 3]; // por pasos de error: 0, 1, 2, 3, 4
+  function piedraGoliat(id) {
+    for (var i = 0; i < PIEDRAS_GOLIAT.length; i++) if (PIEDRAS_GOLIAT[i].id === id) return PIEDRAS_GOLIAT[i];
+    return null;
+  }
+  function vientoGoliat(r) { return Math.floor(r() * 7) - 3; } // -3..+3
+
+  function crearGoliat(jugadores, rng) {
+    var r = rng || Math.random;
+    var puntajes = {};
+    (jugadores || []).forEach(function (id) { puntajes[id] = 0; });
+    return {
+      tipo: 'goliat', jugadores: (jugadores || []).slice(0, 3),
+      turno: 0, ronda: 1, viento: vientoGoliat(r),
+      puntajes: puntajes, ultimoTiro: null,
+      evento: 'Goliat se ríe desde lejos… 😤 ¡A afinar la honda! Cada quien tiene ' + GOLIAT_RONDAS + ' tiros.',
+      ganador: null, terminado: false
+    };
+  }
+
+  function lanzarGoliat(estado, jugadorIdx, piedraId, fuerza, rng) {
+    exigirTurno(estado, jugadorIdx);
+    var piedra = piedraGoliat(piedraId);
+    if (!piedra) throw new Error('Esa piedra no existe 🙈');
+    if (typeof fuerza !== 'number' || Math.floor(fuerza) !== fuerza || fuerza < 1 || fuerza > 10) {
+      throw new Error('La fuerza va de 1 a 10 💪');
+    }
+    var r = rng || Math.random;
+    var uid = estado.jugadores[jugadorIdx];
+    var puntajes = conMapa(estado, 'puntajes', 0);
+    var impacto = 6 + fuerza + piedra.ajuste + (estado.viento || 0) * piedra.vientoMult;
+    var error = Math.abs(impacto - GOLIAT_DISTANCIA);
+    var pts = error < PUNTOS_GOLIAT.length ? PUNTOS_GOLIAT[error] : 0;
+    puntajes[uid] += pts;
+    var evento;
+    if (error === 0) evento = '🎯🎯 ¡¡JUSTO EN LA FRENTE!! ¡GOLIAT CAYÓ! +50 pts ¡Increíble, como David!';
+    else if (error <= 2) evento = '🎯 ¡Casi en la frente! Le pegaste a ' + error + (error === 1 ? ' paso' : ' pasos') + '. +' + pts + ' pts';
+    else if (pts > 0) evento = '🪨 Le rozaste el casco: a ' + error + ' pasos de la frente. +' + pts + ' pts';
+    else evento = '💨 ¡Pasó zumbando a ' + error + ' pasos! Goliat se sigue riendo… 0 pts';
+    var turnoNuevo = siguienteTurno(estado);
+    var rondaNueva = (estado.ronda || 1) + (turnoNuevo === 0 ? 1 : 0);
+    var cambios = {
+      puntajes: puntajes, evento: evento,
+      ultimoTiro: { jugador: uid, piedra: piedraId, fuerza: fuerza, impacto: impacto, error: error, puntos: pts },
+      viento: vientoGoliat(r), turno: turnoNuevo, ronda: Math.min(rondaNueva, GOLIAT_RONDAS)
+    };
+    if (rondaNueva > GOLIAT_RONDAS) {
+      cambios.terminado = true;
+      var finG = Object.assign({}, estado, cambios);
+      cambios.ganador = ganadorPorPuntajes(finG);
+      cambios.evento = evento + ' 🏆 ¡Se acabaron los tiros! El mejor puntero de la familia gana.';
+    }
+    return Object.assign({}, estado, cambios);
+  }
+
+  /* ----- 🚀 Carrera Espacial (a la Luna, con propulsor a tu riesgo) -----
+     Camino de 40 casillas hasta la Luna 🌕. Tú eliges cómo despegar en
+     tu turno: propulsor SEGURO (avanzas 1–3, sin sustos) o TURBO
+     (1–8… pero si sale 1 el motor se sobrecalienta y no avanzas; el 8
+     trae super salto +2). Hay estaciones 🚩 cada 12, recargas ⛽ que te
+     empujan y agujeros negros 🕳️ que te devuelven a tu estación. */
+  var COHETE_META = 40;
+  var COHETE_ESTRELLAS = { 6: 5, 13: 5, 19: 10, 26: 5, 31: 10, 37: 10 };
+  var COHETE_AGUJERO = [15, 28];
+  var COHETE_RECARGA = { 10: 14, 22: 26, 33: 37 };
+
+  function crearCohete(jugadores) {
+    var posiciones = {}, estaciones = {}, estrellas = {}, puntajes = {};
+    (jugadores || []).forEach(function (id) {
+      posiciones[id] = 0; estaciones[id] = 0; estrellas[id] = 0; puntajes[id] = 0;
+    });
+    return {
+      tipo: 'cohete', jugadores: (jugadores || []).slice(0, 3),
+      posiciones: posiciones, estaciones: estaciones, estrellas: estrellas, puntajes: puntajes,
+      turno: 0, dado: null, ultimoModo: null,
+      evento: '🚀 ¡A la Luna! Elige tu propulsor: seguro o TURBO (con riesgo).',
+      ganador: null, terminado: false
+    };
+  }
+
+  function despegarCohete(estado, jugadorIdx, modo, rng) {
+    exigirTurno(estado, jugadorIdx);
+    if (modo !== 'seguro' && modo !== 'turbo') throw new Error('Elige propulsor: seguro o turbo 🚀');
+    var r = rng || Math.random;
+    var uid = estado.jugadores[jugadorIdx];
+    var posiciones = conMapa(estado, 'posiciones', 0);
+    var estaciones = conMapa(estado, 'estaciones', 0);
+    var estrellas = conMapa(estado, 'estrellas', 0);
+    var dado, avance;
+    var evento = '';
+    if (modo === 'seguro') {
+      dado = 1 + Math.floor(r() * 3);
+      avance = dado;
+      evento = '🛡️ Propulsor seguro: avanzas ' + avance + '. ';
+    } else {
+      dado = 1 + Math.floor(r() * 8);
+      if (dado === 1) {
+        avance = 0;
+        evento = '🔥 ¡SE SOBRECALENTÓ EL TURBO! Humea mucho y no avanzas nada. 🙈 ';
+      } else {
+        avance = dado + (dado === 8 ? 2 : 0);
+        evento = '🚀 ¡TURBO! Avanzas ' + avance + (dado === 8 ? ' (¡el 8 trae SUPER SALTO +2!)' : '') + '. ';
+      }
+    }
+    var destino = posiciones[uid] + avance;
+    var gano = destino >= COHETE_META;
+    if (gano) {
+      destino = COHETE_META;
+      evento += '🌕🎉 ¡LLEGASTE A LA LUNA! ¡Ganaste la carrera espacial!';
+    } else if (avance > 0 && COHETE_AGUJERO.indexOf(destino) !== -1) {
+      destino = estaciones[uid];
+      evento += '🕳️ ¡AGUJERO NEGRO! Te tragó y te escupió en tu estación 🚩 (casilla ' + destino + '). ';
+    } else if (avance > 0 && COHETE_RECARGA[destino]) {
+      destino = COHETE_RECARGA[destino];
+      evento += '⛽ ¡Estación de recarga! El combustible extra te empujó a la casilla ' + destino + '. ';
+    }
+    if (!gano && avance > 0 && COHETE_ESTRELLAS[destino]) {
+      estrellas[uid] += COHETE_ESTRELLAS[destino];
+      evento += '⭐ ¡Agarraste ' + COHETE_ESTRELLAS[destino] + ' estrellas!';
+    }
+    posiciones[uid] = destino;
+    var estNueva = Math.floor(destino / 12) * 12;
+    if (estNueva > estaciones[uid]) {
+      estaciones[uid] = estNueva;
+      if (!gano) evento += ' Nueva estación 🚩 en la ' + estNueva + '.';
+    }
+    return Object.assign({}, estado, {
+      posiciones: posiciones, estaciones: estaciones, estrellas: estrellas,
+      puntajes: Object.assign({}, estrellas),
+      dado: dado, ultimoModo: modo, evento: evento,
+      turno: gano ? estado.turno : siguienteTurno(estado),
+      ganador: gano ? uid : null, terminado: gano
+    });
+  }
+
+  /* ----- 🎯 Tiro al Blanco (dardos: sigue… o te plantas) -----
+     En tu turno lanzas hasta 3 dardos. Cada dardo cae en un anillo
+     (¡centro 50!, 25, 10, 5 o ¡fuera!). Lo que sumes queda «sin
+     guardar»: si un dardo sale del blanco, pierdes todo lo del turno.
+     Tú decides: plantarte y guardar, o seguir tentando a la suerte.
+     3 aciertos seguidos en el mismo turno pagan DOBLE (¡racha! 🔥). */
+  var BLANCO_RONDAS = 5;
+
+  function crearBlanco(jugadores) {
+    var puntajes = {};
+    (jugadores || []).forEach(function (id) { puntajes[id] = 0; });
+    return {
+      tipo: 'blanco', jugadores: (jugadores || []).slice(0, 3),
+      turno: 0, ronda: 1, parcial: 0, dardos: 0, racha: 0,
+      puntajes: puntajes, ultimoDardo: null,
+      evento: '🎯 ¡A lanzar dardos! Guarda tus puntos antes de que un dardo se vaya fuera…',
+      ganador: null, terminado: false
+    };
+  }
+
+  function finTurnoBlanco(estado, cambios) {
+    var turnoNuevo = siguienteTurno(estado);
+    var rondaNueva = (estado.ronda || 1) + (turnoNuevo === 0 ? 1 : 0);
+    cambios.turno = turnoNuevo;
+    cambios.parcial = 0;
+    cambios.dardos = 0;
+    cambios.racha = 0;
+    cambios.ronda = Math.min(rondaNueva, BLANCO_RONDAS);
+    if (rondaNueva > BLANCO_RONDAS) {
+      cambios.terminado = true;
+      var fin = Object.assign({}, estado, cambios);
+      cambios.ganador = ganadorPorPuntajes(fin);
+      cambios.evento = (cambios.evento || '') + ' 🏁 ¡Se acabaron las rondas! Gana quien más puntos guardó.';
+    }
+    return Object.assign({}, estado, cambios);
+  }
+
+  function lanzarBlanco(estado, jugadorIdx, rng) {
+    exigirTurno(estado, jugadorIdx);
+    var r = rng || Math.random;
+    var uid = estado.jugadores[jugadorIdx];
+    var puntajes = conMapa(estado, 'puntajes', 0);
+    var suerte = r();
+    var anillo, base;
+    if (suerte < 0.08) { anillo = '🎯 ¡EL CENTRO!'; base = 50; }
+    else if (suerte < 0.30) { anillo = 'Anillo de 25'; base = 25; }
+    else if (suerte < 0.65) { anillo = 'Anillo de 10'; base = 10; }
+    else if (suerte < 0.90) { anillo = 'Anillo de 5'; base = 5; }
+    else { anillo = '¡FUERA del blanco!'; base = 0; }
+    if (base === 0) {
+      var perdido = estado.parcial || 0;
+      return finTurnoBlanco(estado, {
+        puntajes: puntajes,
+        ultimoDardo: { jugador: uid, anillo: anillo, puntos: 0 },
+        evento: '🙈 ¡El dardo salió del blanco!' + (perdido ? ' Pierdes los ' + perdido + ' pts que llevabas sin guardar.' : '') + ' Turno del siguiente.'
+      });
+    }
+    var rachaNueva = (estado.racha || 0) + 1;
+    var pts = base * (rachaNueva >= 3 ? 2 : 1);
+    var parcialNuevo = (estado.parcial || 0) + pts;
+    var dardosNuevos = (estado.dardos || 0) + 1;
+    var eventoB = anillo + ': +' + pts + ' pts' + (rachaNueva >= 3 ? ' (🔥 ¡RACHA! pagó DOBLE)' : '') +
+      '. Llevas ' + parcialNuevo + ' sin guardar.';
+    if (dardosNuevos >= 3) {
+      puntajes[uid] += parcialNuevo;
+      return finTurnoBlanco(estado, {
+        puntajes: puntajes,
+        ultimoDardo: { jugador: uid, anillo: anillo, puntos: pts },
+        evento: eventoB + ' 🎯 Fueron tus 3 dardos: se guardaron solos. ¡Bien guardados!'
+      });
+    }
+    return Object.assign({}, estado, {
+      puntajes: puntajes, parcial: parcialNuevo, dardos: dardosNuevos, racha: rachaNueva,
+      ultimoDardo: { jugador: uid, anillo: anillo, puntos: pts },
+      evento: eventoB + ' ¿Otro dardo o te plantas? 😏'
+    });
+  }
+
+  function plantarseBlanco(estado, jugadorIdx) {
+    exigirTurno(estado, jugadorIdx);
+    if (!(estado.dardos > 0)) throw new Error('Lanza al menos un dardo primero 🎯');
+    var uid = estado.jugadores[jugadorIdx];
+    var puntajes = conMapa(estado, 'puntajes', 0);
+    var guardado = estado.parcial || 0;
+    puntajes[uid] += guardado;
+    return finTurnoBlanco(estado, {
+      puntajes: puntajes,
+      evento: '🏦 ¡Se plantó y guardó ' + guardado + ' pts! A salvo en la bolsa.'
+    });
+  }
+
+  /* ----- 🌻 Granja de Monedas (planta, riega con el clima y cosecha) -----
+     Cada granjero empieza con 10 monedas y 1 parcela. Al empezar TU
+     turno tus cultivos crecen (con lluvia 🌧️ crecen el doble; con
+     tormenta ⛈️ puedes perder el más viejo) y haces UNA acción:
+     plantar (5 🪙), cosechar los maduros (12 🪙 c/u, ¡con arcoíris
+     🌈 pagan 15!), comprar parcela (15 🪙, máx. 4) o pasar. Son 6
+     rondas y gana el mayor patrimonio (monedas + parcelas + cultivos). */
+  var CLIMAS_GRANJA = [
+    { id: 'sol', icono: '☀️', nombre: 'Sol' },
+    { id: 'lluvia', icono: '🌧️', nombre: 'Lluvia' },
+    { id: 'tormenta', icono: '⛈️', nombre: 'Tormenta' },
+    { id: 'arcoiris', icono: '🌈', nombre: 'Arcoíris' }
+  ];
+  var GRANJA_RONDAS = 6;
+  function climaDeGranja(id) {
+    for (var i = 0; i < CLIMAS_GRANJA.length; i++) if (CLIMAS_GRANJA[i].id === id) return CLIMAS_GRANJA[i];
+    return CLIMAS_GRANJA[0];
+  }
+  function sortearClimaGranja(r) {
+    var s = r();
+    return s < 0.45 ? 'sol' : s < 0.75 ? 'lluvia' : s < 0.90 ? 'arcoiris' : 'tormenta';
+  }
+  function patrimonioGranja(estado, uid) {
+    var total = (estado.monedas || {})[uid] || 0;
+    total += ((estado.parcelas || {})[uid] || 1) * 10;
+    ((estado.cultivos || {})[uid] || []).forEach(function (edad) {
+      total += edad >= 2 ? 12 : 5;
+    });
+    return total;
+  }
+
+  function crearGranja(jugadores, rng) {
+    var r = rng || Math.random;
+    var monedas = {}, parcelas = {}, cultivos = {}, puntajes = {};
+    (jugadores || []).forEach(function (id) {
+      monedas[id] = 10; parcelas[id] = 1; cultivos[id] = []; puntajes[id] = 20;
+    });
+    return {
+      tipo: 'granja', jugadores: (jugadores || []).slice(0, 3),
+      turno: 0, ronda: 1, clima: sortearClimaGranja(r),
+      monedas: monedas, parcelas: parcelas, cultivos: cultivos, puntajes: puntajes,
+      evento: '🌻 ¡A sembrar! Planta cultivos, míralos crecer con el clima y cosecha cuando estén dorados.',
+      ganador: null, terminado: false
+    };
+  }
+
+  function jugarGranja(estado, jugadorIdx, accion, rng) {
+    exigirTurno(estado, jugadorIdx);
+    if (['plantar', 'cosechar', 'parcela', 'pasar'].indexOf(accion) === -1) {
+      throw new Error('Esa acción no existe en la granja 🙈');
+    }
+    var r = rng || Math.random;
+    var uid = estado.jugadores[jugadorIdx];
+    var monedas = conMapa(estado, 'monedas', 10);
+    var parcelas = conMapa(estado, 'parcelas', 1);
+    var cultivos = conMapa(estado, 'cultivos', function () { return []; });
+    var clima = climaDeGranja(estado.clima || 'sol');
+    var evento = '';
+    // Al empezar tu turno, tus cultivos sienten el clima de hoy.
+    var mis = (cultivos[uid] || []).slice();
+    if (mis.length) {
+      if (clima.id === 'tormenta') {
+        mis.shift();
+        evento += '⛈️ ¡La tormenta se llevó tu cultivo más viejo! ';
+        mis = mis.map(function (e) { return e + 1; });
+      } else {
+        var crece = clima.id === 'lluvia' ? 2 : 1;
+        mis = mis.map(function (e) { return e + crece; });
+        evento += (clima.id === 'lluvia' ? '🌧️ ¡La lluvia hizo crecer tus cultivos el DOBLE! ' : clima.icono + ' Tus cultivos crecieron. ');
+      }
+    }
+    if (accion === 'plantar') {
+      if (monedas[uid] < 5) throw new Error('No te alcanzan las monedas para plantar 🙈');
+      if (mis.length >= parcelas[uid] * 3) throw new Error('Tus parcelas están llenas 🌱 Compra otra parcela primero');
+      monedas[uid] -= 5;
+      mis.push(0);
+      evento += '🌱 Plantaste un cultivo nuevo. A esperar que crezca…';
+    } else if (accion === 'cosechar') {
+      var maduros = mis.filter(function (e) { return e >= 2; });
+      if (!maduros.length) throw new Error('Todavía no hay cultivos maduros 🌱 Déjalos crecer un turno más');
+      var pago = clima.id === 'arcoiris' ? 15 : 12;
+      monedas[uid] += maduros.length * pago;
+      mis = mis.filter(function (e) { return e < 2; });
+      evento += '🧺 ¡Cosechaste ' + maduros.length + (maduros.length === 1 ? ' cultivo' : ' cultivos') + '!' +
+        (clima.id === 'arcoiris' ? ' 🌈 ¡El arcoíris los pagó a ' + pago + '!' : '') + ' +' + (maduros.length * pago) + ' monedas 🪙';
+    } else if (accion === 'parcela') {
+      if (parcelas[uid] >= 4) throw new Error('Ya tienes las 4 parcelas 🌻 ¡Granja completa!');
+      if (monedas[uid] < 15) throw new Error('La parcela cuesta 15 monedas y no te alcanzan 🙈');
+      monedas[uid] -= 15;
+      parcelas[uid] += 1;
+      evento += '🚜 ¡Parcela nueva! Ya tienes ' + parcelas[uid] + '. Más tierra, más cosecha.';
+    } else {
+      evento += '⏭️ Pasaste el turno mirando las nubes.';
+    }
+    cultivos[uid] = mis;
+    var baseG = { monedas: monedas, parcelas: parcelas, cultivos: cultivos };
+    var puntajes = {};
+    estado.jugadores.forEach(function (id) { puntajes[id] = patrimonioGranja(baseG, id); });
+    var turnoNuevo = siguienteTurno(estado);
+    var rondaNueva = (estado.ronda || 1) + (turnoNuevo === 0 ? 1 : 0);
+    var cambios = {
+      monedas: monedas, parcelas: parcelas, cultivos: cultivos, puntajes: puntajes,
+      evento: evento, turno: turnoNuevo,
+      ronda: Math.min(rondaNueva, GRANJA_RONDAS), clima: sortearClimaGranja(r)
+    };
+    if (rondaNueva > GRANJA_RONDAS) {
+      cambios.terminado = true;
+      var finGranja = Object.assign({}, estado, cambios);
+      cambios.ganador = ganadorPorPuntajes(finGranja);
+      cambios.evento = evento + ' 🏁 ¡Se acabó la temporada! Gana el mayor patrimonio de la granja.';
+    }
+    return Object.assign({}, estado, cambios);
+  }
+
   var API = {
     normalizarTexto: normalizarTexto,
     FICHAS_CONECTA: FICHAS_CONECTA, crearConecta: crearConecta, jugadaConecta: jugadaConecta, lineaConecta: lineaConecta,
@@ -3017,6 +3543,12 @@
     MASCOTAS: MASCOTAS, crearMascotas: crearMascotas, explorarMascotas: explorarMascotas, bonusMascotas: bonusMascotas, mascotaDe: mascotaDe,
     TORRES: TORRES, TORRE_PISTA: TORRE_PISTA, crearTorre: crearTorre, colocarTorre: colocarTorre, pasarTorre: pasarTorre, lanzarOleada: lanzarOleada, globosDeOleada: globosDeOleada,
     BANCO_IMPOSTOR: BANCO_IMPOSTOR, crearImpostor: crearImpostor, rolDeImpostor: rolDeImpostor, marcarRolImpostor: marcarRolImpostor, darPistaImpostor: darPistaImpostor, votarImpostor: votarImpostor, siguienteRondaImpostor: siguienteRondaImpostor,
+    JONAS_META: JONAS_META, JONAS_CONCHAS: JONAS_CONCHAS, JONAS_TORMENTA: JONAS_TORMENTA, JONAS_OLA: JONAS_OLA, JONAS_BALLENA: JONAS_BALLENA, crearJonas: crearJonas, tirarJonas: tirarJonas,
+    ANIMALES_ARCA: ANIMALES_ARCA, ARCA_PAREJAS_META: ARCA_PAREJAS_META, ARCA_AGUA_MAX: ARCA_AGUA_MAX, crearArca: crearArca, buscarArca: buscarArca, animalArca: animalArca,
+    PIEDRAS_GOLIAT: PIEDRAS_GOLIAT, GOLIAT_DISTANCIA: GOLIAT_DISTANCIA, GOLIAT_RONDAS: GOLIAT_RONDAS, crearGoliat: crearGoliat, lanzarGoliat: lanzarGoliat, piedraGoliat: piedraGoliat,
+    COHETE_META: COHETE_META, COHETE_ESTRELLAS: COHETE_ESTRELLAS, COHETE_AGUJERO: COHETE_AGUJERO, COHETE_RECARGA: COHETE_RECARGA, crearCohete: crearCohete, despegarCohete: despegarCohete,
+    BLANCO_RONDAS: BLANCO_RONDAS, crearBlanco: crearBlanco, lanzarBlanco: lanzarBlanco, plantarseBlanco: plantarseBlanco,
+    CLIMAS_GRANJA: CLIMAS_GRANJA, GRANJA_RONDAS: GRANJA_RONDAS, crearGranja: crearGranja, jugarGranja: jugarGranja, patrimonioGranja: patrimonioGranja, climaDeGranja: climaDeGranja,
     rngDeSemilla: rngDeSemilla,
     puntosDePartidaExtra: puntosDePartidaExtra, ganadorPorPuntajes: ganadorPorPuntajes
   };
