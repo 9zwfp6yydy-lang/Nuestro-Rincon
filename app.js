@@ -3442,6 +3442,8 @@
   var videoActual = null, ultimoNonce = null;
   var estadoRepro = null;        // fila global de reproducción
   var ultimoMsgSync = null;      // { posicion, reproduciendo, enviadoEn }
+  var desfaseSync = 0;           // v3.6 · desfase entre el reloj de quien envía y el de este aparato (ms)
+  var atascadoTicks = 0;         // v3.6 · ciclos seguidos sin sonar mientras el grupo sí suena
   var soyControlador = false;
   var colaActual = [];
   var canalCine = null;
@@ -3524,7 +3526,16 @@
     $('#form-apps').addEventListener('submit', compartirEnlaceApps);
     $('#btn-cerrar-lanzar').addEventListener('click', cerrarLanzamiento);
     $('#lanzar-abrir').addEventListener('click', abrirEnlaceLanzado);
-    setInterval(mantenimientoSync, 4000);
+    setInterval(mantenimientoSync, 2000);
+    setInterval(enviarLatido, 2000); // v3.6 · pulso del anfitrión
+    // v3.6 · Al volver a la app (pantalla que se durmió, cambio de app),
+    // re-leer la fila y re-alinear de golpe en vez de esperar al ciclo.
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden || soyControlador) return;
+      supa.from('estado_reproduccion').select('*').eq('id', 1).maybeSingle().then(function (res) {
+        if (res.data) { estadoRepro = res.data; aplicarEstadoReproduccion(res.data, false); }
+      });
+    });
   }
 
   /* ----- buscador de YouTube (dentro de la app, sin pegar enlaces) ----- */
@@ -3576,9 +3587,26 @@
 
   /* ----- estado global y eventos de sincronización ----- */
   function actualizarFilaRepro(campos) {
-    var datos = Object.assign({}, campos, { actualizado_en: new Date().toISOString(), actualizado_por: yo.id });
+    // v3.6 · actualizado_en ya NO se manda desde el aparato: la columna
+    // tiene default now() y PostgreSQL pone la hora del servidor. Antes
+    // cada aparato escribía con SU reloj y los demás extrapolaban la
+    // posición contra relojes distintos → cada pantalla en un punto.
+    var datos = Object.assign({}, campos, { actualizado_por: yo.id });
     return supa.from('estado_reproduccion').update(datos).eq('id', 1);
   }
+
+  // v3.6 · Estima el desfase entre el reloj de quien envió el mensaje y
+  // el de este aparato. La muestra vale enviadoEn − ahora(local): el
+  // tránsito de red solo puede RESTAR, así que la muestra mayor es la
+  // más cercana a la verdad (truco clásico de sincronización de relojes).
+  function anotarDesfase(enviadoEn) {
+    if (!enviadoEn || soyControlador) return;
+    var muestra = enviadoEn - Date.now();
+    if (muestra > desfaseSync || desfaseSync - muestra > 10000) desfaseSync = muestra;
+  }
+
+  // «Ahora» en el reloj de quien manda: contra ese reloj se extrapola.
+  function ahoraRemoto() { return Date.now() + desfaseSync; }
 
   function enviarSync(tipo, extra) {
     var msg = Object.assign({
@@ -3607,7 +3635,7 @@
 
   function programarRescate() {
     clearTimeout(rescateTimer);
-    rescateTimer = setTimeout(rescateToque, 1300);
+    rescateTimer = setTimeout(rescateToque, 800); // v3.6 · rescate más rápido
   }
 
   // Si el grupo quiere escuchar y el video no arrancó solo (pasa en
@@ -3664,8 +3692,22 @@
 
   function recibirSyncBroadcast(ev) {
     if (!ev || !ev.tipo) return;
+    if (ev.tipo === 'posicion' && ev.videoId && videoActual && ev.videoId !== videoActual) return; // latido de otro video
+    anotarDesfase(ev.enviadoEn);
     ultimoMsgSync = { posicion: ev.posicion || 0, reproduciendo: !!ev.reproduciendo, enviadoEn: ev.enviadoEn || Date.now() };
+    if (ev.tipo === 'posicion') return; // el latido solo alimenta la corrección de deriva
     ejecutarAccionSync(L.interpretarSync(ev), ev);
+  }
+
+  // v3.6 · Latido del anfitrión: cada 2 s anuncia su posición exacta por
+  // el canal. Es el pulso contra el que todos se alinean; sin él, entre
+  // refresco y refresco de la fila (segundos) cada aparato derivaba solo.
+  function enviarLatido() {
+    if (!soyControlador || !videoActual || !ytListo || !ytPlayer) return;
+    var estado;
+    try { estado = ytPlayer.getPlayerState(); } catch (e) { return; }
+    if (estado !== 1) return;
+    enviarSync('posicion', { reproduciendo: true });
   }
 
   function aplicarEstadoReproduccion(row, inicial) {
@@ -3675,6 +3717,7 @@
       var av2 = $('#aviso-yt-carga'); if (av2) av2.classList.remove('oculto');
       var by2 = $('#cine-youtube'); if (by2) by2.classList.remove('oculto');
     }
+    anotarDesfase(row.actualizado_en ? Date.parse(row.actualizado_en) : null);
     ultimoMsgSync = {
       posicion: row.posicion || 0,
       reproduciendo: !!row.reproduciendo,
@@ -3684,21 +3727,28 @@
     var esNuevo = row.video_id !== videoActual || (row.nonce && row.nonce !== ultimoNonce);
     if (esNuevo) {
       ultimoNonce = row.nonce;
-      var pos = L.posicionRemota(ultimoMsgSync, Date.now());
+      var pos = L.posicionRemota(ultimoMsgSync, ahoraRemoto());
       ejecutarAccionSync({ accion: 'cargar', videoId: row.video_id, posicion: pos }, null);
       if (!row.reproduciendo) setTimeout(function () { if (ytListo) ytPlayer.pauseVideo(); }, 600);
       return;
     }
-    // Mismo video: alinear play/pausa con el grupo.
+    // Mismo video: alinear play/pausa Y posición con el grupo (v3.6: antes
+    // solo se alineaba play/pausa y un aparato atrasado se quedaba atrás).
     try {
       var estado = ytPlayer.getPlayerState();
-      if (row.reproduciendo && estado !== 1) ytPlayer.playVideo();
+      if (row.reproduciendo) {
+        var corrFila = L.correccionDeriva(ytPlayer.getCurrentTime(), ultimoMsgSync, ahoraRemoto());
+        if (corrFila.accion === 'seek') ytPlayer.seekTo(corrFila.a, true);
+        if (estado !== 1) { ytPlayer.playVideo(); programarRescate(); }
+      }
       if (!row.reproduciendo && estado === 1) ytPlayer.pauseVideo();
     } catch (e) { /* el reproductor aún despierta */ }
   }
 
   function reproducirParaTodos(videoId, titulo) {
     soyControlador = true;
+    desfaseSync = 0; // ahora el reloj de referencia es el de este aparato
+    atascadoTicks = 0;
     grupoQuiereSonar = true;
     var nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
     ultimoNonce = nonce;
@@ -3711,6 +3761,7 @@
   function controlGlobal(tipo) {
     if (!videoActual) return;
     soyControlador = true;
+    desfaseSync = 0; // ahora el reloj de referencia es el de este aparato
     grupoQuiereSonar = tipo === 'reproducir';
     var pos = ytListo && ytPlayer.getCurrentTime ? ytPlayer.getCurrentTime() : 0;
     enviarSync(tipo, { posicion: pos });
@@ -3936,15 +3987,46 @@
     var estado;
     try { estado = ytPlayer.getPlayerState(); } catch (e) { return; }
     if (soyControlador) {
-      // Quien controla refresca la posición del grupo cada ~12 s.
-      if (ticksSync % 3 === 0 && estado === 1) {
+      // Quien controla refresca la posición del grupo cada ~10 s (la
+      // precisión fina la da el latido de 2 s por el canal, no la fila).
+      if (ticksSync % 5 === 0 && estado === 1) {
         actualizarFilaRepro({ posicion: ytPlayer.getCurrentTime(), reproduciendo: true, nonce: ultimoNonce });
       }
       return;
     }
-    if (estado !== 1) return;
-    var correccion = L.correccionDeriva(ytPlayer.getCurrentTime(), ultimoMsgSync, Date.now());
-    if (correccion.accion === 'seek') ytPlayer.seekTo(correccion.a, true);
+    var ahora = ahoraRemoto();
+    if (!ultimoMsgSync.reproduciendo) {
+      // El grupo está en pausa: este aparato también, y en el mismo punto.
+      atascadoTicks = 0;
+      if (estado === 1) {
+        try {
+          var destinoPausa = L.posicionRemota(ultimoMsgSync, ahora);
+          ytPlayer.pauseVideo();
+          ytPlayer.seekTo(destinoPausa, true);
+        } catch (e) { /* sin reproductor aún */ }
+      }
+      return;
+    }
+    if (estado === 1) {
+      atascadoTicks = 0;
+      var correccion = L.correccionDeriva(ytPlayer.getCurrentTime(), ultimoMsgSync, ahora);
+      if (correccion.accion === 'seek') ytPlayer.seekTo(correccion.a, true);
+      return;
+    }
+    // v3.6 · El grupo SÍ está sonando y este aparato no (pausado, cargando
+    // o sin arrancar — el caso del iPad). Antes aquí no se hacía NADA y el
+    // aparato se quedaba atrás para siempre. Ahora: tras ~4 s atascado,
+    // salta al punto exacto del grupo y arranca (en silencio si iOS lo
+    // exige; el botón grande trae el sonido con un toque).
+    if (estado === 2 || estado === 3 || estado === -1 || estado === 5) {
+      atascadoTicks++;
+      if (atascadoTicks >= 2) {
+        atascadoTicks = 0;
+        var destino = L.posicionRemota(ultimoMsgSync, ahora);
+        try { ytPlayer.seekTo(destino, true); ytPlayer.playVideo(); } catch (e) { /* queda el rescate */ }
+        programarRescate();
+      }
+    }
   }
 
   /* ================= AVISOS DE LLAMADA (Web Push) ================= */
