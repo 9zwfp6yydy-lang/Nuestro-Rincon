@@ -1717,6 +1717,18 @@
       case 'calculo':
         if (estado.terminado) copiarPuntajes(20);
         break;
+      case 'obby': // v3.6: las monedas cuentan como puntaje + 50 al que llegó a la meta
+        if (estado.terminado) { copiarPuntajes(0); dar(estado.ganador, 50); }
+        break;
+      case 'tycoon': case 'mascotas': case 'impostor': // v3.6: suma su propio puntaje
+        if (estado.terminado) copiarPuntajes(0);
+        break;
+      case 'torre': // v3.6: puntos por globos reventados + 20 a cada uno si la familia aguantó
+        if (estado.terminado) {
+          copiarPuntajes(0);
+          if (estado.ganado) estado.jugadores.forEach(function (uid) { dar(uid, 20); });
+        }
+        break;
     }
     return suma;
   }
@@ -2431,6 +2443,533 @@
     return Object.assign({}, estado, { fase: 'final', terminado: true });
   }
 
+  /* ================= v3.6: MUNDO ROBLOX + EL IMPOSTOR =================
+     Pedidos del dueño: más juegos «tipo Roblox» (saltar por un obby,
+     construir un tycoon, coleccionar mascotas y defender torres) y el
+     clásico de fiesta El Impostor. Todo sigue el patrón de la casa:
+     estado JSON compartido, funciones puras que devuelven un estado
+     NUEVO y lanzan Error si la jugada no vale. Como unirse a una
+     partida solo añade el id a estado.jugadores, los mapas por jugador
+     se completan solos en la primera jugada (conMapa). */
+
+  // Completa un mapa por jugador con su valor por defecto para quien
+  // se unió después de creada la partida.
+  function conMapa(estado, clave, defecto) {
+    var mapa = Object.assign({}, estado[clave] || {});
+    (estado.jugadores || []).forEach(function (uid) {
+      if (mapa[uid] === undefined) mapa[uid] = (typeof defecto === 'function') ? defecto() : defecto;
+    });
+    return mapa;
+  }
+
+  /* ----- 🏃 Obby ¡Salta y Gana! (parkour de casillas con monedas) -----
+     Un «obby» de mesa: se avanza con el dado por una pista de 30
+     casillas con trampolines 🌀, lava 🌋 (vuelves a tu bandera 🚩) y
+     monedas 🪙. El primero en llegar a la meta 🏁 gana; las monedas
+     cuentan como puntaje. */
+  var OBBY_META = 30;
+  var OBBY_MONEDAS = { 3: 5, 8: 5, 13: 10, 19: 5, 24: 10, 27: 10 };
+  var OBBY_TRAMPOLIN = { 6: 10, 17: 22 };
+  var OBBY_LAVA = [11, 21];
+
+  function crearObby(jugadores) {
+    var posiciones = {}, banderas = {}, monedas = {}, puntajes = {};
+    (jugadores || []).forEach(function (id) {
+      posiciones[id] = 0; banderas[id] = 0; monedas[id] = 0; puntajes[id] = 0;
+    });
+    return {
+      tipo: 'obby', jugadores: (jugadores || []).slice(0, 3),
+      posiciones: posiciones, banderas: banderas, monedas: monedas, puntajes: puntajes,
+      turno: 0, dado: null, evento: '¡A saltar! El primero en llegar a la meta 🏁 gana.',
+      ganador: null, terminado: false
+    };
+  }
+
+  function tirarObby(estado, jugadorIdx, rng) {
+    exigirTurno(estado, jugadorIdx);
+    var r = rng || Math.random;
+    var uid = estado.jugadores[jugadorIdx];
+    var posiciones = conMapa(estado, 'posiciones', 0);
+    var banderas = conMapa(estado, 'banderas', 0);
+    var monedas = conMapa(estado, 'monedas', 0);
+    var dado = 1 + Math.floor(r() * 6);
+    var destino = posiciones[uid] + dado;
+    var evento = '🎲 Salió un ' + dado + '. ';
+    var gano = destino >= OBBY_META;
+    if (gano) {
+      destino = OBBY_META;
+      evento += '¡Llegaste a la META! 🏁🎉';
+    } else if (OBBY_TRAMPOLIN[destino]) {
+      destino = OBBY_TRAMPOLIN[destino];
+      evento += '¡BOING! 🌀 El trampolín te lanzó a la casilla ' + destino + '. ';
+    } else if (OBBY_LAVA.indexOf(destino) !== -1) {
+      destino = banderas[uid];
+      evento += '¡LAVA! 🌋 No pasa nada: vuelves a tu bandera 🚩 (casilla ' + destino + '). ';
+    }
+    if (!gano && OBBY_MONEDAS[destino]) {
+      monedas[uid] += OBBY_MONEDAS[destino];
+      evento += '¡Agarraste ' + OBBY_MONEDAS[destino] + ' monedas! 🪙';
+    }
+    posiciones[uid] = destino;
+    var banderaNueva = Math.floor(destino / 10) * 10;
+    if (banderaNueva > banderas[uid]) {
+      banderas[uid] = banderaNueva;
+      if (!gano) evento += ' Nueva bandera 🚩 en la ' + banderaNueva + '.';
+    }
+    return Object.assign({}, estado, {
+      posiciones: posiciones, banderas: banderas, monedas: monedas,
+      puntajes: Object.assign({}, monedas),
+      dado: dado, evento: evento,
+      turno: gano ? estado.turno : siguienteTurno(estado),
+      ganador: gano ? uid : null, terminado: gano
+    });
+  }
+
+  /* ----- 🏗️ Mi Tycoon (cobra, construye y haz crecer tu imperio) -----
+     En tu turno primero COBRAS el ingreso de tus negocios (5 🪙 base +
+     lo que den tus edificios) y después puedes construir UNO nuevo si
+     te alcanzan las monedas (o ahorrar). Dura 8 rondas y gana el mayor
+     patrimonio (monedas + lo que valen los edificios). */
+  var EDIFICIOS_TYCOON = [
+    { id: 'limonada', icono: '🍋', nombre: 'Puesto de limonada', costo: 10, ingreso: 3 },
+    { id: 'helados', icono: '🍦', nombre: 'Carrito de helados', costo: 20, ingreso: 6 },
+    { id: 'pizza', icono: '🍕', nombre: 'Pizzería', costo: 35, ingreso: 11 },
+    { id: 'rueda', icono: '🎡', nombre: 'Rueda de la fortuna', costo: 60, ingreso: 19 },
+    { id: 'cine', icono: '🎬', nombre: 'Cine familiar', costo: 90, ingreso: 28 },
+    { id: 'cohete', icono: '🚀', nombre: 'Parque espacial', costo: 140, ingreso: 45 }
+  ];
+  function edificioTycoon(id) {
+    for (var i = 0; i < EDIFICIOS_TYCOON.length; i++) if (EDIFICIOS_TYCOON[i].id === id) return EDIFICIOS_TYCOON[i];
+    return null;
+  }
+  function ingresoTycoon(estado, uid) {
+    var total = 5; // ingreso base de la familia emprendedora
+    ((estado.edificios || {})[uid] || []).forEach(function (id) {
+      var ed = edificioTycoon(id);
+      if (ed) total += ed.ingreso;
+    });
+    return total;
+  }
+  function patrimonioTycoon(estado, uid) {
+    var total = (estado.monedas || {})[uid] || 0;
+    ((estado.edificios || {})[uid] || []).forEach(function (id) {
+      var ed = edificioTycoon(id);
+      if (ed) total += ed.costo;
+    });
+    return total;
+  }
+
+  function crearTycoon(jugadores) {
+    var monedas = {}, edificios = {}, puntajes = {};
+    (jugadores || []).forEach(function (id) {
+      monedas[id] = 15; edificios[id] = []; puntajes[id] = 15;
+    });
+    return {
+      tipo: 'tycoon', jugadores: (jugadores || []).slice(0, 3),
+      turno: 0, ronda: 1, rondasTotales: 8,
+      monedas: monedas, edificios: edificios, puntajes: puntajes,
+      evento: '¡A construir! En tu turno cobras y puedes levantar un negocio. 🏗️',
+      ganador: null, terminado: false
+    };
+  }
+
+  function jugarTycoon(estado, jugadorIdx, compraId) {
+    exigirTurno(estado, jugadorIdx);
+    var uid = estado.jugadores[jugadorIdx];
+    var monedas = conMapa(estado, 'monedas', 15);
+    var edificios = conMapa(estado, 'edificios', function () { return []; });
+    var ingreso = ingresoTycoon({ edificios: edificios }, uid);
+    monedas[uid] += ingreso;
+    var evento = '💰 Cobró ' + ingreso + ' monedas de sus negocios. ';
+    if (compraId) {
+      var ed = edificioTycoon(compraId);
+      if (!ed) throw new Error('Ese negocio no existe 🙈');
+      if (monedas[uid] < ed.costo) throw new Error('No te alcanzan las monedas para eso 🙈');
+      monedas[uid] -= ed.costo;
+      edificios[uid] = edificios[uid].concat([compraId]);
+      evento += '¡Construyó ' + ed.icono + ' ' + ed.nombre + '! 🏗️🎉';
+    } else {
+      evento += 'Guardó sus monedas en la alcancía 🏦';
+    }
+    var turnoNuevo = siguienteTurno(estado);
+    var rondaNueva = estado.ronda + (turnoNuevo === 0 ? 1 : 0);
+    var puntajes = {};
+    estado.jugadores.forEach(function (id) {
+      puntajes[id] = patrimonioTycoon({ monedas: monedas, edificios: edificios }, id);
+    });
+    if (rondaNueva > estado.rondasTotales) {
+      var fin = Object.assign({}, estado, {
+        monedas: monedas, edificios: edificios, puntajes: puntajes,
+        ronda: estado.rondasTotales, evento: evento + ' ¡Se acabaron las rondas!',
+        terminado: true
+      });
+      fin.ganador = ganadorPorPuntajes(fin);
+      return fin;
+    }
+    return Object.assign({}, estado, {
+      monedas: monedas, edificios: edificios, puntajes: puntajes,
+      turno: turnoNuevo, ronda: rondaNueva, evento: evento
+    });
+  }
+
+  /* ----- 🐾 Mascotas Monederas (explora, junta monedas y mascotas) -----
+     Cada exploración puede traer monedas, una mascota nueva (cada una
+     ayuda a encontrar más monedas), una estrella ⭐… o que se te caigan
+     unas monedas 🙈. Son 30 exploraciones entre todos y al final cada
+     mascota vale 5 puntos extra. */
+  var MASCOTAS = [
+    { id: 'gato', icono: '🐱', nombre: 'Gatito', bonus: 1 },
+    { id: 'perro', icono: '🐶', nombre: 'Perrito', bonus: 2 },
+    { id: 'conejo', icono: '🐰', nombre: 'Conejito', bonus: 2 },
+    { id: 'zorro', icono: '🦊', nombre: 'Zorrito', bonus: 3 },
+    { id: 'panda', icono: '🐼', nombre: 'Panda', bonus: 4 },
+    { id: 'unicornio', icono: '🦄', nombre: 'Unicornio', bonus: 6 },
+    { id: 'dragon', icono: '🐲', nombre: 'Dragón bebé', bonus: 8 }
+  ];
+  function mascotaDe(id) {
+    for (var i = 0; i < MASCOTAS.length; i++) if (MASCOTAS[i].id === id) return MASCOTAS[i];
+    return null;
+  }
+  function bonusMascotas(listaIds) {
+    var total = 0;
+    (listaIds || []).forEach(function (id) {
+      var m = mascotaDe(id);
+      if (m) total += m.bonus;
+    });
+    return total;
+  }
+
+  function crearMascotas(jugadores) {
+    var monedas = {}, mascotas = {}, puntajes = {};
+    (jugadores || []).forEach(function (id) {
+      monedas[id] = 0; mascotas[id] = []; puntajes[id] = 0;
+    });
+    return {
+      tipo: 'mascotas', jugadores: (jugadores || []).slice(0, 3),
+      turno: 0, jugadas: 0, jugadasTotales: 30,
+      monedas: monedas, mascotas: mascotas, puntajes: puntajes,
+      ultimoEvento: '¡A explorar! Busquen monedas y mascotas 🐾',
+      ganador: null, terminado: false
+    };
+  }
+
+  function explorarMascotas(estado, jugadorIdx, rng) {
+    exigirTurno(estado, jugadorIdx);
+    var r = rng || Math.random;
+    var uid = estado.jugadores[jugadorIdx];
+    var monedas = conMapa(estado, 'monedas', 0);
+    var mascotas = conMapa(estado, 'mascotas', function () { return []; });
+    var suerte = r();
+    var evento;
+    if (suerte < 0.42) {
+      var ayuda = bonusMascotas(mascotas[uid]);
+      var halladas = 6 + Math.floor(r() * 9) + ayuda;
+      monedas[uid] += halladas;
+      evento = '🪙 Encontró ' + halladas + ' monedas' + (ayuda ? ' (¡sus mascotas ayudaron a buscar! 🐾)' : '') + '.';
+    } else if (suerte < 0.72) {
+      var libres = MASCOTAS.filter(function (m) { return mascotas[uid].indexOf(m.id) === -1; });
+      if (!libres.length) {
+        monedas[uid] += 8;
+        evento = '🎉 ¡Ya tiene TODAS las mascotas! Premio: 8 monedas 🪙';
+      } else {
+        var nueva = libres[Math.floor(r() * libres.length)];
+        mascotas[uid] = mascotas[uid].concat([nueva.id]);
+        evento = '🎉 ¡Nueva mascota! ' + nueva.icono + ' ' + nueva.nombre + ' se unió a la aventura.';
+      }
+    } else if (suerte < 0.88) {
+      monedas[uid] += 20;
+      evento = '⭐ ¡Una estrella fugaz! +20 monedas 🪙✨';
+    } else {
+      var caidas = Math.min(5, monedas[uid]);
+      monedas[uid] -= caidas;
+      evento = caidas ? '🙈 ¡Uy! Se le cayeron ' + caidas + ' monedas por el camino.' : '🙈 Tropezó… ¡pero no llevaba monedas! Sin daño.';
+    }
+    var jugadas = estado.jugadas + 1;
+    var fin = jugadas >= estado.jugadasTotales;
+    var puntajes = {};
+    estado.jugadores.forEach(function (id) {
+      puntajes[id] = monedas[id] + (fin ? (mascotas[id] || []).length * 5 : 0);
+    });
+    var nuevo = Object.assign({}, estado, {
+      monedas: monedas, mascotas: mascotas, puntajes: puntajes,
+      jugadas: jugadas, ultimoEvento: evento,
+      turno: fin ? estado.turno : siguienteTurno(estado),
+      terminado: fin
+    });
+    if (fin) nuevo.ganador = ganadorPorPuntajes(nuevo);
+    return nuevo;
+  }
+
+  /* ----- 🎈 Defiende la Torre (cooperativo: que no escapen los globos) --
+     Entre todos defienden el camino: por turnos colocan torres con sus
+     monedas y, cuando quieran, lanzan la oleada. La oleada se resuelve
+     entera y sin azar: cada globo avanza paso a paso y las torres le
+     pegan a su alcance; reventar globos da puntos y monedas a la torre
+     dueña. Si escapan 10 globos, pierden todos; si aguantan las 6
+     oleadas, ¡gana la familia! */
+  var TORRES = [
+    { id: 'dardos', icono: '🎯', nombre: 'Torre de dardos', costo: 10, danio: 1, alcance: 3 },
+    { id: 'canon', icono: '💣', nombre: 'Cañón', costo: 25, danio: 3, alcance: 2 },
+    { id: 'laser', icono: '🔆', nombre: 'Torre láser', costo: 40, danio: 2, alcance: 5 }
+  ];
+  var TORRE_PISTA = 10; // casillas 0..9; el globo que llega a la 10 escapa
+  function torreDe(id) {
+    for (var i = 0; i < TORRES.length; i++) if (TORRES[i].id === id) return TORRES[i];
+    return null;
+  }
+  function globosDeOleada(ronda) {
+    return { cantidad: 3 + ronda * 2, vida: 1 + Math.floor((ronda - 1) / 2) };
+  }
+
+  function crearTorre(jugadores) {
+    var monedas = {}, puntajes = {};
+    (jugadores || []).forEach(function (id) { monedas[id] = 20; puntajes[id] = 0; });
+    return {
+      tipo: 'torre', jugadores: (jugadores || []).slice(0, 3),
+      turno: 0, fase: 'colocar', ronda: 1, rondasTotales: 6, vidas: 10,
+      monedas: monedas, torres: {}, puntajes: puntajes,
+      ultimoResumen: 'Coloquen sus torres 🎯 y lancen la primera oleada cuando estén listos.',
+      ganado: false, ganador: null, terminado: false
+    };
+  }
+
+  function colocarTorre(estado, jugadorIdx, torreId, posicion) {
+    exigirTurno(estado, jugadorIdx);
+    if (estado.fase !== 'colocar') throw new Error('Ahora no se pueden colocar torres');
+    var def = torreDe(torreId);
+    if (!def) throw new Error('Esa torre no existe 🙈');
+    if (typeof posicion !== 'number' || posicion < 0 || posicion >= TORRE_PISTA || Math.floor(posicion) !== posicion) {
+      throw new Error('Esa casilla no existe');
+    }
+    if (estado.torres[posicion]) throw new Error('Ya hay una torre en esa casilla');
+    var uid = estado.jugadores[jugadorIdx];
+    var monedas = conMapa(estado, 'monedas', 20);
+    if (monedas[uid] < def.costo) throw new Error('No te alcanzan las monedas para esa torre 🙈');
+    monedas[uid] -= def.costo;
+    var torres = Object.assign({}, estado.torres);
+    torres[posicion] = { tipo: torreId, dueno: uid };
+    return Object.assign({}, estado, {
+      monedas: monedas, torres: torres,
+      ultimoResumen: def.icono + ' ¡Torre «' + def.nombre + '» colocada en la casilla ' + (posicion + 1) + '!',
+      turno: siguienteTurno(estado)
+    });
+  }
+
+  function pasarTorre(estado, jugadorIdx) {
+    exigirTurno(estado, jugadorIdx);
+    if (estado.fase !== 'colocar') throw new Error('Ahora no se puede pasar');
+    return Object.assign({}, estado, {
+      ultimoResumen: 'Pasó su turno de colocar. ⏭️',
+      turno: siguienteTurno(estado)
+    });
+  }
+
+  function lanzarOleada(estado, jugadorIdx) {
+    exigirTurno(estado, jugadorIdx);
+    if (estado.fase !== 'colocar') throw new Error('La oleada ya está en marcha');
+    var spec = globosDeOleada(estado.ronda);
+    var globos = [];
+    for (var i = 0; i < spec.cantidad; i++) globos.push({ pos: -1 - i, vida: spec.vida, fuera: false });
+    var monedas = conMapa(estado, 'monedas', 20);
+    var puntajes = conMapa(estado, 'puntajes', 0);
+    var torres = estado.torres || {};
+    var posicionesTorres = Object.keys(torres).map(Number).sort(function (a, b) { return a - b; });
+    var escapados = 0, reventados = 0, pasos = 0;
+    function quedanGlobos() {
+      return globos.some(function (g) { return !g.fuera; });
+    }
+    while (quedanGlobos() && pasos < 400) {
+      pasos++;
+      // 1) Los globos avanzan un paso; el que sale del camino escapa.
+      globos.forEach(function (g) {
+        if (g.fuera) return;
+        g.pos++;
+        if (g.pos >= TORRE_PISTA) { g.fuera = true; g.escapado = true; escapados++; }
+      });
+      // 2) Cada torre pega UNA vez al globo más adelantado a su alcance.
+      posicionesTorres.forEach(function (posT) {
+        var t = torres[posT];
+        var def = torreDe(t.tipo);
+        if (!def) return;
+        var blanco = null;
+        globos.forEach(function (g) {
+          if (g.fuera || g.pos < 0) return;
+          if (Math.abs(g.pos - posT) > def.alcance) return;
+          if (!blanco || g.pos > blanco.pos) blanco = g;
+        });
+        if (!blanco) return;
+        blanco.vida -= def.danio;
+        if (blanco.vida <= 0) {
+          blanco.fuera = true;
+          reventados++;
+          puntajes[t.dueno] = (puntajes[t.dueno] || 0) + 1;
+          monedas[t.dueno] = (monedas[t.dueno] || 0) + 2;
+        }
+      });
+    }
+    estado.jugadores.forEach(function (id) { monedas[id] = (monedas[id] || 0) + 8; }); // premio por oleada
+    var vidas = Math.max(0, estado.vidas - escapados);
+    var resumen = 'Oleada ' + estado.ronda + ': reventaron ' + reventados + ' globos 🎈' +
+      (escapados ? ' y escaparon ' + escapados + ' 😱' : ' ¡y no escapó NI UNO! 🎉') +
+      ' Cada quien ganó 8 monedas por la oleada.';
+    if (vidas <= 0) {
+      return Object.assign({}, estado, {
+        monedas: monedas, puntajes: puntajes, vidas: 0,
+        ultimoResumen: resumen + ' ¡Los globos ganaron esta vez! A intentarlo otra vez 💪',
+        ganado: false, terminado: true
+      });
+    }
+    if (estado.ronda >= estado.rondasTotales) {
+      return Object.assign({}, estado, {
+        monedas: monedas, puntajes: puntajes, vidas: vidas,
+        ultimoResumen: resumen + ' ¡¡LA FAMILIA DEFENDIÓ LA TORRE HASTA EL FINAL!! 🏆🎉',
+        ganado: true, terminado: true
+      });
+    }
+    return Object.assign({}, estado, {
+      monedas: monedas, puntajes: puntajes, vidas: vidas,
+      ronda: estado.ronda + 1, turno: 0,
+      ultimoResumen: resumen + ' Coloquen más torres y lancen la oleada ' + (estado.ronda + 1) + '.'
+    });
+  }
+
+  /* ----- 🕵️ El Impostor (el clásico de fiesta, en línea) -----
+     Cada ronda hay una palabra secreta de una categoría: TODOS la ven
+     en su aparato menos UNO, el impostor, que solo ve la categoría.
+     Por turnos cada quien escribe UNA palabra de pista (el impostor
+     improvisa sin saber la palabra) y al final todos votan quién es.
+     Si lo descubren, los que votaron bien ganan 10 pts; si no, el
+     impostor se lleva 15 pts.
+     ⚠️ SECRETO (honesto, como en Batalla Naval y Dibujo y Adivina):
+     el modelo de partidas de la app es estado compartido, así que la
+     palabra y quién es el impostor VIAJAN en el estado; la pantalla
+     solo pinta el rol de cada quien en SU aparato tras tocar
+     «ver mi rol» y lo vuelve a ocultar. Es sistema de honor familiar:
+     nadie espía el aparato del otro. rolDeImpostor es la única puerta
+     que la pantalla debe usar para pintar roles. */
+  var BANCO_IMPOSTOR = {
+    'Comida': ['PIZZA', 'HELADO', 'PASTEL', 'TACO', 'HAMBURGUESA', 'MANZANA', 'PLATANO', 'QUESO',
+      'CHOCOLATE', 'GALLETA', 'SOPA', 'ARROZ', 'POLLO', 'PESCADO', 'UVAS', 'SANDIA'],
+    'Animales': ['PERRO', 'GATO', 'ELEFANTE', 'LEON', 'JIRAFA', 'PINGUINO', 'MONO', 'TORTUGA',
+      'MARIPOSA', 'CABALLO', 'OSO', 'DELFIN', 'ZORRO', 'CONEJO', 'VACA', 'TIBURON'],
+    'Lugares': ['PLAYA', 'ESCUELA', 'PARQUE', 'BIBLIOTECA', 'ZOOLOGICO', 'MUSEO', 'CINE', 'GRANJA',
+      'SELVA', 'ISLA', 'CASTILLO', 'HOSPITAL', 'MERCADO', 'AEROPUERTO', 'ESTADIO', 'PISCINA'],
+    'Objetos': ['RELOJ', 'LLAVE', 'ESPEJO', 'PELOTA', 'LIBRO', 'GUITARRA', 'TELEFONO', 'SOMBRERO',
+      'ZAPATO', 'MOCHILA', 'TIJERA', 'VELA', 'GLOBO', 'TROMPETA', 'BICICLETA', 'COMETA'],
+    'Naturaleza': ['SOL', 'LUNA', 'ESTRELLA', 'ARCOIRIS', 'VOLCAN', 'RIO', 'NIEVE', 'FLOR',
+      'ARBOL', 'NUBE', 'MAR', 'MONTANA', 'RAYO', 'OLA', 'BOSQUE', 'CASCADA']
+  };
+
+  function estadoRondaImpostor(jugadores, puntajes, ronda, rng) {
+    var r = rng || Math.random;
+    var categorias = Object.keys(BANCO_IMPOSTOR);
+    var categoria = categorias[Math.floor(r() * categorias.length)];
+    var palabras = BANCO_IMPOSTOR[categoria];
+    return {
+      tipo: 'impostor', jugadores: (jugadores || []).slice(0, 3),
+      ronda: ronda, fase: 'roles', // roles | pistas | votacion | final
+      categoria: categoria,
+      palabra: palabras[Math.floor(r() * palabras.length)],
+      impostor: jugadores[Math.floor(r() * jugadores.length)],
+      listos: [], turnoPista: 0, pistas: {}, votos: {},
+      puntajes: puntajes || {},
+      descubierto: null, masVotado: null,
+      ganador: null, terminado: false
+    };
+  }
+
+  function crearImpostor(jugadores, rng) {
+    var puntajes = {};
+    (jugadores || []).forEach(function (id) { puntajes[id] = 0; });
+    return estadoRondaImpostor(jugadores || [], puntajes, 1, rng);
+  }
+
+  // La ÚNICA puerta para pintar roles: lo que cada jugador puede ver
+  // en SU aparato. El impostor nunca recibe la palabra por aquí.
+  function rolDeImpostor(estado, userId) {
+    if (!estado || (estado.jugadores || []).indexOf(userId) === -1) return null;
+    var esImpostor = estado.impostor === userId;
+    return {
+      esImpostor: esImpostor,
+      palabra: esImpostor ? null : estado.palabra,
+      categoria: estado.categoria
+    };
+  }
+
+  function marcarRolImpostor(estado, userId) {
+    if (estado.terminado || estado.fase !== 'roles') throw new Error('Los roles ya se repartieron');
+    if ((estado.jugadores || []).indexOf(userId) === -1) throw new Error('No estás en esta partida');
+    if (estado.listos.indexOf(userId) !== -1) return Object.assign({}, estado); // ya lo vio: sin cambios
+    var listos = estado.listos.concat([userId]);
+    var todos = estado.jugadores.every(function (uid) { return listos.indexOf(uid) !== -1; });
+    return Object.assign({}, estado, {
+      listos: listos,
+      fase: todos ? 'pistas' : 'roles'
+    });
+  }
+
+  function darPistaImpostor(estado, userId, texto) {
+    if (estado.terminado) throw new Error('La partida ya terminó');
+    if (estado.fase !== 'pistas') throw new Error('Todavía no es la hora de las pistas');
+    if (estado.jugadores[estado.turnoPista] !== userId) throw new Error('Todavía no es tu turno de pista');
+    var t = normalizarTexto(texto || '');
+    if (!t) throw new Error('Escribe una pista');
+    if (t.indexOf(' ') !== -1) throw new Error('La pista es UNA sola palabra 🙊');
+    if (t.length > 16) throw new Error('Pista muy larga: una palabrita, porfa');
+    if (t === normalizarTexto(estado.palabra)) throw new Error('¡Esa es la palabra secreta! Di una pista, no la palabra 🙊');
+    var pistas = Object.assign({}, estado.pistas);
+    pistas[userId] = String(texto || '').trim();
+    var turnoPista = estado.turnoPista + 1;
+    var todos = estado.jugadores.every(function (uid) { return pistas[uid] !== undefined; });
+    return Object.assign({}, estado, {
+      pistas: pistas, turnoPista: turnoPista,
+      fase: todos ? 'votacion' : 'pistas'
+    });
+  }
+
+  function votarImpostor(estado, userId, sospechosoId) {
+    if (estado.terminado) throw new Error('La partida ya terminó');
+    if (estado.fase !== 'votacion') throw new Error('Todavía no es la hora de votar');
+    if ((estado.jugadores || []).indexOf(userId) === -1) throw new Error('No estás en esta partida');
+    if ((estado.jugadores || []).indexOf(sospechosoId) === -1) throw new Error('Ese jugador no está en la partida');
+    if (sospechosoId === userId) throw new Error('No puedes votarte a ti mismo 😅');
+    if (estado.votos[userId]) throw new Error('Ya votaste 🗳️');
+    var votos = Object.assign({}, estado.votos);
+    votos[userId] = sospechosoId;
+    var todos = estado.jugadores.every(function (uid) { return !!votos[uid]; });
+    if (!todos) return Object.assign({}, estado, { votos: votos });
+    // Resolución: gana la votación quien tenga más votos; si hay
+    // empate arriba, nadie queda señalado y el impostor se escapa.
+    var conteo = {};
+    Object.keys(votos).forEach(function (uid) { conteo[votos[uid]] = (conteo[votos[uid]] || 0) + 1; });
+    var max = 0, senalados = [];
+    Object.keys(conteo).forEach(function (uid) {
+      if (conteo[uid] > max) { max = conteo[uid]; senalados = [uid]; }
+      else if (conteo[uid] === max) senalados.push(uid);
+    });
+    var masVotado = senalados.length === 1 ? senalados[0] : null;
+    var descubierto = masVotado !== null && masVotado === estado.impostor;
+    var puntajes = Object.assign({}, estado.puntajes);
+    if (descubierto) {
+      estado.jugadores.forEach(function (uid) {
+        if (uid !== estado.impostor && votos[uid] === estado.impostor) puntajes[uid] = (puntajes[uid] || 0) + 10;
+      });
+    } else {
+      puntajes[estado.impostor] = (puntajes[estado.impostor] || 0) + 15;
+    }
+    return Object.assign({}, estado, {
+      votos: votos, fase: 'final', terminado: true,
+      masVotado: masVotado, descubierto: descubierto,
+      puntajes: puntajes,
+      ganador: descubierto ? null : estado.impostor
+    });
+  }
+
+  function siguienteRondaImpostor(estado, rng) {
+    if (estado.fase !== 'final') throw new Error('La ronda todavía no termina');
+    return estadoRondaImpostor(estado.jugadores, Object.assign({}, estado.puntajes), estado.ronda + 1, rng);
+  }
+
   var API = {
     normalizarTexto: normalizarTexto,
     FICHAS_CONECTA: FICHAS_CONECTA, crearConecta: crearConecta, jugadaConecta: jugadaConecta, lineaConecta: lineaConecta,
@@ -2473,6 +3012,11 @@
     crearQuizBiblico: crearQuizBiblico, preguntaQuiz: preguntaQuiz, iniciarQuiz: iniciarQuiz, responderQuiz: responderQuiz, revelarQuiz: revelarQuiz, siguienteQuiz: siguienteQuiz,
     EVENTOS_ORDENA: EVENTOS_ORDENA, crearOrdena: crearOrdena, arregloDeOrdena: arregloDeOrdena, moverEnOrdena: moverEnOrdena, entregarOrdena: entregarOrdena,
     PERSONAJES_MISTERIO: PERSONAJES_MISTERIO, crearMisterio: crearMisterio, personajeMisterio: personajeMisterio, revelarPistaMisterio: revelarPistaMisterio, adivinarMisterio: adivinarMisterio, cerrarMisterio: cerrarMisterio,
+    OBBY_META: OBBY_META, OBBY_MONEDAS: OBBY_MONEDAS, OBBY_TRAMPOLIN: OBBY_TRAMPOLIN, OBBY_LAVA: OBBY_LAVA, crearObby: crearObby, tirarObby: tirarObby,
+    EDIFICIOS_TYCOON: EDIFICIOS_TYCOON, crearTycoon: crearTycoon, jugarTycoon: jugarTycoon, ingresoTycoon: ingresoTycoon, patrimonioTycoon: patrimonioTycoon,
+    MASCOTAS: MASCOTAS, crearMascotas: crearMascotas, explorarMascotas: explorarMascotas, bonusMascotas: bonusMascotas, mascotaDe: mascotaDe,
+    TORRES: TORRES, TORRE_PISTA: TORRE_PISTA, crearTorre: crearTorre, colocarTorre: colocarTorre, pasarTorre: pasarTorre, lanzarOleada: lanzarOleada, globosDeOleada: globosDeOleada,
+    BANCO_IMPOSTOR: BANCO_IMPOSTOR, crearImpostor: crearImpostor, rolDeImpostor: rolDeImpostor, marcarRolImpostor: marcarRolImpostor, darPistaImpostor: darPistaImpostor, votarImpostor: votarImpostor, siguienteRondaImpostor: siguienteRondaImpostor,
     rngDeSemilla: rngDeSemilla,
     puntosDePartidaExtra: puntosDePartidaExtra, ganadorPorPuntajes: ganadorPorPuntajes
   };
