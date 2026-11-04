@@ -997,7 +997,12 @@
     vf: { icono: '✅', nombre: 'Verdadero o Falso Bíblico', tope: 3 },
     encuentra: { icono: '🔍', nombre: 'Encuentra el Versículo', tope: 3 },
     ordenab: { icono: '📜', nombre: 'Ordena la Historia', tope: 3 },
-    misterio: { icono: '🕵️', nombre: 'Personaje Misterioso', tope: 3 }
+    misterio: { icono: '🕵️', nombre: 'Personaje Misterioso', tope: 3 },
+    obby: { icono: '🏃', nombre: 'Obby ¡Salta y Gana!', tope: 3 },
+    tycoon: { icono: '🏗️', nombre: 'Mi Tycoon', tope: 3 },
+    mascotas: { icono: '🐾', nombre: 'Mascotas Monederas', tope: 3 },
+    torre: { icono: '🎈', nombre: 'Defiende la Torre', tope: 3 },
+    impostor: { icono: '🕵️', nombre: 'El Impostor', tope: 3 }
   };
 
   /* ----- v3.4: los juegos POR CATEGORÍAS, en barras que se deslizan -----
@@ -1030,7 +1035,8 @@
     { id: 'cartas', icono: '🃏', nombre: 'Cartas y dados', juegos: ['parchis', 'loteria', 'guerra', 'carrera'] },
     { id: 'mente', icono: '🔤', nombre: 'Mente y palabras', juegos: ['trivia', 'ahorcado', 'sopa', 'basta', 'calculo', 'adivina', 'encadenada'] },
     { id: 'memoria', icono: '🧠', nombre: 'Memoria y reflejos', juegos: ['memoria', 'memoria-tema', 'simon', 'quef', 'orden', 'numeros'] },
-    { id: 'risas', icono: '😂', nombre: 'Para reírse', juegos: ['dibujo', 'verdad', 'puzzle', 'ppt'] },
+    { id: 'risas', icono: '😂', nombre: 'Para reírse', juegos: ['dibujo', 'verdad', 'puzzle', 'ppt', 'impostor'] },
+    { id: 'roblox', icono: '🕹️', nombre: 'Mundo Roblox', juegos: ['obby', 'tycoon', 'mascotas', 'torre'] },
     { id: 'biblicos', icono: '📖', nombre: 'Bíblicos', juegos: ['trivia-biblica', 'memoria-biblica', 'versiculo', 'quien', 'vf', 'encuentra', 'ordenab', 'misterio'] }
   ];
   function infoCrear(clave) { return CATALOGO[clave] || EXTRA_CREAR[clave] || { icono: '🎮', nombre: clave }; }
@@ -1187,6 +1193,11 @@
       case 'encuentra': estado = G.crearQuizBiblico('encuentra', [yo.id], ordenAleatorio(G.BANCO_ENCUENTRA.length, 10)); break;
       case 'ordenab': estado = G.crearOrdena([yo.id]); break;
       case 'misterio': estado = G.crearMisterio([yo.id]); break;
+      case 'obby': estado = G.crearObby([yo.id]); break;
+      case 'tycoon': estado = G.crearTycoon([yo.id]); break;
+      case 'mascotas': estado = G.crearMascotas([yo.id]); break;
+      case 'torre': estado = G.crearTorre([yo.id]); break;
+      case 'impostor': estado = G.crearImpostor([yo.id]); break;
       default: return;
     }
     // v3.3: la capa se abre AL TOQUE con la partida provisional; el insert
@@ -1327,6 +1338,11 @@
       case 'quien': case 'vf': case 'encuentra': renderQuizBiblico(p); break;
       case 'ordenab': renderOrdena(p); break;
       case 'misterio': renderMisterio(p); break;
+      case 'obby': renderObby(p); break;
+      case 'tycoon': renderTycoon(p); break;
+      case 'mascotas': renderMascotas(p); break;
+      case 'torre': renderTorre(p); break;
+      case 'impostor': renderImpostor(p); break;
       default: $('#zona-juego').innerHTML = '<p>Este juego todavía no tiene pantalla. 🙈</p>';
     }
     } catch (eRender) {
@@ -3089,6 +3105,303 @@
       try { guardarConPuntos(p, e, G.plantarseCarrera(e)); Fun.sonido('acierto'); } catch (err) { Fun.sonido('error'); }
     });
     celebrarGanador(p, e, '¡Carrera ganada! 🎲🏆', 'Supo cuándo plantarse');
+  }
+
+  /* ----- v3.6 · 🏃 Obby ¡Salta y Gana! ----- */
+  function renderObby(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    var esMiTurno = !e.terminado && miIdx !== -1 && e.turno === miIdx;
+    avisoTurno(p, esMiTurno);
+    var html = tituloJuego(p, e, '🏃 Obby ¡Salta y Gana!') +
+      '<p>Un parkour de casillas: tira el dado 🎲 y avanza. Las 🪙 valen puntos, el 🌀 te lanza lejos, la 🌋 te devuelve a tu bandera 🚩. ¡El primero a la meta 🏁 gana!</p>';
+    html += '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:8px 0">';
+    for (var c = 0; c <= G.OBBY_META; c++) {
+      var fondo = c === G.OBBY_META ? '#ffe066' : G.OBBY_LAVA.indexOf(c) !== -1 ? '#ffb3a7' : G.OBBY_TRAMPOLIN[c] ? '#b3e5fc' : (c % 10 === 0 && c > 0) ? '#d3f9d8' : '#fff';
+      var dentro = '';
+      if (c === G.OBBY_META) dentro = '🏁';
+      else if (G.OBBY_LAVA.indexOf(c) !== -1) dentro = '🌋';
+      else if (G.OBBY_TRAMPOLIN[c]) dentro = '🌀';
+      else if (G.OBBY_MONEDAS[c]) dentro = '🪙';
+      else if (c % 10 === 0 && c > 0) dentro = '🚩';
+      var fichas = e.jugadores.filter(function (uid) { return (e.posiciones[uid] || 0) === c; })
+        .map(function (uid) { return emojiDe(uid); }).join('');
+      html += '<div style="background:' + fondo + ';border:2px solid var(--borde);border-radius:8px;min-height:44px;text-align:center;padding:2px">' +
+        '<small>' + c + '</small><br>' + (fichas || dentro || '') + '</div>';
+    }
+    html += '</div>';
+    html += e.jugadores.map(function (uid) {
+      return '<p>' + emojiDe(uid) + ' ' + escapar(nombreDe(uid)) + ': casilla <strong>' + (e.posiciones[uid] || 0) + '</strong> · 🪙 <strong>' + (e.monedas[uid] || 0) + '</strong></p>';
+    }).join('');
+    if (e.dado) html += '<p style="font-size:1.6rem;text-align:center">🎲 ' + e.dado + '</p>';
+    if (e.evento) html += '<p class="subtitulo">' + escapar(e.evento) + '</p>';
+    if (e.terminado) {
+      html += '<p><strong>🏆 ¡' + escapar(nombreDe(e.ganador)) + ' llegó a la meta!</strong></p>' + rankingFinalHTML(e);
+    } else {
+      html += '<p>Turno de ' + emojiDe(e.jugadores[e.turno]) + ' <strong>' + escapar(nombreDe(e.jugadores[e.turno])) + '</strong></p>';
+      if (esMiTurno) html += '<div class="botones-juego"><button class="btn-principal" id="obby-tirar">🎲 ¡Saltar!</button></div>';
+    }
+    zona.innerHTML = html;
+    var bo = $('#obby-tirar');
+    if (bo) bo.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.tirarObby(e, miIdx)); Fun.sonido('pop'); } catch (err) { Fun.sonido('error'); }
+    });
+    celebrarPorPuntajes(p, e, '¡Obby ganado! 🏃🏆', 'Saltó como un campeón de parkour');
+  }
+
+  /* ----- v3.6 · 🏗️ Mi Tycoon ----- */
+  function renderTycoon(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    var esMiTurno = !e.terminado && miIdx !== -1 && e.turno === miIdx;
+    avisoTurno(p, esMiTurno);
+    var html = tituloJuego(p, e, '🏗️ Mi Tycoon') +
+      '<p><strong>Ronda ' + e.ronda + ' de ' + e.rondasTotales + '</strong> · En tu turno primero <strong>cobras</strong> lo que dan tus negocios y luego puedes construir <strong>uno</strong> nuevo (o ahorrar). Gana el mayor patrimonio: monedas + lo que valen tus negocios.</p>';
+    html += e.jugadores.map(function (uid) {
+      var eds = ((e.edificios || {})[uid] || []).map(function (id) {
+        var def = null;
+        G.EDIFICIOS_TYCOON.forEach(function (x) { if (x.id === id) def = x; });
+        return def ? def.icono : '🏠';
+      }).join(' ');
+      return '<p>' + emojiDe(uid) + ' ' + escapar(nombreDe(uid)) + ': 🪙 <strong>' + ((e.monedas || {})[uid] || 0) + '</strong>' +
+        ' · Patrimonio <strong>' + G.patrimonioTycoon(e, uid) + '</strong><br>' + (eds || '<small>Sin negocios todavía</small>') + '</p>';
+    }).join('');
+    if (e.evento) html += '<p class="subtitulo">' + escapar(e.evento) + '</p>';
+    if (e.terminado) {
+      html += '<h3>🏁 ¡Se acabaron las rondas!</h3>' + rankingFinalHTML(e);
+    } else if (esMiTurno) {
+      var alCobrar = ((e.monedas || {})[yo.id] || 0) + G.ingresoTycoon(e, yo.id);
+      html += '<p>Al tocar, cobras <strong>+' + G.ingresoTycoon(e, yo.id) + ' 🪙</strong> (tendrás ' + alCobrar + '). ¿Qué construyes?</p><div class="botones-juego">';
+      G.EDIFICIOS_TYCOON.forEach(function (def) {
+        html += '<button class="btn-suave" data-edificio="' + def.id + '"' + (alCobrar < def.costo ? ' disabled' : '') + '>' +
+          def.icono + ' ' + escapar(def.nombre) + ' · ' + def.costo + ' 🪙 (+' + def.ingreso + '/turno)</button>';
+      });
+      html += '<button class="btn-verde" data-edificio="">🏦 Solo cobrar y ahorrar</button></div>';
+    } else {
+      html += '<p>Turno de ' + emojiDe(e.jugadores[e.turno]) + ' <strong>' + escapar(nombreDe(e.jugadores[e.turno])) + '</strong>…</p>';
+    }
+    zona.innerHTML = html;
+    $$('#zona-juego [data-edificio]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        try { guardarConPuntos(p, e, G.jugarTycoon(e, miIdx, b.dataset.edificio || null)); Fun.sonido('acierto'); }
+        catch (err) { Fun.sonido('error'); }
+      });
+    });
+    celebrarPorPuntajes(p, e, '¡Tycoon ganado! 🏗️🏆', 'Construyó el imperio más grande');
+  }
+
+  /* ----- v3.6 · 🐾 Mascotas Monederas ----- */
+  function renderMascotas(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    var esMiTurno = !e.terminado && miIdx !== -1 && e.turno === miIdx;
+    avisoTurno(p, esMiTurno);
+    var html = tituloJuego(p, e, '🐾 Mascotas Monederas') +
+      '<p>Explora por turnos: puedes hallar monedas 🪙, una estrella ⭐… ¡o una <strong>mascota nueva</strong> que te ayuda a encontrar más! Quedan <strong>' + (e.jugadasTotales - e.jugadas) + '</strong> exploraciones entre todos.</p>';
+    html += e.jugadores.map(function (uid) {
+      var ms = ((e.mascotas || {})[uid] || []).map(function (id) { var m = G.mascotaDe(id); return m ? m.icono : '🐾'; }).join(' ');
+      return '<p>' + emojiDe(uid) + ' ' + escapar(nombreDe(uid)) + ': 🪙 <strong>' + ((e.monedas || {})[uid] || 0) + '</strong>' +
+        '<br>' + (ms || '<small>Sin mascotas todavía</small>') + '</p>';
+    }).join('');
+    if (e.ultimoEvento) html += '<p style="font-size:1.15rem;text-align:center">' + escapar(e.ultimoEvento) + '</p>';
+    if (e.terminado) {
+      html += '<h3>🏁 ¡Se acabó la exploración!</h3>' + rankingFinalHTML(e);
+    } else {
+      html += '<p>Turno de ' + emojiDe(e.jugadores[e.turno]) + ' <strong>' + escapar(nombreDe(e.jugadores[e.turno])) + '</strong></p>';
+      if (esMiTurno) html += '<div class="botones-juego"><button class="btn-principal" id="mascotas-explorar">🧭 ¡Explorar!</button></div>';
+    }
+    zona.innerHTML = html;
+    var bm = $('#mascotas-explorar');
+    if (bm) bm.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.explorarMascotas(e, miIdx)); Fun.sonido('pop'); } catch (err) { Fun.sonido('error'); }
+    });
+    celebrarPorPuntajes(p, e, '¡Explorador mayor! 🐾🏆', 'Sus mascotas valen oro');
+  }
+
+  /* ----- v3.6 · 🎈 Defiende la Torre (cooperativo) ----- */
+  var torreElegida = 'dardos';
+  function renderTorre(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    var esMiTurno = !e.terminado && miIdx !== -1 && e.turno === miIdx;
+    avisoTurno(p, esMiTurno);
+    var html = tituloJuego(p, e, '🎈 Defiende la Torre') +
+      '<p>¡Trabajo en equipo! Los globos 🎈 quieren cruzar el camino. Coloquen torres por turnos y lancen la oleada cuando estén listos. Si escapan 10 globos, pierden; si aguantan las ' + e.rondasTotales + ' oleadas, ¡gana la familia! 🏆</p>' +
+      '<p>❤️ Vidas: <strong>' + e.vidas + '</strong> · 🎈 Oleada <strong>' + e.ronda + ' de ' + e.rondasTotales + '</strong> · Mis monedas: 🪙 <strong>' + ((e.monedas || {})[yo.id] || 0) + '</strong></p>';
+    html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:8px 0">';
+    for (var c = 0; c < G.TORRE_PISTA; c++) {
+      var t = (e.torres || {})[c];
+      var def = null;
+      if (t) G.TORRES.forEach(function (x) { if (x.id === t.tipo) def = x; });
+      html += '<button class="casilla-tesoro" data-casilla="' + c + '"' + (t ? ' disabled' : '') + ' style="min-height:52px">' +
+        '<small>' + (c + 1) + '</small><br>' + (def ? def.icono + '<br><small>' + escapar(nombreDe(t.dueno)) + '</small>' : '·') + '</button>';
+    }
+    html += '</div><p>🏁 Los globos salen por la izquierda y escapan por la derecha.</p>';
+    html += marcadorPuntos(e, ' globos reventados');
+    if (e.ultimoResumen) html += '<p class="subtitulo">' + escapar(e.ultimoResumen) + '</p>';
+    if (e.terminado) {
+      html += e.ganado
+        ? '<h3>🏆 ¡¡LA FAMILIA DEFENDIÓ LA TORRE!!</h3>'
+        : '<h3>🎈 Los globos ganaron esta vez… ¡a intentarlo otra vez! 💪</h3>';
+      html += rankingFinalHTML(e);
+    } else if (esMiTurno) {
+      html += '<p><strong>Tu turno:</strong> elige una torre y luego toca una casilla libre del camino:</p><div class="botones-juego">';
+      G.TORRES.forEach(function (def2) {
+        var alcanza = ((e.monedas || {})[yo.id] || 0) >= def2.costo;
+        html += '<button class="' + (torreElegida === def2.id ? 'btn-principal' : 'btn-suave') + '" data-torre="' + def2.id + '"' + (alcanza ? '' : ' disabled') + '>' +
+          def2.icono + ' ' + escapar(def2.nombre) + ' · ' + def2.costo + ' 🪙</button>';
+      });
+      html += '</div><div class="botones-juego"><button class="btn-suave" id="torre-pasar">⏭️ Pasar</button>' +
+        '<button class="btn-verde" id="torre-oleada">🎈 ¡Lanzar oleada ' + e.ronda + '!</button></div>';
+    } else {
+      html += '<p>Turno de ' + emojiDe(e.jugadores[e.turno]) + ' <strong>' + escapar(nombreDe(e.jugadores[e.turno])) + '</strong>…</p>';
+    }
+    zona.innerHTML = html;
+    $$('#zona-juego [data-torre]').forEach(function (b) {
+      b.addEventListener('click', function () { torreElegida = b.dataset.torre; renderTorre(p); });
+    });
+    $$('#zona-juego [data-casilla]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (!esMiTurno) { Fun.sonido('error'); return; }
+        try { guardarEstado(p, G.colocarTorre(e, miIdx, torreElegida, Number(b.dataset.casilla))); Fun.sonido('acierto'); }
+        catch (err) { Fun.sonido('error'); }
+      });
+    });
+    var bpT = $('#torre-pasar');
+    if (bpT) bpT.addEventListener('click', function () {
+      try { guardarEstado(p, G.pasarTorre(e, miIdx)); Fun.sonido('pop'); } catch (err) { Fun.sonido('error'); }
+    });
+    var boT = $('#torre-oleada');
+    if (boT) boT.addEventListener('click', function () {
+      try { guardarConPuntos(p, e, G.lanzarOleada(e, miIdx)); Fun.sonido('turno'); } catch (err) { Fun.sonido('error'); }
+    });
+    if (e.terminado && e.ganado) celebrarSiGane(p, true, '¡La familia defendió la torre! 🎈🏆', 'Ni un globo de más pasó');
+  }
+
+  /* ----- v3.6 · 🕵️ El Impostor ----- */
+  // Los puntos se aplican por DELTA en cada ronda: la partida guarda el
+  // acumulado entre rondas, así que se resta lo ya contado (puntosBase).
+  function guardarImpostor(p, e, nuevo) {
+    if (nuevo.terminado && nuevo.fase === 'final' && !e.puntosAplicados) {
+      nuevo.puntosAplicados = true;
+      var base = e.puntosBase || {};
+      var delta = { tipo: 'impostor', jugadores: nuevo.jugadores, terminado: true, puntajes: {} };
+      nuevo.jugadores.forEach(function (uid) {
+        delta.puntajes[uid] = (nuevo.puntajes[uid] || 0) - (base[uid] || 0);
+      });
+      return guardarEstado(p, nuevo).then(function () { aplicarPuntosDePartida(delta); });
+    }
+    return guardarEstado(p, nuevo);
+  }
+
+  function renderImpostor(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var yoListo = (e.listos || []).indexOf(yo.id) !== -1;
+    var html = tituloJuego(p, e, '🕵️ El Impostor') +
+      '<p><strong>Ronda ' + e.ronda + '</strong> · Categoría: <strong>' + escapar(e.categoria) + '</strong> 🎭 Todos conocen la palabra secreta… ¡menos el impostor!</p>' +
+      marcadorPuntos(e, ' pts');
+    if (e.fase === 'roles') {
+      html += '<p>Cada quien mira su rol <strong>en su propio aparato</strong>, en secreto 🤫</p>';
+      if (yoListo) {
+        html += '<p>✅ Ya viste tu rol. Esperando a los demás (' + (e.listos || []).length + '/' + e.jugadores.length + ')…</p>';
+      } else {
+        html += '<div class="botones-juego"><button class="btn-principal" id="impostor-ver">👀 Mantén tocado para ver tu rol</button></div>' +
+          '<div id="impostor-rol" class="oculto" style="text-align:center;font-size:1.25rem;background:#fff3d6;border-radius:10px;padding:12px;margin:8px 0"></div>' +
+          '<div class="botones-juego"><button class="btn-verde" id="impostor-listo">🙈 Ya lo vi, ¡a jugar!</button></div>';
+      }
+    } else if (e.fase === 'pistas') {
+      html += '<p>Por turnos, cada quien escribe <strong>UNA palabra</strong> de pista sobre la palabra secreta. El impostor improvisa… 😏</p>';
+      html += e.jugadores.map(function (uid) {
+        return '<p>' + emojiDe(uid) + ' ' + escapar(nombreDe(uid)) + ': ' +
+          (e.pistas[uid] ? '«<strong>' + escapar(e.pistas[uid]) + '</strong>»' : '<em>pensando…</em>') + '</p>';
+      }).join('');
+      if (e.jugadores[e.turnoPista] === yo.id) {
+        html += '<div class="botones-juego"><input type="text" id="impostor-pista" maxlength="20" placeholder="Tu pista (una palabra)" autocomplete="off">' +
+          '<button class="btn-principal" id="impostor-dar">💬 Dar pista</button></div><p class="subtitulo" id="impostor-error"></p>';
+      } else {
+        html += '<p>Turno de pista de ' + emojiDe(e.jugadores[e.turnoPista]) + ' <strong>' + escapar(nombreDe(e.jugadores[e.turnoPista])) + '</strong>…</p>';
+      }
+    } else if (e.fase === 'votacion') {
+      html += '<p>🗳️ <strong>¡A votar!</strong> ¿Quién es el impostor?</p>';
+      html += e.jugadores.map(function (uid) {
+        return '<p>' + emojiDe(uid) + ' ' + escapar(nombreDe(uid)) + ' dijo: «<strong>' + escapar(e.pistas[uid] || '') + '</strong>»</p>';
+      }).join('');
+      if (e.votos[yo.id]) {
+        html += '<p>✅ Ya votaste. Esperando votos (' + Object.keys(e.votos).length + '/' + e.jugadores.length + ')…</p>';
+      } else {
+        html += '<div class="botones-juego">' + e.jugadores.filter(function (uid) { return uid !== yo.id; }).map(function (uid) {
+          return '<button class="btn-suave" data-voto="' + uid + '">🕵️ ' + emojiDe(uid) + ' ' + escapar(nombreDe(uid)) + '</button>';
+        }).join('') + '</div>';
+      }
+    } else if (e.fase === 'final') {
+      html += e.descubierto
+        ? '<h3>🎉 ¡Descubrieron al impostor!</h3>'
+        : '<h3>😎 ¡El impostor se escapó!</h3>';
+      html += '<p>El impostor era ' + emojiDe(e.impostor) + ' <strong>' + escapar(nombreDe(e.impostor)) + '</strong> 🕵️<br>' +
+        'La palabra secreta era: <strong>' + escapar(e.palabra) + '</strong> (' + escapar(e.categoria) + ')</p>';
+      html += e.jugadores.map(function (uid) {
+        return '<p>' + emojiDe(uid) + ' ' + escapar(nombreDe(uid)) + ' votó por ' + (e.votos[uid] ? escapar(nombreDe(e.votos[uid])) : '—') + '</p>';
+      }).join('');
+      html += '<div class="botones-juego"><button class="btn-principal" id="impostor-otra">🔁 Otra ronda (sigue el marcador)</button></div>';
+    }
+    zona.innerHTML = html;
+    var bv = $('#impostor-ver');
+    if (bv) {
+      var rol = G.rolDeImpostor(e, yo.id);
+      var cajaRol = $('#impostor-rol');
+      var mostrar = function () {
+        if (!rol || !cajaRol) return;
+        cajaRol.innerHTML = rol.esImpostor
+          ? '🕵️ ¡Eres el <strong>IMPOSTOR</strong>!<br><small>Solo sabes la categoría: ' + escapar(rol.categoria) + '. ¡Improvisa tu pista y que no te cacen! 😏</small>'
+          : '🤫 Tu palabra secreta es:<br><strong>' + escapar(rol.palabra) + '</strong><br><small>(' + escapar(rol.categoria) + ') Da una pista sin decirla.</small>';
+        cajaRol.classList.remove('oculto');
+      };
+      var esconder = function () { if (cajaRol) cajaRol.classList.add('oculto'); };
+      bv.addEventListener('pointerdown', mostrar);
+      bv.addEventListener('pointerup', esconder);
+      bv.addEventListener('pointerleave', esconder);
+      bv.addEventListener('pointercancel', esconder);
+    }
+    var bl = $('#impostor-listo');
+    if (bl) bl.addEventListener('click', function () {
+      try { guardarEstado(p, G.marcarRolImpostor(e, yo.id)); Fun.sonido('pop'); } catch (err) { Fun.sonido('error'); }
+    });
+    var bd = $('#impostor-dar');
+    if (bd) bd.addEventListener('click', function () {
+      var inp = $('#impostor-pista');
+      try {
+        guardarEstado(p, G.darPistaImpostor(e, yo.id, inp ? inp.value : ''));
+        Fun.sonido('pop');
+      } catch (err) {
+        Fun.sonido('error');
+        var er = $('#impostor-error');
+        if (er) er.textContent = err.message;
+      }
+    });
+    $$('#zona-juego [data-voto]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        try { guardarImpostor(p, e, G.votarImpostor(e, yo.id, b.dataset.voto)); Fun.sonido('turno'); }
+        catch (err) { Fun.sonido('error'); }
+      });
+    });
+    var bot = $('#impostor-otra');
+    if (bot) bot.addEventListener('click', function () {
+      try {
+        var nueva = G.siguienteRondaImpostor(e);
+        nueva.puntosBase = Object.assign({}, e.puntajes);
+        guardarEstado(p, nueva);
+        Fun.sonido('turno');
+      } catch (err) { Fun.sonido('error'); }
+    });
+    if (e.fase === 'final') {
+      if (e.descubierto) celebrarSiGane(p, yo.id !== e.impostor, '¡Impostor descubierto! 🕵️🎉', 'La familia lo cazó');
+      else celebrarSiGane(p, yo.id === e.impostor, '¡El impostor se escapó! 🕵️💨', 'Nadie lo descubrió');
+    }
   }
 
   /* ----- Palabra Encadenada ----- */
