@@ -3,26 +3,40 @@
   --fondo:#fff7ed; --tarjeta:#ffffff; --tinta:#3d2c29; --suave:#8a6f66;
   --coral:#ff6b6b; --naranja:#ff8a5c; --sol:#feca57; --verde:#1dd1a1;
   --cielo:#48dbfb; --azul:#54a0ff; --rosa:#f368e0; --borde:#f3ddcb;
-  --radio:18px; --sombra:0 6px 18px rgba(214,120,60,.14);
+  --radio:20px; --sombra:0 8px 22px rgba(214,120,60,.18);
+  --sombra-juego:0 4px 0 #f6cf9f, 0 10px 18px rgba(180,110,40,.16);
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
 body{
   font-family:'Segoe UI',system-ui,-apple-system,Roboto,'Helvetica Neue',sans-serif;
-  background:linear-gradient(180deg,#fff7ed 0%,#ffefe0 55%,#ffe9f3 100%);
+  font-size:1.05rem; line-height:1.45;
+  background-color:#fff7ed;
+  background-image:radial-gradient(rgba(255,138,92,.12) 2.2px, transparent 2.8px),
+    radial-gradient(rgba(84,160,255,.10) 2.2px, transparent 2.8px),
+    linear-gradient(180deg,#fff7ed 0%,#ffefe0 55%,#ffe9f3 100%);
+  background-size:26px 26px, 26px 26px, 100% 100%;
+  background-position:0 0, 13px 13px, 0 0;
   color:var(--tinta); min-height:100vh;
 }
 button{font-family:inherit; cursor:pointer; border:none; border-radius:999px;
   min-height:56px; padding:12px 22px; font-size:1.05rem; font-weight:700;
-  transition:transform .12s ease, box-shadow .12s ease, background .2s}
+  transition:transform .16s cubic-bezier(.34,1.56,.64,1), box-shadow .16s ease, background .2s}
 button:active{transform:scale(.96)}
 button:disabled{opacity:.45; cursor:not-allowed}
-.btn-principal{background:linear-gradient(135deg,var(--naranja),var(--coral)); color:#fff; box-shadow:var(--sombra)}
+.btn-principal{background:linear-gradient(135deg,var(--naranja),var(--coral)); color:#fff;
+  box-shadow:0 5px 0 rgba(196,84,44,.35), 0 10px 22px rgba(214,120,60,.28)}
 .btn-principal:hover{transform:translateY(-2px)}
-.btn-suave{background:#fff; color:var(--tinta); border:2px solid var(--borde)}
-.btn-verde{background:linear-gradient(135deg,#2fe0b8,var(--verde)); color:#063d30}
-.btn-chico{min-height:44px; padding:8px 16px; font-size:.95rem}
-input,select{font-family:inherit; font-size:1.05rem; padding:14px 16px; border-radius:14px;
+.btn-principal:active{transform:translateY(2px) scale(.97);
+  box-shadow:0 2px 0 rgba(196,84,44,.35), 0 6px 14px rgba(214,120,60,.22)}
+.btn-suave{background:#fff; color:var(--tinta); border:2px solid var(--borde);
+  box-shadow:0 3px 10px rgba(214,120,60,.10)}
+.btn-verde{background:linear-gradient(135deg,#2fe0b8,var(--verde)); color:#063d30;
+  box-shadow:0 5px 0 rgba(6,90,70,.22), 0 10px 22px rgba(20,160,120,.25)}
+.btn-verde:active{transform:translateY(2px) scale(.97);
+  box-shadow:0 2px 0 rgba(6,90,70,.22), 0 6px 14px rgba(20,160,120,.20)}
+.btn-chico{min-height:48px; padding:9px 18px; font-size:.97rem}
+input,select{font-family:inherit; font-size:1.08rem; padding:14px 16px; border-radius:16px;
   border:2px solid var(--borde); background:#fff; min-height:56px; width:100%}
 input:focus,select:focus{outline:3px solid var(--sol); border-color:var(--sol)}
 h1,h2,h3{margin:.2em 0 .4em}
@@ -30,12 +44,13 @@ h1,h2,h3{margin:.2em 0 .4em}
 
 /* ---------- Vistas de entrada ---------- */
 .vista-centro{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px}
-.tarjeta-entrada{background:var(--tarjeta); border-radius:26px; box-shadow:var(--sombra);
+.tarjeta-entrada{background:var(--tarjeta); border-radius:30px; box-shadow:var(--sombra);
+  border:2px solid #ffe4c7;
   padding:34px 30px; width:min(520px,94vw); text-align:center; animation:aparecer .45s ease}
 .logo-grande{font-size:3.4rem; animation:flotar 3s ease-in-out infinite}
-.titulo-app{font-size:2.1rem; background:linear-gradient(90deg,var(--coral),var(--naranja),var(--rosa));
+.titulo-app{font-size:2.35rem; background:linear-gradient(90deg,var(--coral),var(--naranja),var(--rosa));
   -webkit-background-clip:text; background-clip:text; color:transparent}
-.subtitulo{color:var(--suave); margin-bottom:18px}
+.subtitulo{color:var(--suave); margin-bottom:18px; font-size:1.02rem; line-height:1.45}
 .tarjeta-entrada form{display:grid; gap:12px; text-align:left}
 .aviso{background:#fff4d6; border:2px solid var(--sol); border-radius:14px; padding:14px 16px; font-size:.98rem}
 .aviso-error{background:#ffe1e1; border-color:var(--coral)}
@@ -45,9 +60,13 @@ h1,h2,h3{margin:.2em 0 .4em}
 .avatar-opcion.elegido{border-color:var(--coral); background:#ffe9e4; transform:scale(1.1)}
 
 /* ---------- Encabezado de la app ---------- */
-header.barra{position:sticky; top:0; z-index:30; background:rgba(255,247,237,.92); backdrop-filter:blur(8px);
+header.barra{position:sticky; top:0; z-index:30; backdrop-filter:blur(8px);
+  background:linear-gradient(90deg,rgba(255,241,224,.95),rgba(255,233,243,.95));
+  box-shadow:0 4px 16px rgba(214,120,60,.12);
   border-bottom:2px solid var(--borde); padding:10px 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap}
-header .titulo{font-size:1.35rem; font-weight:800}
+header .titulo{font-size:1.45rem; font-weight:900; white-space:nowrap;
+  background:linear-gradient(135deg,#ffffff,#ffe9d2); border:2px solid #ffd9ae;
+  border-radius:999px; padding:7px 16px; box-shadow:0 3px 10px rgba(214,120,60,.16)}
 .presencia{display:flex; gap:8px; align-items:center; flex:1; flex-wrap:wrap}
 .chip-presencia{display:flex; align-items:center; gap:7px; background:#fff; border:2px solid var(--borde);
   border-radius:999px; padding:5px 13px 5px 6px; font-weight:700; font-size:.95rem}
@@ -56,12 +75,15 @@ header .titulo{font-size:1.35rem; font-weight:800}
 .punto.en-linea{background:var(--verde); box-shadow:0 0 0 4px rgba(29,209,161,.22); animation:pulso 1.8s infinite}
 
 /* ---------- Navegación por pestañas ---------- */
-nav.pestanas{display:flex; gap:8px; padding:12px 16px 4px; flex-wrap:wrap; max-width:1200px; margin:0 auto}
-nav.pestanas button{background:#fff; border:2px solid var(--borde); color:var(--tinta); flex:1; min-width:130px}
-nav.pestanas button.activa{background:linear-gradient(135deg,var(--naranja),var(--coral)); color:#fff; border-color:transparent}
+nav.pestanas{display:flex; gap:10px; padding:12px 16px 4px; flex-wrap:wrap; max-width:1200px; margin:0 auto}
+nav.pestanas button{background:#fff; border:2px solid var(--borde); color:var(--tinta); flex:1; min-width:130px;
+  min-height:60px; font-size:1.1rem; box-shadow:0 3px 10px rgba(214,120,60,.10)}
+nav.pestanas button.activa{background:linear-gradient(135deg,var(--naranja),var(--coral)); color:#fff; border-color:transparent;
+  box-shadow:0 6px 16px rgba(255,107,107,.35)}
 main{max-width:1200px; margin:0 auto; padding:14px 16px 130px}
 .seccion{animation:aparecer .3s ease}
-.tarjeta{background:var(--tarjeta); border-radius:var(--radio); box-shadow:var(--sombra); padding:20px; margin-bottom:16px}
+.tarjeta{background:var(--tarjeta); border-radius:var(--radio); box-shadow:var(--sombra);
+  border:2px solid #ffedda; padding:22px; margin-bottom:16px}
 .dos-columnas{display:grid; grid-template-columns:1fr; gap:16px}
 @media (min-width:820px){
   .dos-columnas{grid-template-columns:1fr 1fr}
@@ -79,8 +101,9 @@ table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius
 
 /* ---------- Juegos ---------- */
 .botones-juego{display:flex; gap:10px; flex-wrap:wrap}
-.partida-item{display:flex; align-items:center; gap:12px; background:#fff8f1; border:2px solid var(--borde);
-  border-radius:14px; padding:12px 14px; margin-bottom:10px; flex-wrap:wrap}
+.partida-item{display:flex; align-items:center; gap:12px; background:linear-gradient(180deg,#fffdf8,#fff3e2); border:2px solid var(--borde);
+  border-radius:16px; padding:14px 16px; margin-bottom:10px; flex-wrap:wrap;
+  box-shadow:0 3px 10px rgba(214,120,60,.10)}
 .partida-item .crece{flex:1; font-weight:700}
 .tablero-gato{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; max-width:420px; margin:14px auto}
 .casilla-gato{aspect-ratio:1; font-size:3rem; font-weight:900; background:#fff; border:3px solid var(--borde);
@@ -125,7 +148,8 @@ table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius
 /* ---------- Cine / música ---------- */
 .buscador{display:flex; gap:10px} .buscador input{flex:1}
 .resultados{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-top:14px}
-.resultado{background:#fff; border:2px solid var(--borde); border-radius:14px; overflow:hidden; text-align:left; padding:0; min-height:0}
+.resultado{background:#fff; border:2px solid var(--borde); border-radius:18px; overflow:hidden; text-align:left; padding:0; min-height:0;
+  box-shadow:0 4px 12px rgba(214,120,60,.10)}
 .resultado img{width:100%; display:block; aspect-ratio:16/9; object-fit:cover}
 .resultado .tit{padding:10px 12px; font-weight:700; font-size:.95rem}
 .resultado .acciones{display:flex; gap:8px; padding:0 12px 12px; flex-wrap:wrap}
@@ -144,9 +168,9 @@ table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius
 
 /* ---------- Chat ---------- */
 .chat-caja{height:46vh; min-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:6px}
-.mensaje{max-width:80%; padding:10px 14px; border-radius:18px; background:#fff4e8; align-self:flex-start; box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.mensaje{max-width:80%; padding:12px 16px; border-radius:20px; background:#fff4e8; align-self:flex-start; box-shadow:0 2px 6px rgba(0,0,0,.05)}
 .mensaje.mio{background:linear-gradient(135deg,#ffe3ba,#ffd1dc); align-self:flex-end}
-.mensaje .quien{font-size:.78rem; font-weight:800; color:var(--suave)}
+.mensaje .quien{font-size:.84rem; font-weight:800; color:var(--suave)}
 .chat-enviar{display:flex; gap:10px; margin-top:10px} .chat-enviar input{flex:1}
 
 /* ---------- Chat v2: emojis grandes, reacciones, selector y notas de voz ---------- */
@@ -180,7 +204,7 @@ table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius
 /* ---------- Llamada entrante (tarjeta grande dentro de la app) ---------- */
 #tarjeta-llamada{position:fixed; inset:0; z-index:85; display:flex; align-items:center; justify-content:center;
   background:rgba(61,44,41,.5); padding:20px}
-.llamada-caja{background:#fff; border-radius:26px; padding:36px 30px; text-align:center; max-width:460px; width:94vw;
+.llamada-caja{background:#fff; border-radius:30px; border:2px solid #ffe4c7; padding:36px 30px; text-align:center; max-width:460px; width:94vw;
   box-shadow:0 18px 50px rgba(0,0,0,.3); animation:rebote .6s ease}
 .llamada-titulo{font-size:1.7rem; font-weight:900; margin:.3em 0}
 
@@ -193,7 +217,7 @@ table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius
 
 /* ---------- Reacciones ---------- */
 .barra-reacciones{position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:40;
-  background:rgba(255,255,255,.94); border:2px solid var(--borde); border-radius:999px; padding:6px 10px;
+  background:rgba(255,255,255,.94); backdrop-filter:blur(8px); border:2px solid var(--borde); border-radius:999px; padding:6px 10px;
   display:flex; gap:4px; box-shadow:var(--sombra)}
 .barra-reacciones button{background:transparent; font-size:1.5rem; min-height:48px; padding:4px 10px}
 #zona-reacciones{position:fixed; inset:0; pointer-events:none; z-index:76; overflow:hidden}
@@ -204,22 +228,22 @@ table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius
 #capa-ganador{position:fixed; inset:0; z-index:80; display:none; align-items:center; justify-content:center;
   background:rgba(61,44,41,.45); padding:20px}
 #capa-ganador.visible{display:flex}
-.ganador-caja{background:#fff; border-radius:26px; padding:36px 30px; text-align:center; max-width:440px; width:92vw;
-  animation:rebote .6s ease}
+.ganador-caja{background:linear-gradient(180deg,#ffffff,#fff8e6); border-radius:30px; border:2px solid #ffe4c7; padding:36px 30px; text-align:center; max-width:440px; width:92vw;
+  box-shadow:0 18px 50px rgba(0,0,0,.28); animation:rebote .6s ease}
 .ganador-titulo{font-size:2.2rem; font-weight:900}
 .ganador-sub{color:var(--suave); font-size:1.1rem}
 
 /* ---------- Ajustes para celular (pantalla angosta) ---------- */
 @media (max-width:680px){
   header.barra{padding:8px 10px; gap:8px}
-  header .titulo{font-size:1.08rem}
+  header .titulo{font-size:1.18rem; padding:5px 12px}
   .presencia{flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none}
   .presencia::-webkit-scrollbar{display:none}
   .chip-presencia{padding:3px 9px 3px 4px; font-size:.8rem; white-space:nowrap}
   .chip-presencia .avatar{font-size:1.05rem}
-  header .btn-chico{min-height:40px; padding:6px 12px; font-size:.88rem}
+  header .btn-chico{min-height:44px; padding:6px 12px; font-size:.9rem}
   nav.pestanas{padding:10px 10px 2px; gap:6px}
-  nav.pestanas button{min-width:100px; min-height:50px; font-size:.97rem; padding:10px 8px}
+  nav.pestanas button{min-width:100px; min-height:56px; font-size:1rem; padding:10px 8px}
   main{padding:10px 10px 178px}
   .tarjeta{padding:16px 14px}
   /* v3.4.3: NADA de nowrap aquí — con la llamada viva hay 5–6
@@ -345,7 +369,8 @@ button.celda-naval.disparo:disabled{cursor:default; opacity:1}
    (v3.2: el anillo de la tarjeta del juego vive ahora en .tarjeta-en-capa,
    dentro de la capa sobrepuesta — ver la sección v3.2 al final.) */
 .historia-img{width:100%; max-height:300px; object-fit:cover; border-radius:14px; margin:10px 0; display:block}
-.biblia-grupo{margin:14px 0 6px; font-size:1.05rem}
+.biblia-grupo{display:inline-block; margin:14px 0 6px; font-size:1.05rem; font-weight:800;
+  background:#fff1e3; border:2px solid #ffd9ae; color:#9a5a1e; padding:6px 16px; border-radius:999px}
 .tablero-damas{display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:2px; max-width:360px; margin:10px auto}
 .casilla-damas{aspect-ratio:1; border:none; border-radius:6px; font-size:1.25rem; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0; min-width:0; min-height:0}
 .casilla-damas.clara{background:#f3e2c7}.casilla-damas.oscura{background:#b07a45}
@@ -385,10 +410,10 @@ body.con-capa{position:fixed; left:0; right:0; width:100%; overflow:hidden}
   box-shadow:0 18px 50px rgba(0,0,0,.35)}
 .capa-cabecera{display:flex; align-items:center; justify-content:space-between; gap:12px;
   padding:calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
-  background:rgba(255,247,237,.96); border-bottom:2px solid var(--borde); flex:none}
-.capa-titulo{font-size:1.25rem; font-weight:800}
-.btn-cerrar-capa{background:#fff; border:3px solid var(--coral); color:var(--coral);
-  font-size:1.5rem; font-weight:900; line-height:1; width:60px; height:60px; min-height:60px;
+  background:linear-gradient(90deg,#fff1e0,#ffe9f3); border-bottom:2px solid var(--borde); flex:none}
+.capa-titulo{font-size:1.38rem; font-weight:900}
+.btn-cerrar-capa{background:linear-gradient(180deg,#ffffff,#ffe9e4); border:3px solid var(--coral); color:var(--coral);
+  font-size:1.6rem; font-weight:900; line-height:1; width:64px; height:64px; min-height:60px;
   padding:0; border-radius:50%; flex:none; box-shadow:var(--sombra)}
 .btn-cerrar-capa:active{transform:scale(.93)}
 .capa-cuerpo{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
@@ -401,8 +426,9 @@ body.con-capa{position:fixed; left:0; right:0; width:100%; overflow:hidden}
     max-height:calc(100dvh - 52px); border-radius:26px; overflow:hidden}
 }
 /* El versículo del día se toca para verlo en grande */
-#versiculo-dia-tocable{cursor:pointer; border-radius:14px}
-#versiculo-dia-tocable:active{background:#fff8f1}
+#versiculo-dia-tocable{cursor:pointer; border-radius:18px; padding:12px 14px;
+  background:#fffaf3; border:2px solid #ffedda}
+#versiculo-dia-tocable:active{background:#ffedda}
 .versiculo-grande .versiculo-texto{font-size:1.65rem; line-height:1.55}
 .versiculo-grande .versiculo-cita{font-size:1.1rem}
 
@@ -414,26 +440,29 @@ body.con-capa{position:fixed; left:0; right:0; width:100%; overflow:hidden}
    las 36 historias y los juegos bíblicos quedan arriba, a la vista. */
 .barra-historias{display:flex; flex-wrap:nowrap; gap:10px; overflow-x:auto; overflow-y:hidden;
   scroll-snap-type:x proximity; padding:6px 2px 12px; margin-bottom:2px;
-  -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain}
+  -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain; scroll-behavior:smooth}
 .barra-historias::-webkit-scrollbar{height:6px}
-.barra-historias::-webkit-scrollbar-thumb{background:#f3c9a5; border-radius:3px}
-.historia-tarjeta{flex:0 0 auto; width:138px; scroll-snap-align:start; display:flex; flex-direction:column;
-  gap:5px; text-align:left; padding:8px; border-radius:16px; cursor:pointer;
-  background:#fff; border:2px solid #ffd9ae; box-shadow:0 2px 6px rgba(180,110,40,.10);
+.barra-historias::-webkit-scrollbar-thumb{background:#f0a868; border-radius:3px}
+.historia-tarjeta{flex:0 0 auto; width:150px; scroll-snap-align:start; display:flex; flex-direction:column;
+  gap:5px; text-align:left; padding:10px; border-radius:20px; cursor:pointer;
+  background:linear-gradient(180deg,#ffffff 0%,#fff3e0 100%); border:2px solid #ffd9ae;
+  box-shadow:var(--sombra-juego);
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .18s ease;
   font:inherit; color:inherit}
-.historia-tarjeta:active{transform:scale(.97)}
-.historia-portada{width:100%; height:80px; object-fit:cover; border-radius:10px; display:block;
+.historia-tarjeta:active{transform:translateY(3px) scale(.97);
+  box-shadow:0 1px 0 #f6cf9f, 0 4px 10px rgba(180,110,40,.14)}
+.historia-portada{width:100%; height:88px; object-fit:cover; border-radius:12px; display:block;
   background:#ffe9d2}
-.historia-tarjeta-titulo{font-weight:800; font-size:.9rem; line-height:1.25; min-height:2.5em;
+.historia-tarjeta-titulo{font-weight:800; font-size:.95rem; line-height:1.25; min-height:2.5em;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
 .historia-tarjeta-cita{font-size:.74rem; font-weight:700; color:var(--suave);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 /* Los 8 juegos bíblicos en rejilla compacta de 2 columnas: apilados de
    uno en uno el bloque medía más de 600px y su última fila quedaba muy
    abajo; en rejilla el bloque entero asoma casi sin bajar. */
-.rejilla-biblica{display:grid; grid-template-columns:1fr 1fr; gap:8px}
-.rejilla-biblica .btn-principal{width:100%; min-height:52px; padding:10px 6px;
-  font-size:.93rem; line-height:1.2}
+.rejilla-biblica{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.rejilla-biblica .btn-principal{width:100%; min-height:58px; padding:10px 6px;
+  font-size:.98rem; line-height:1.2; border-radius:18px}
 
 /* ================= V3.4 · JUEGOS POR CATEGORÍAS (barras) =================
    Pedido del dueño: «los juegos, ponlos por categoría y deslizamiento en
@@ -442,19 +471,28 @@ body.con-capa{position:fixed; left:0; right:0; width:100%; overflow:hidden}
    de la pestaña; la página no crece con los 33 juegos. La tarjeta es
    compacta: icono grande + nombre, y al tocarla se crea la partida y se
    abre su capa (conducta v3.3). */
-.categoria-titulo{margin:18px 0 2px; font-size:1.05rem}
+.categoria-titulo{display:inline-block; margin:20px 0 4px; font-size:1.08rem; font-weight:900; color:#fff;
+  background:linear-gradient(135deg,var(--naranja),var(--coral)); padding:8px 18px; border-radius:999px;
+  box-shadow:0 4px 12px rgba(214,120,60,.25); letter-spacing:.01em}
+#categorias-juegos .categoria-titulo:nth-of-type(3n+2){background:linear-gradient(135deg,#2fe0b8,var(--azul));
+  box-shadow:0 4px 12px rgba(84,160,255,.25)}
+#categorias-juegos .categoria-titulo:nth-of-type(3n){background:linear-gradient(135deg,var(--rosa),#a55eea);
+  box-shadow:0 4px 12px rgba(165,94,234,.25)}
 .barra-juegos{display:flex; flex-wrap:nowrap; gap:10px; overflow-x:auto; overflow-y:hidden;
   scroll-snap-type:x proximity; padding:6px 2px 12px; margin-bottom:2px;
-  -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain}
+  -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain; scroll-behavior:smooth}
 .barra-juegos::-webkit-scrollbar{height:6px}
-.barra-juegos::-webkit-scrollbar-thumb{background:#f3c9a5; border-radius:3px}
-.juego-tarjeta{flex:0 0 auto; width:98px; scroll-snap-align:start; display:flex; flex-direction:column;
-  align-items:center; gap:6px; text-align:center; padding:12px 6px 10px; border-radius:16px; cursor:pointer;
-  background:#fff; border:2px solid #ffd9ae; box-shadow:0 2px 6px rgba(180,110,40,.10);
+.barra-juegos::-webkit-scrollbar-thumb{background:#f0a868; border-radius:3px}
+.juego-tarjeta{flex:0 0 auto; width:112px; scroll-snap-align:start; display:flex; flex-direction:column;
+  align-items:center; gap:7px; text-align:center; padding:14px 8px 12px; border-radius:20px; cursor:pointer;
+  background:linear-gradient(180deg,#ffffff 0%,#fff3e0 100%); border:2px solid #ffd9ae;
+  box-shadow:var(--sombra-juego);
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .18s ease;
   font:inherit; color:inherit}
-.juego-tarjeta:active{transform:scale(.96)}
-.juego-tarjeta-icono{font-size:2rem; line-height:1}
-.juego-tarjeta-nombre{font-weight:800; font-size:.82rem; line-height:1.2}
+.juego-tarjeta:active{transform:translateY(3px) scale(.96);
+  box-shadow:0 1px 0 #f6cf9f, 0 4px 10px rgba(180,110,40,.14)}
+.juego-tarjeta-icono{font-size:2.7rem; line-height:1; filter:drop-shadow(0 3px 3px rgba(180,110,40,.25))}
+.juego-tarjeta-nombre{font-weight:800; font-size:.88rem; line-height:1.2}
 .mazo-fila{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-weight:700; margin-top:6px}
 .mazo-fila select{width:auto; flex:1; min-width:170px}
 
@@ -512,3 +550,26 @@ body.con-capa{position:fixed; left:0; right:0; width:100%; overflow:hidden}
 .videos-mosaicos .mosaico-video.mosaico-grande{width:100%; flex:1 1 100%; height:auto;
   aspect-ratio:16/10; max-height:54vh; max-width:none; order:-1}
 .videos-mosaicos .mosaico-video.mosaico-grande .avatar-grande{font-size:4rem}
+
+/* ================= V3.6.2 · INTERFAZ MÁS DIVERTIDA Y CÓMODA =================
+   Pedido del dueño: «quiero más juegos… y te pedí que hagas la interfaz
+   más divertida y cómoda de usar». Solo aspecto y comodidad: la paleta
+   viva y los relieves viven en las reglas de siempre (botones con borde
+   3D que se hunde al tocar, tarjetas de juego e historia más grandes
+   con sombra de «botón de juguete» y rebote elástico, títulos de
+   categoría en píldora de colores que rotan, cabecera con título en
+   píldora, fondo con puntitos suaves). Aquí queda lo transversal:
+   la entrada suave de las capas, el realce con ratón (solo donde hay
+   ratón, para no pelear con el tacto), el foco visible para quien
+   navega con teclado y el respeto a «reducir movimiento». */
+@keyframes subir-capa{from{transform:translateY(26px); opacity:.4} to{transform:none; opacity:1}}
+.capa-panel{animation:subir-capa .32s cubic-bezier(.22,1.2,.36,1)}
+@media (hover:hover){
+  .juego-tarjeta:hover{transform:translateY(-3px)}
+  .historia-tarjeta:hover{transform:translateY(-3px)}
+}
+button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible{
+  outline:3px solid var(--azul); outline-offset:2px}
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{animation-duration:.01s !important; transition-duration:.01s !important}
+}
