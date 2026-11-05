@@ -366,6 +366,9 @@
     var esAudio = !!m.audio_path;
     var soloEmojis = !esAudio && !esArchivo && Fun.esSoloEmojis(m.texto);
     div.className = 'mensaje' + (m.autor === yo.id ? ' mio' : '') + (soloEmojis ? ' solo-emojis' : '');
+    var hashAutor = 0;
+    for (var hi = 0; hi < String(m.autor || '').length; hi++) hashAutor += String(m.autor).charCodeAt(hi);
+    div.dataset.autor = String(hashAutor % 3);
     div.innerHTML = '<div class="quien">' + escapar(m.nombre) + '</div>';
     if (esArchivo) {
       var zonaA = document.createElement('div');
