@@ -1738,6 +1738,9 @@
       case 'blanco': // v3.7: su puntaje + 20 a quien más sumó
         if (estado.terminado) copiarPuntajes(20);
         break;
+      case 'verdad': // auditoría v3.7.1: era el único juego sin puntos; cada tarjeta cumplida vale 10
+        if (estado.terminado) copiarPuntajes(0);
+        break;
     }
     return suma;
   }
@@ -1990,11 +1993,14 @@
     'Camina como un cangrejo de lado a lado 🦀', 'Pon cara de sorpresa máxima por 10 segundos 😲'
   ];
   function crearVerdad(jugadores) {
+    var puntajes = {};
+    (jugadores || []).forEach(function (id) { puntajes[id] = 0; });
     return {
       tipo: 'verdad', jugadores: (jugadores || []).slice(0, 3),
       turno: 0, jugadas: 0, jugadasTotales: 9,
       fase: 'eligiendo', // eligiendo | mostrando
-      tarjeta: null, terminado: false
+      tarjeta: null, terminado: false,
+      puntajes: puntajes
     };
   }
   function elegirTarjetaVerdad(estado, idxJug, clase, rng) {
@@ -2011,8 +2017,11 @@
   function completarVerdad(estado) {
     if (estado.fase !== 'mostrando') throw new Error('Todavía no hay tarjeta');
     var jugadas = estado.jugadas + 1;
+    var puntajes = conMapa(estado, 'puntajes', 0);
+    var uid = estado.jugadores[estado.turno];
+    if (uid) puntajes[uid] += 10; // cada tarjeta cumplida vale 10 pts
     return Object.assign({}, estado, {
-      fase: 'eligiendo', tarjeta: null, jugadas: jugadas,
+      fase: 'eligiendo', tarjeta: null, jugadas: jugadas, puntajes: puntajes,
       turno: (estado.turno + 1) % estado.jugadores.length,
       terminado: jugadas >= estado.jugadasTotales
     });
