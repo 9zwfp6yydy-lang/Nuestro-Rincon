@@ -3062,7 +3062,8 @@
     var esMiTurno = !e.terminado && miIdx !== -1 && e.turno === miIdx;
     avisoTurno(p, esMiTurno);
     var html = tituloJuego(p, e, '💬 Verdad o Reto familiar') +
-      '<p class="subtitulo">Tarjetas suaves y divertidas para toda la familia. Turno ' + (e.jugadas + 1) + ' de ' + e.jugadasTotales + '.</p>';
+      '<p class="subtitulo">Tarjetas suaves y divertidas para toda la familia. Cada tarjeta cumplida vale <strong>10 pts</strong>. Turno ' + (e.jugadas + 1) + ' de ' + e.jugadasTotales + '.</p>' +
+      marcadorPuntos(e, ' pts');
     if (e.terminado) {
       html += '<h3>🎉 ¡Lo lograron!</h3><p>Completaron todas las tarjetas. ¡Qué familia tan valiente y divertida! 💛</p>';
     } else if (e.fase === 'eligiendo') {
@@ -3087,7 +3088,7 @@
         var nuevo = G.completarVerdad(e);
         Fun.sonido('acierto');
         if (nuevo.terminado && !celebraciones[p.id]) { celebraciones[p.id] = true; Fun.pantallaGanador('¡Verdad o Reto completo! 💬🏆', 'Familia valiente y divertida'); }
-        guardarEstado(p, nuevo);
+        guardarConPuntos(p, e, nuevo);
       } catch (err) { Fun.sonido('error'); }
     });
   }
