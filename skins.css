@@ -65,6 +65,21 @@
 .skin-insignia-fila{display:inline-block; margin-left:8px; font-size:.92rem;
   font-weight:800; color:var(--suave)}
 
+/* ---------- La FOTO del personaje (v3.7.6) ----------
+   Cuando la skin tiene imagen real, skins.js mete una
+   <img class="skin-foto"> dentro del círculo donde iba el emoji y
+   la foto lo llena entera (cover, redonda). El baile no cambia: la
+   animación vive en el disco/avatar que la envuelve y la foto se
+   mueve con él. En la previa y en las insignias el contenedor no
+   tiene tamaño fijo, así que la foto lleva el suyo en em/px. */
+.skin-foto{display:block; width:100%; height:100%;
+  object-fit:cover; border-radius:50%}
+.skins-previa-emoji .skin-foto{width:72px; height:72px}
+.skin-insignia .skin-foto{display:inline-block; width:1.5em; height:1.5em;
+  vertical-align:-.35em}
+#tabla-campeones .skin-foto{display:inline-block; width:1.7em; height:1.7em;
+  vertical-align:-.45em}
+
 /* ---------- Tinte de MI burbuja con los colores de mi héroe ----------
    Las variables --skin-1/--skin-2 las pone skins.js al aplicar. Sin
    héroe no hay clase con-skin y la burbuja queda como la de la casa. */
