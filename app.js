@@ -4306,6 +4306,19 @@
 
   function aplicarEstadoReproduccion(row, inicial) {
     if (!row) return;
+    // v3.7.6 · Cine familiar: si el video_id trae «:» (peli:, drive:,
+    // web:) NO es un video de YouTube: lo atiende cine-familiar.js con
+    // su propio reproductor. Aquí solo se aparca el de YouTube para
+    // que no intente cargar ese id ni enseñe errores que no son suyos.
+    if (row.video_id && row.video_id.indexOf(':') !== -1) {
+      if (videoActual && ytListo && ytPlayer) { try { ytPlayer.pauseVideo(); } catch (e) { /* aún sin reproductor */ } }
+      videoActual = null;
+      grupoQuiereSonar = false;
+      ocultarToca();
+      var avp = $('#aviso-yt-carga'); if (avp) avp.classList.add('oculto');
+      var ave = $('#aviso-embed'); if (ave) ave.classList.add('oculto');
+      return;
+    }
     grupoQuiereSonar = !!row.reproduciendo;
     if (row.video_id && !ytListo) {
       var av2 = $('#aviso-yt-carga'); if (av2) av2.classList.remove('oculto');
