@@ -171,9 +171,25 @@ body.skin-oceano .skins-previa-emoji{animation:skin-oceano 3.2s ease-in-out infi
 /* ---------- Insignias (Sala y chat): bailoteo chiquito ---------- */
 .skin-insignia{display:inline-block; animation:skin-insignia-baile 2.8s ease-in-out infinite}
 
+/* =====================================================================
+   MI AVATAR ES TOCABLE (v3.7.4): tocar mi animal/héroe — el círculo
+   de mi fila en la Sala, mi chip de la cabecera o mi celda de
+   campeones — abre el selector de héroes. La pista es sutil y muy
+   iOS: cursor de puntero, un anillo suave alrededor del círculo
+   grande y el gesto de «se hunde» al tocar. Solo lo pinta skins.js
+   sobre MIS elementos (clase skin-tocable); el avatar de otro no
+   lleva la clase ni hace nada.
+   ===================================================================== */
+.skin-tocable{cursor:pointer; -webkit-tap-highlight-color:transparent;
+  transition:transform .15s ease, box-shadow .15s ease}
+.skin-tocable:active{transform:scale(.93)}
+.avatar-grande.skin-tocable{box-shadow:0 0 0 2px #fff, 0 0 0 4.5px rgba(255,159,67,.75)}
+td.skin-tocable{text-decoration:underline dotted rgba(255,159,67,.8) 2px;
+  text-underline-offset:4px}
+
 /* ---------- Sin movimiento para quien lo tenga así en su aparato ---------- */
 @media (prefers-reduced-motion: reduce){
   .skin-chip-disco,.skins-previa-emoji,.skin-opcion,.skin-insignia,
-  .skin-opcion .skin-disco{animation:none !important; transition:none !important}
+  .skin-opcion .skin-disco,.skin-tocable{animation:none !important; transition:none !important}
   body.con-skin .skin-chip-disco::after{display:none}
 }
