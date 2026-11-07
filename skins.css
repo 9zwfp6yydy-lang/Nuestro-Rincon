@@ -1,0 +1,179 @@
+/* =====================================================================
+   skins.css — Estilos de los skins de héroes 🦸 (Nuestro Rincón)
+   Hoja ADITIVA: se carga DESPUÉS de styles.css y solo añade reglas
+   propias (prefijo skin-) más el tinte de MI burbuja de chat cuando
+   tengo héroe (body.con-skin). No redefine nada de la casa salvo ese
+   tinte intencionado. Estilo Apple/iOS de la v3.7.1, objetivos
+   táctiles ≥48px, iPad-first.
+   ===================================================================== */
+
+/* ---------- Botón «🦸 Mi héroe» de la cabecera ---------- */
+.skin-chip{display:flex; align-items:center; gap:8px; padding:6px 14px 6px 7px}
+.skin-chip-disco{width:38px; height:38px; flex:none; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-size:1.25rem;
+  background:linear-gradient(135deg,#ffe3ba,#ffd1dc);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.65), 0 2px 6px rgba(61,44,41,.18)}
+.skin-chip-texto{font-weight:800; white-space:nowrap}
+/* En pantallas angostas la cabecera ya va llena (presencia, sonido,
+   llamada, salir): el chip se queda solo con el disco del héroe. */
+@media (max-width:560px){
+  .skin-chip{padding:6px 7px}
+  .skin-chip-texto{display:none}
+}
+
+/* ---------- Capa del selector ---------- */
+.skins-previa{display:flex; align-items:center; gap:14px; border-radius:20px;
+  padding:14px 18px; margin-bottom:14px; min-height:84px; color:#fff;
+  background:linear-gradient(135deg,#ffd9ae,#ffb3c8);
+  box-shadow:var(--sombra-juego); transition:background .25s ease}
+.skins-previa-emoji{font-size:2.6rem; line-height:1;
+  filter:drop-shadow(0 3px 4px rgba(61,44,41,.3))}
+.skins-previa-nombre{font-size:1.35rem; font-weight:900;
+  text-shadow:0 2px 6px rgba(61,44,41,.35)}
+
+.skins-rejilla{display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-top:12px}
+@media (min-width:820px){
+  .skins-rejilla{grid-template-columns:repeat(3,1fr)}
+}
+.skin-opcion{position:relative; display:flex; flex-direction:column; align-items:center;
+  gap:8px; padding:16px 10px 14px; min-height:132px; border-radius:22px;
+  background:linear-gradient(180deg,#ffffff 0%,#fff3e0 100%);
+  border:3px solid var(--borde); box-shadow:var(--sombra-juego); color:var(--tinta);
+  transition:transform .16s cubic-bezier(.34,1.56,.64,1), border-color .16s ease, box-shadow .16s ease}
+.skin-opcion:active{transform:translateY(3px) scale(.97);
+  box-shadow:0 1px 0 #f6cf9f, 0 4px 10px rgba(180,110,40,.14)}
+.skin-disco{width:64px; height:64px; border-radius:50%; flex:none;
+  display:flex; align-items:center; justify-content:center; font-size:2rem;
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.55), 0 4px 10px rgba(61,44,41,.22)}
+.skin-nombre{font-size:1.02rem; font-weight:800; text-align:center; line-height:1.25}
+.skin-check{position:absolute; top:8px; right:8px; width:30px; height:30px;
+  border-radius:50%; background:var(--ios-verde); color:#fff; font-size:1rem;
+  font-weight:900; display:none; align-items:center; justify-content:center;
+  box-shadow:0 2px 6px rgba(52,199,89,.5)}
+.skin-opcion.elegido{border-color:var(--coral); transform:scale(1.03);
+  box-shadow:0 6px 0 #f6cf9f, 0 14px 24px rgba(214,120,60,.25)}
+.skin-opcion.elegido .skin-check{display:flex}
+
+/* ---------- Insignias donde pinta app.js (chat y Sala) ---------- */
+.skin-insignia{font-size:.95em}
+.skin-insignia-fila{display:inline-block; margin-left:8px; font-size:.92rem;
+  font-weight:800; color:var(--suave)}
+
+/* ---------- Tinte de MI burbuja con los colores de mi héroe ----------
+   Las variables --skin-1/--skin-2 las pone skins.js al aplicar. Sin
+   héroe no hay clase con-skin y la burbuja queda como la de la casa. */
+body.con-skin .mensaje.mio{
+  background:linear-gradient(135deg,var(--skin-1,#ffb020),var(--skin-2,#ff7847));
+}
+
+/* =====================================================================
+   SKINS MOVIBLES 💃 (pedido de Rafiel, 2026-11-07): el héroe elegido
+   se MUEVE de continuo, suave y ligero (solo transform/opacity, 60fps).
+   Cada héroe tiene su toque propio:
+     rayo ⚡ parpadea · estrella 🌟 gira despacio · guardián 🛡️ se
+     balancea · turbo 🚀 despega y vuelve · león 🦁 ruge (pulso) ·
+     ninja 🥷 se escabulle · princesa 👸 flota con gracia · robot 🤖
+     se mueve a pasitos · dragón 🐉 respira · océano 🌊 hace olas.
+   El cuerpo lleva la clase skin-<id> (la pone skins.js), la tarjeta
+   elegida lleva .elegido y cada tarjeta su data-skin: con eso basta,
+   sin tocar JS. Quien tenga «reducir movimiento» en su aparato no ve
+   ninguna animación (media query al final).
+   ===================================================================== */
+
+/* ---------- Movimientos (keyframes) ---------- */
+@keyframes skin-flota{0%,100%{transform:translateY(0) rotate(0deg)}
+  50%{transform:translateY(-3px) rotate(-2deg)}}
+@keyframes skin-rayo{0%,100%{transform:scale(1); opacity:1}
+  7%{transform:scale(1.2); opacity:.5} 14%{transform:scale(1.06); opacity:1}
+  21%{transform:scale(1.16); opacity:.65} 30%{transform:scale(1); opacity:1}}
+@keyframes skin-estrella{0%{transform:rotate(0deg) scale(1)}
+  25%{transform:rotate(90deg) scale(1.1)} 50%{transform:rotate(180deg) scale(1)}
+  75%{transform:rotate(270deg) scale(1.1)} 100%{transform:rotate(360deg) scale(1)}}
+@keyframes skin-guardian{0%,100%{transform:rotate(-4deg)}
+  50%{transform:rotate(4deg)}}
+@keyframes skin-turbo{0%,100%{transform:translateY(0) rotate(0deg)}
+  28%{transform:translateY(-9px) rotate(-5deg)}
+  38%{transform:translateY(-9px) translateX(1px) rotate(-4deg)}
+  48%{transform:translateY(-9px) translateX(-1px) rotate(-5deg)}
+  62%{transform:translateY(0) rotate(0deg)}}
+@keyframes skin-leon{0%,100%{transform:scale(1)}
+  12%{transform:scale(1.17)} 24%{transform:scale(1.09)}
+  36%{transform:scale(1.17)} 52%{transform:scale(1)}}
+@keyframes skin-ninja{0%,100%{transform:translateX(0); opacity:1}
+  30%{transform:translateX(6px); opacity:.3}
+  55%{transform:translateX(6px); opacity:.3}
+  80%{transform:translateX(-2px); opacity:1}}
+@keyframes skin-princesa{0%,100%{transform:translateY(0) rotate(-3deg)}
+  50%{transform:translateY(-4px) rotate(3deg)}}
+@keyframes skin-robot{0%,100%{transform:rotate(0deg)}
+  25%{transform:rotate(-7deg)} 50%{transform:rotate(0deg)}
+  75%{transform:rotate(7deg)}}
+@keyframes skin-dragon{0%,100%{transform:scale(1)}
+  50%{transform:scale(1.1)}}
+@keyframes skin-oceano{0%,100%{transform:translateY(0) rotate(0deg)}
+  25%{transform:translateY(-4px) rotate(2deg)}
+  50%{transform:translateY(0) rotate(0deg)}
+  75%{transform:translateY(3px) rotate(-2deg)}}
+@keyframes skin-onda{0%{transform:scale(1); opacity:.65}
+  100%{transform:scale(1.35); opacity:0}}
+@keyframes skin-elegido-salto{0%,100%{transform:scale(1.03) translateY(0)}
+  50%{transform:scale(1.05) translateY(-3px)}}
+@keyframes skin-insignia-baile{0%,100%{transform:translateY(0) rotate(0deg)}
+  50%{transform:translateY(-2px) rotate(6deg)}}
+
+/* ---------- Disco de la cabecera: flota siempre; con héroe, SU baile
+   + un anillo de brillo pulsante en su color (--skin-1) ---------- */
+.skin-chip-disco{position:relative; animation:skin-flota 3s ease-in-out infinite}
+body.con-skin .skin-chip-disco::after{content:''; position:absolute; inset:0;
+  border-radius:50%; border:2px solid var(--skin-1,#ffb020); pointer-events:none;
+  animation:skin-onda 2.2s ease-out infinite}
+body.skin-rayo .skin-chip-disco{animation:skin-rayo 2.4s ease-in-out infinite}
+body.skin-estrella .skin-chip-disco{animation:skin-estrella 7s linear infinite}
+body.skin-guardian .skin-chip-disco{animation:skin-guardian 3s ease-in-out infinite}
+body.skin-turbo .skin-chip-disco{animation:skin-turbo 2.8s ease-in-out infinite}
+body.skin-leon .skin-chip-disco{animation:skin-leon 3s ease-in-out infinite}
+body.skin-ninja .skin-chip-disco{animation:skin-ninja 2.6s ease-in-out infinite}
+body.skin-princesa .skin-chip-disco{animation:skin-princesa 2.6s ease-in-out infinite}
+body.skin-robot .skin-chip-disco{animation:skin-robot 1.6s ease-in-out infinite}
+body.skin-dragon .skin-chip-disco{animation:skin-dragon 2.8s ease-in-out infinite}
+body.skin-oceano .skin-chip-disco{animation:skin-oceano 3.2s ease-in-out infinite}
+
+/* ---------- Vista previa del selector: el héroe grande también baila ---------- */
+.skins-previa-emoji{animation:skin-flota 2.6s ease-in-out infinite}
+body.skin-rayo .skins-previa-emoji{animation:skin-rayo 2.4s ease-in-out infinite}
+body.skin-estrella .skins-previa-emoji{animation:skin-estrella 7s linear infinite}
+body.skin-guardian .skins-previa-emoji{animation:skin-guardian 3s ease-in-out infinite}
+body.skin-turbo .skins-previa-emoji{animation:skin-turbo 2.8s ease-in-out infinite}
+body.skin-leon .skins-previa-emoji{animation:skin-leon 3s ease-in-out infinite}
+body.skin-ninja .skins-previa-emoji{animation:skin-ninja 2.6s ease-in-out infinite}
+body.skin-princesa .skins-previa-emoji{animation:skin-princesa 2.6s ease-in-out infinite}
+body.skin-robot .skins-previa-emoji{animation:skin-robot 1.6s ease-in-out infinite}
+body.skin-dragon .skins-previa-emoji{animation:skin-dragon 2.8s ease-in-out infinite}
+body.skin-oceano .skins-previa-emoji{animation:skin-oceano 3.2s ease-in-out infinite}
+
+/* ---------- Rejilla: la tarjeta elegida salta suave y su disco hace
+   el baile de SU héroe; todas micro-reaccionan al tocarlas/pasar ---------- */
+.skin-opcion.elegido{animation:skin-elegido-salto 1.8s ease-in-out infinite}
+.skin-opcion .skin-disco{transition:transform .18s ease}
+.skin-opcion:hover .skin-disco{transform:scale(1.14) rotate(-5deg)}
+.skin-opcion:active .skin-disco{transform:scale(.93)}
+.skin-opcion.elegido[data-skin="rayo"] .skin-disco{animation:skin-rayo 2.4s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="estrella"] .skin-disco{animation:skin-estrella 7s linear infinite}
+.skin-opcion.elegido[data-skin="guardian"] .skin-disco{animation:skin-guardian 3s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="turbo"] .skin-disco{animation:skin-turbo 2.8s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="leon"] .skin-disco{animation:skin-leon 3s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="ninja"] .skin-disco{animation:skin-ninja 2.6s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="princesa"] .skin-disco{animation:skin-princesa 2.6s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="robot"] .skin-disco{animation:skin-robot 1.6s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="dragon"] .skin-disco{animation:skin-dragon 2.8s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="oceano"] .skin-disco{animation:skin-oceano 3.2s ease-in-out infinite}
+
+/* ---------- Insignias (Sala y chat): bailoteo chiquito ---------- */
+.skin-insignia{display:inline-block; animation:skin-insignia-baile 2.8s ease-in-out infinite}
+
+/* ---------- Sin movimiento para quien lo tenga así en su aparato ---------- */
+@media (prefers-reduced-motion: reduce){
+  .skin-chip-disco,.skins-previa-emoji,.skin-opcion,.skin-insignia,
+  .skin-opcion .skin-disco{animation:none !important; transition:none !important}
+  body.con-skin .skin-chip-disco::after{display:none}
+}
