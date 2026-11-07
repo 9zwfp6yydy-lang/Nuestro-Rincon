@@ -40,6 +40,7 @@
 
    API pública:
      window.NRSkins.catalogo()     -> copia del catálogo
+     window.NRSkins.categorias()   -> copia de las categorías (v3.7.5)
      window.NRSkins.actual()       -> skin elegido o null
      window.NRSkins.elegir(id)     -> aplica y guarda al instante
      window.NRSkins.abrir()        -> abre el selector
@@ -49,19 +50,64 @@
   'use strict';
 
   /* ------------------------- catálogo de héroes -------------------------
-     10 héroes ORIGINALES y genéricos (emoji + nombre + paleta CSS).
-     Nada de personajes con copyright ni imágenes externas. */
+     v3.7.5 (pedido de Rafiel: «más skins, de Mario, Marvel, DC y de
+     series famosas — como Doctor Strange y Spider-Man»): el catálogo
+     crece a 34 y el selector se organiza por CATEGORÍAS. Todo sigue
+     siendo SOLO emoji + nombre + paleta CSS: sin imágenes ni assets
+     externos. Los 10 originales quedan en «Héroes». Colisiones de
+     emoji resueltas: ⚡ es Capitán Rayo (Flash corre con 🏃), 🛡️ es
+     el Guardián (Capitán América brilla con ⭐), 👸 es la Princesa
+     Guerrera (Mujer Maravilla pelea con ⚔️ y Peach reina con 👑),
+     🌟 es Súper Estrella, y Mario 🍄 se distingue de Toad 🍄✨ por
+     el brillo, el nombre y los colores. */
+  var CATEGORIAS = [
+    { id: 'heroes', nombre: 'Héroes' },
+    { id: 'mario',  nombre: 'Mario y amigos' },
+    { id: 'marvel', nombre: 'Marvel' },
+    { id: 'dc',     nombre: 'DC' },
+    { id: 'series', nombre: 'Series famosas' }
+  ];
+
   var CATALOGO = [
-    { id: 'rayo',     nombre: 'Capitán Rayo',      emoji: '⚡', colores: ['#ffb020', '#ff7847'] },
-    { id: 'estrella', nombre: 'Súper Estrella',    emoji: '🌟', colores: ['#f368e0', '#feca57'] },
-    { id: 'guardian', nombre: 'Héroe Guardián',    emoji: '🛡️', colores: ['#54a0ff', '#2e86de'] },
-    { id: 'turbo',    nombre: 'Chica Turbo',       emoji: '🚀', colores: ['#ff6b81', '#a55eea'] },
-    { id: 'leon',     nombre: 'Rey León',          emoji: '🦁', colores: ['#f39c12', '#d35400'] },
-    { id: 'ninja',    nombre: 'Ninja Sombra',      emoji: '🥷', colores: ['#8395a7', '#222f3e'] },
-    { id: 'princesa', nombre: 'Princesa Guerrera', emoji: '👸', colores: ['#fd79a8', '#e84393'] },
-    { id: 'robot',    nombre: 'Robot Héroe',       emoji: '🤖', colores: ['#7ed6df', '#3dc1d3'] },
-    { id: 'dragon',   nombre: 'Dragón Valiente',   emoji: '🐉', colores: ['#2ed573', '#1e90ff'] },
-    { id: 'oceano',   nombre: 'Capitán Océano',    emoji: '🌊', colores: ['#00d2ff', '#3a7bd5'] }
+    /* Héroes (los 10 originales) */
+    { id: 'rayo',     nombre: 'Capitán Rayo',      emoji: '⚡', colores: ['#ffb020', '#ff7847'], categoria: 'heroes' },
+    { id: 'estrella', nombre: 'Súper Estrella',    emoji: '🌟', colores: ['#f368e0', '#feca57'], categoria: 'heroes' },
+    { id: 'guardian', nombre: 'Héroe Guardián',    emoji: '🛡️', colores: ['#54a0ff', '#2e86de'], categoria: 'heroes' },
+    { id: 'turbo',    nombre: 'Chica Turbo',       emoji: '🚀', colores: ['#ff6b81', '#a55eea'], categoria: 'heroes' },
+    { id: 'leon',     nombre: 'Rey León',          emoji: '🦁', colores: ['#f39c12', '#d35400'], categoria: 'heroes' },
+    { id: 'ninja',    nombre: 'Ninja Sombra',      emoji: '🥷', colores: ['#8395a7', '#222f3e'], categoria: 'heroes' },
+    { id: 'princesa', nombre: 'Princesa Guerrera', emoji: '👸', colores: ['#fd79a8', '#e84393'], categoria: 'heroes' },
+    { id: 'robot',    nombre: 'Robot Héroe',       emoji: '🤖', colores: ['#7ed6df', '#3dc1d3'], categoria: 'heroes' },
+    { id: 'dragon',   nombre: 'Dragón Valiente',   emoji: '🐉', colores: ['#2ed573', '#1e90ff'], categoria: 'heroes' },
+    { id: 'oceano',   nombre: 'Capitán Océano',    emoji: '🌊', colores: ['#00d2ff', '#3a7bd5'], categoria: 'heroes' },
+    /* Mario y amigos */
+    { id: 'mario',    nombre: 'Mario',             emoji: '🍄', colores: ['#e52521', '#049cd8'], categoria: 'mario' },
+    { id: 'luigi',    nombre: 'Luigi',             emoji: '🧢', colores: ['#2fa84f', '#2456a6'], categoria: 'mario' },
+    { id: 'peach',    nombre: 'Princesa Peach',    emoji: '👑', colores: ['#f78fb3', '#f5cd30'], categoria: 'mario' },
+    { id: 'bowser',   nombre: 'Bowser',            emoji: '🐢', colores: ['#5da130', '#f5821f'], categoria: 'mario' },
+    { id: 'yoshi',    nombre: 'Yoshi',             emoji: '🦖', colores: ['#7ac74f', '#f39c3c'], categoria: 'mario' },
+    { id: 'toad',     nombre: 'Toad',              emoji: '🍄✨', colores: ['#f6e8e8', '#e52521'], categoria: 'mario' },
+    /* Marvel */
+    { id: 'spiderman',  nombre: 'Spider-Man',      emoji: '🕷️', colores: ['#d42a2a', '#1f3a93'], categoria: 'marvel' },
+    { id: 'strange',    nombre: 'Doctor Strange',  emoji: '🔮', colores: ['#a31621', '#d4a017'], categoria: 'marvel' },
+    { id: 'ironman',    nombre: 'Iron Man',        emoji: '🦾', colores: ['#b71313', '#f5a623'], categoria: 'marvel' },
+    { id: 'hulk',       nombre: 'Hulk',            emoji: '💚', colores: ['#3fa34d', '#14532d'], categoria: 'marvel' },
+    { id: 'thor',       nombre: 'Thor',            emoji: '🔨', colores: ['#2e5aa8', '#9fb6c9'], categoria: 'marvel' },
+    { id: 'panther',    nombre: 'Black Panther',   emoji: '🐾', colores: ['#241f31', '#7b2d8b'], categoria: 'marvel' },
+    { id: 'capamerica', nombre: 'Capitán América', emoji: '⭐', colores: ['#1f4e9c', '#d43a2f'], categoria: 'marvel' },
+    /* DC */
+    { id: 'batman',     nombre: 'Batman',          emoji: '🦇', colores: ['#23272e', '#f5c518'], categoria: 'dc' },
+    { id: 'superman',   nombre: 'Superman',        emoji: '💙', colores: ['#1e5aa8', '#e23636'], categoria: 'dc' },
+    { id: 'maravilla',  nombre: 'Mujer Maravilla', emoji: '⚔️', colores: ['#c8102e', '#f2a900'], categoria: 'dc' },
+    { id: 'flash',      nombre: 'Flash',           emoji: '🏃', colores: ['#d42a1e', '#f7c948'], categoria: 'dc' },
+    { id: 'aquaman',    nombre: 'Aquaman',         emoji: '🔱', colores: ['#1e7a5a', '#f2a900'], categoria: 'dc' },
+    /* Series famosas */
+    { id: 'goku',       nombre: 'Goku',            emoji: '🥋', colores: ['#f57c00', '#1e5aa8'], categoria: 'series' },
+    { id: 'naruto',     nombre: 'Naruto',          emoji: '🍥', colores: ['#f5821f', '#23272e'], categoria: 'series' },
+    { id: 'pikachu',    nombre: 'Pikachu',         emoji: '🐹', colores: ['#ffcb05', '#f5a623'], categoria: 'series' },
+    { id: 'sonic',      nombre: 'Sonic',           emoji: '🦔', colores: ['#1e6fd9', '#0d3b8c'], categoria: 'series' },
+    { id: 'harry',      nombre: 'Harry Potter',    emoji: '🧙', colores: ['#740001', '#d3a625'], categoria: 'series' },
+    { id: 'minecraft',  nombre: 'Minecraft',       emoji: '⛏️', colores: ['#5da130', '#8a5a2b'], categoria: 'series' }
   ];
 
   var CLAVE_BASE = 'nr-skin';
@@ -358,19 +404,27 @@
     $('#btn-cerrar-skins', capa).addEventListener('click', cerrarSelector);
     $('#btn-skin-quitar', capa).addEventListener('click', function () { elegir(null); });
     var rejilla = $('#skins-rejilla', capa);
-    CATALOGO.forEach(function (skin) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'skin-opcion';
-      b.dataset.skin = skin.id;
-      b.setAttribute('aria-label', 'Elegir ' + skin.nombre);
-      b.innerHTML =
-        '<span class="skin-disco" style="background:linear-gradient(135deg,' +
-          skin.colores[0] + ',' + skin.colores[1] + ')" aria-hidden="true">' + skin.emoji + '</span>' +
-        '<span class="skin-nombre">' + skin.nombre + '</span>' +
-        '<span class="skin-check" aria-hidden="true">✔</span>';
-      b.addEventListener('click', function () { elegir(skin.id); });
-      rejilla.appendChild(b);
+    CATEGORIAS.forEach(function (cat) {
+      var deCategoria = CATALOGO.filter(function (s) { return s.categoria === cat.id; });
+      if (!deCategoria.length) return;
+      var encabezado = document.createElement('h3');
+      encabezado.className = 'skins-categoria';
+      encabezado.textContent = cat.nombre;
+      rejilla.appendChild(encabezado);
+      deCategoria.forEach(function (skin) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'skin-opcion';
+        b.dataset.skin = skin.id;
+        b.setAttribute('aria-label', 'Elegir ' + skin.nombre);
+        b.innerHTML =
+          '<span class="skin-disco" style="background:linear-gradient(135deg,' +
+            skin.colores[0] + ',' + skin.colores[1] + ')" aria-hidden="true">' + skin.emoji + '</span>' +
+          '<span class="skin-nombre">' + skin.nombre + '</span>' +
+          '<span class="skin-check" aria-hidden="true">✔</span>';
+        b.addEventListener('click', function () { elegir(skin.id); });
+        rejilla.appendChild(b);
+      });
     });
   }
 
@@ -667,6 +721,7 @@
 
   window.NRSkins = {
     catalogo: function () { return CATALOGO.slice(); },
+    categorias: function () { return CATEGORIAS.slice(); },
     actual: function () { return elegido; },
     elegir: elegir,
     abrir: abrirSelector,
