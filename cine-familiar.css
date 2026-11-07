@@ -1,0 +1,60 @@
+/* =====================================================================
+   cine-familiar.css — Cine familiar 🎬 (v3.7.6)
+   Solo clases con prefijo cf- : no toca los estilos de la casa.
+   El marco del reproductor reusa .reproductor-marco y el botón de
+   rescate reusa .cine-toca (ambos de styles.css).
+   ===================================================================== */
+
+.cf-marco video,
+.cf-marco iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #14100e;
+}
+
+.cf-ahora {
+  margin: 12px 0 0;
+  font-weight: 600;
+}
+
+/* Tarjetas de la cartelera */
+.cf-peli {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 6px;
+  border-bottom: 1px dashed var(--borde, #f3d9c2);
+}
+.cf-peli:last-child { border-bottom: 0; }
+.cf-peli-tit { flex: 1; min-width: 0; }
+
+.cf-btn-subir {
+  display: inline-block;
+  text-decoration: none;
+  text-align: center;
+}
+
+/* Cuenta regresiva de Drive: número enorme sobre el video */
+.cf-cuenta {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 84px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, .65), 0 0 4px rgba(0, 0, 0, .8);
+  pointer-events: none;
+  z-index: 5;
+  text-align: center;
+  padding: 0 12px;
+}
+.cf-cuenta.oculto { display: none; }
+
+@media (max-width: 560px) {
+  .cf-cuenta { font-size: 56px; }
+}
