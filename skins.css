@@ -35,6 +35,12 @@
 @media (min-width:820px){
   .skins-rejilla{grid-template-columns:repeat(3,1fr)}
 }
+/* Encabezado de categoría (v3.7.5): ocupa toda la fila de la rejilla */
+.skins-categoria{grid-column:1/-1; margin:12px 2px 0; font-size:1.05rem;
+  font-weight:900; color:var(--tinta); display:flex; align-items:center; gap:10px}
+.skins-categoria:first-child{margin-top:0}
+.skins-categoria::after{content:''; flex:1; height:3px; border-radius:99px;
+  background:var(--borde)}
 .skin-opcion{position:relative; display:flex; flex-direction:column; align-items:center;
   gap:8px; padding:16px 10px 14px; min-height:132px; border-radius:22px;
   background:linear-gradient(180deg,#ffffff 0%,#fff3e0 100%);
@@ -120,6 +126,16 @@ body.con-skin .mensaje.mio{
   50%{transform:scale(1.05) translateY(-3px)}}
 @keyframes skin-insignia-baile{0%,100%{transform:translateY(0) rotate(0deg)}
   50%{transform:translateY(-2px) rotate(6deg)}}
+/* Bailes nuevos de la v3.7.5 (el resto de personajes reusa los de arriba):
+   balanceo 🕷️ Spider-Man colgando de su tela · velocidad 🏃 Flash ·
+   místico 🔮 el giro de Doctor Strange */
+@keyframes skin-balanceo{0%,100%{transform:rotate(11deg)}
+  50%{transform:rotate(-11deg)}}
+@keyframes skin-velocidad{0%,100%{transform:translateX(0)}
+  20%{transform:translateX(4px)} 40%{transform:translateX(-3px)}
+  60%{transform:translateX(5px)} 80%{transform:translateX(-2px)}}
+@keyframes skin-mistico{0%{transform:rotate(0deg) scale(1)}
+  50%{transform:rotate(180deg) scale(1.12)} 100%{transform:rotate(360deg) scale(1)}}
 
 /* ---------- Disco de la cabecera: flota siempre; con héroe, SU baile
    + un anillo de brillo pulsante en su color (--skin-1) ---------- */
@@ -137,6 +153,34 @@ body.skin-princesa .skin-chip-disco{animation:skin-princesa 2.6s ease-in-out inf
 body.skin-robot .skin-chip-disco{animation:skin-robot 1.6s ease-in-out infinite}
 body.skin-dragon .skin-chip-disco{animation:skin-dragon 2.8s ease-in-out infinite}
 body.skin-oceano .skin-chip-disco{animation:skin-oceano 3.2s ease-in-out infinite}
+/* v3.7.5 · Mario y amigos */
+body.skin-mario .skin-chip-disco{animation:skin-flota 2.2s ease-in-out infinite}
+body.skin-luigi .skin-chip-disco{animation:skin-flota 2.6s ease-in-out infinite}
+body.skin-peach .skin-chip-disco{animation:skin-princesa 2.6s ease-in-out infinite}
+body.skin-bowser .skin-chip-disco{animation:skin-dragon 3.4s ease-in-out infinite}
+body.skin-yoshi .skin-chip-disco{animation:skin-flota 1.9s ease-in-out infinite}
+body.skin-toad .skin-chip-disco{animation:skin-leon 2.2s ease-in-out infinite}
+/* v3.7.5 · Marvel */
+body.skin-spiderman .skin-chip-disco{animation:skin-balanceo 2.6s ease-in-out infinite; transform-origin:50% 0}
+body.skin-strange .skin-chip-disco{animation:skin-mistico 7s linear infinite}
+body.skin-ironman .skin-chip-disco{animation:skin-robot 1.6s ease-in-out infinite}
+body.skin-hulk .skin-chip-disco{animation:skin-leon 2.6s ease-in-out infinite}
+body.skin-thor .skin-chip-disco{animation:skin-rayo 2.4s ease-in-out infinite}
+body.skin-panther .skin-chip-disco{animation:skin-ninja 2.6s ease-in-out infinite}
+body.skin-capamerica .skin-chip-disco{animation:skin-estrella 7s linear infinite}
+/* v3.7.5 · DC */
+body.skin-batman .skin-chip-disco{animation:skin-ninja 3.4s ease-in-out infinite}
+body.skin-superman .skin-chip-disco{animation:skin-flota 3s ease-in-out infinite}
+body.skin-maravilla .skin-chip-disco{animation:skin-princesa 2.8s ease-in-out infinite}
+body.skin-flash .skin-chip-disco{animation:skin-velocidad .7s linear infinite}
+body.skin-aquaman .skin-chip-disco{animation:skin-oceano 3.2s ease-in-out infinite}
+/* v3.7.5 · Series famosas */
+body.skin-goku .skin-chip-disco{animation:skin-leon 1.9s ease-in-out infinite}
+body.skin-naruto .skin-chip-disco{animation:skin-ninja 2.2s ease-in-out infinite}
+body.skin-pikachu .skin-chip-disco{animation:skin-rayo 2s ease-in-out infinite}
+body.skin-sonic .skin-chip-disco{animation:skin-estrella 1.1s linear infinite}
+body.skin-harry .skin-chip-disco{animation:skin-princesa 3.6s ease-in-out infinite}
+body.skin-minecraft .skin-chip-disco{animation:skin-robot 1.2s ease-in-out infinite}
 
 /* ---------- Vista previa del selector: el héroe grande también baila ---------- */
 .skins-previa-emoji{animation:skin-flota 2.6s ease-in-out infinite}
@@ -150,6 +194,31 @@ body.skin-princesa .skins-previa-emoji{animation:skin-princesa 2.6s ease-in-out 
 body.skin-robot .skins-previa-emoji{animation:skin-robot 1.6s ease-in-out infinite}
 body.skin-dragon .skins-previa-emoji{animation:skin-dragon 2.8s ease-in-out infinite}
 body.skin-oceano .skins-previa-emoji{animation:skin-oceano 3.2s ease-in-out infinite}
+/* v3.7.5 · la vista previa baila igual que el disco de la cabecera */
+body.skin-mario .skins-previa-emoji{animation:skin-flota 2.2s ease-in-out infinite}
+body.skin-luigi .skins-previa-emoji{animation:skin-flota 2.6s ease-in-out infinite}
+body.skin-peach .skins-previa-emoji{animation:skin-princesa 2.6s ease-in-out infinite}
+body.skin-bowser .skins-previa-emoji{animation:skin-dragon 3.4s ease-in-out infinite}
+body.skin-yoshi .skins-previa-emoji{animation:skin-flota 1.9s ease-in-out infinite}
+body.skin-toad .skins-previa-emoji{animation:skin-leon 2.2s ease-in-out infinite}
+body.skin-spiderman .skins-previa-emoji{animation:skin-balanceo 2.6s ease-in-out infinite; transform-origin:50% 0}
+body.skin-strange .skins-previa-emoji{animation:skin-mistico 7s linear infinite}
+body.skin-ironman .skins-previa-emoji{animation:skin-robot 1.6s ease-in-out infinite}
+body.skin-hulk .skins-previa-emoji{animation:skin-leon 2.6s ease-in-out infinite}
+body.skin-thor .skins-previa-emoji{animation:skin-rayo 2.4s ease-in-out infinite}
+body.skin-panther .skins-previa-emoji{animation:skin-ninja 2.6s ease-in-out infinite}
+body.skin-capamerica .skins-previa-emoji{animation:skin-estrella 7s linear infinite}
+body.skin-batman .skins-previa-emoji{animation:skin-ninja 3.4s ease-in-out infinite}
+body.skin-superman .skins-previa-emoji{animation:skin-flota 3s ease-in-out infinite}
+body.skin-maravilla .skins-previa-emoji{animation:skin-princesa 2.8s ease-in-out infinite}
+body.skin-flash .skins-previa-emoji{animation:skin-velocidad .7s linear infinite}
+body.skin-aquaman .skins-previa-emoji{animation:skin-oceano 3.2s ease-in-out infinite}
+body.skin-goku .skins-previa-emoji{animation:skin-leon 1.9s ease-in-out infinite}
+body.skin-naruto .skins-previa-emoji{animation:skin-ninja 2.2s ease-in-out infinite}
+body.skin-pikachu .skins-previa-emoji{animation:skin-rayo 2s ease-in-out infinite}
+body.skin-sonic .skins-previa-emoji{animation:skin-estrella 1.1s linear infinite}
+body.skin-harry .skins-previa-emoji{animation:skin-princesa 3.6s ease-in-out infinite}
+body.skin-minecraft .skins-previa-emoji{animation:skin-robot 1.2s ease-in-out infinite}
 
 /* ---------- Rejilla: la tarjeta elegida salta suave y su disco hace
    el baile de SU héroe; todas micro-reaccionan al tocarlas/pasar ---------- */
@@ -167,6 +236,31 @@ body.skin-oceano .skins-previa-emoji{animation:skin-oceano 3.2s ease-in-out infi
 .skin-opcion.elegido[data-skin="robot"] .skin-disco{animation:skin-robot 1.6s ease-in-out infinite}
 .skin-opcion.elegido[data-skin="dragon"] .skin-disco{animation:skin-dragon 2.8s ease-in-out infinite}
 .skin-opcion.elegido[data-skin="oceano"] .skin-disco{animation:skin-oceano 3.2s ease-in-out infinite}
+/* v3.7.5 · y en la rejilla, la tarjeta elegida baila con su personaje */
+.skin-opcion.elegido[data-skin="mario"] .skin-disco{animation:skin-flota 2.2s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="luigi"] .skin-disco{animation:skin-flota 2.6s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="peach"] .skin-disco{animation:skin-princesa 2.6s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="bowser"] .skin-disco{animation:skin-dragon 3.4s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="yoshi"] .skin-disco{animation:skin-flota 1.9s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="toad"] .skin-disco{animation:skin-leon 2.2s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="spiderman"] .skin-disco{animation:skin-balanceo 2.6s ease-in-out infinite; transform-origin:50% 0}
+.skin-opcion.elegido[data-skin="strange"] .skin-disco{animation:skin-mistico 7s linear infinite}
+.skin-opcion.elegido[data-skin="ironman"] .skin-disco{animation:skin-robot 1.6s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="hulk"] .skin-disco{animation:skin-leon 2.6s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="thor"] .skin-disco{animation:skin-rayo 2.4s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="panther"] .skin-disco{animation:skin-ninja 2.6s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="capamerica"] .skin-disco{animation:skin-estrella 7s linear infinite}
+.skin-opcion.elegido[data-skin="batman"] .skin-disco{animation:skin-ninja 3.4s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="superman"] .skin-disco{animation:skin-flota 3s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="maravilla"] .skin-disco{animation:skin-princesa 2.8s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="flash"] .skin-disco{animation:skin-velocidad .7s linear infinite}
+.skin-opcion.elegido[data-skin="aquaman"] .skin-disco{animation:skin-oceano 3.2s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="goku"] .skin-disco{animation:skin-leon 1.9s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="naruto"] .skin-disco{animation:skin-ninja 2.2s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="pikachu"] .skin-disco{animation:skin-rayo 2s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="sonic"] .skin-disco{animation:skin-estrella 1.1s linear infinite}
+.skin-opcion.elegido[data-skin="harry"] .skin-disco{animation:skin-princesa 3.6s ease-in-out infinite}
+.skin-opcion.elegido[data-skin="minecraft"] .skin-disco{animation:skin-robot 1.2s ease-in-out infinite}
 
 /* ---------- Insignias (Sala y chat): bailoteo chiquito ---------- */
 .skin-insignia{display:inline-block; animation:skin-insignia-baile 2.8s ease-in-out infinite}
