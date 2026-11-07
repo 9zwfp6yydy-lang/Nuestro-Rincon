@@ -8,6 +8,18 @@
    (requisito del dueño, 2026-11-07). El cambio surte efecto al
    instante, sin recargar la página.
 
+   IMAGEN REAL (v3.7.6 — pedido de Rafiel: «Busca los personajes
+   reales y ponlos»): las 24 skins de personajes (Mario, Marvel, DC
+   y series) muestran su FOTO en vez del emoji: la imagen vive en el
+   bucket PRIVADO «skins» de Supabase (solo la lee quien tiene
+   sesión de la familia) y skins.js la descarga por el REST de
+   Storage con el mismo token de siempre, la cachea como objectURL
+   en memoria y la pinta llenando el círculo donde iba el emoji
+   (selector, cabecera, Sala, presencia, campeones, chat y fila).
+   Los 10 de «Héroes» siguen con su emoji. DEGRADACIÓN: sin sesión,
+   sin bucket o sin red, se queda el emoji, en silencio, como con
+   perfiles.skin — y la foto se reintenta al rato.
+
    DÓNDE SE VE el skin (v3.7.4 — pedido de Rafiel: «Quiero que
    cambien el zorro»): el héroe REEMPLAZA al avatar de siempre
    (🦊/🌸/🦁) en los avatares de quien lo tenga elegido:
@@ -52,9 +64,11 @@
   /* ------------------------- catálogo de héroes -------------------------
      v3.7.5 (pedido de Rafiel: «más skins, de Mario, Marvel, DC y de
      series famosas — como Doctor Strange y Spider-Man»): el catálogo
-     crece a 34 y el selector se organiza por CATEGORÍAS. Todo sigue
-     siendo SOLO emoji + nombre + paleta CSS: sin imágenes ni assets
-     externos. Los 10 originales quedan en «Héroes». Colisiones de
+     crece a 34 y el selector se organiza por CATEGORÍAS. En v3.7.6
+     los 24 personajes llevan además su IMAGEN REAL (`img`, el
+     archivo exacto del bucket privado «skins»): la foto manda y el
+     emoji queda de respaldo mientras carga o si la foto falla. Los
+     10 originales quedan en «Héroes», solo con emoji. Colisiones de
      emoji resueltas: ⚡ es Capitán Rayo (Flash corre con 🏃), 🛡️ es
      el Guardián (Capitán América brilla con ⭐), 👸 es la Princesa
      Guerrera (Mujer Maravilla pelea con ⚔️ y Peach reina con 👑),
@@ -80,34 +94,34 @@
     { id: 'robot',    nombre: 'Robot Héroe',       emoji: '🤖', colores: ['#7ed6df', '#3dc1d3'], categoria: 'heroes' },
     { id: 'dragon',   nombre: 'Dragón Valiente',   emoji: '🐉', colores: ['#2ed573', '#1e90ff'], categoria: 'heroes' },
     { id: 'oceano',   nombre: 'Capitán Océano',    emoji: '🌊', colores: ['#00d2ff', '#3a7bd5'], categoria: 'heroes' },
-    /* Mario y amigos */
-    { id: 'mario',    nombre: 'Mario',             emoji: '🍄', colores: ['#e52521', '#049cd8'], categoria: 'mario' },
-    { id: 'luigi',    nombre: 'Luigi',             emoji: '🧢', colores: ['#2fa84f', '#2456a6'], categoria: 'mario' },
-    { id: 'peach',    nombre: 'Princesa Peach',    emoji: '👑', colores: ['#f78fb3', '#f5cd30'], categoria: 'mario' },
-    { id: 'bowser',   nombre: 'Bowser',            emoji: '🐢', colores: ['#5da130', '#f5821f'], categoria: 'mario' },
-    { id: 'yoshi',    nombre: 'Yoshi',             emoji: '🦖', colores: ['#7ac74f', '#f39c3c'], categoria: 'mario' },
-    { id: 'toad',     nombre: 'Toad',              emoji: '🍄✨', colores: ['#f6e8e8', '#e52521'], categoria: 'mario' },
-    /* Marvel */
-    { id: 'spiderman',  nombre: 'Spider-Man',      emoji: '🕷️', colores: ['#d42a2a', '#1f3a93'], categoria: 'marvel' },
-    { id: 'strange',    nombre: 'Doctor Strange',  emoji: '🔮', colores: ['#a31621', '#d4a017'], categoria: 'marvel' },
-    { id: 'ironman',    nombre: 'Iron Man',        emoji: '🦾', colores: ['#b71313', '#f5a623'], categoria: 'marvel' },
-    { id: 'hulk',       nombre: 'Hulk',            emoji: '💚', colores: ['#3fa34d', '#14532d'], categoria: 'marvel' },
-    { id: 'thor',       nombre: 'Thor',            emoji: '🔨', colores: ['#2e5aa8', '#9fb6c9'], categoria: 'marvel' },
-    { id: 'panther',    nombre: 'Black Panther',   emoji: '🐾', colores: ['#241f31', '#7b2d8b'], categoria: 'marvel' },
-    { id: 'capamerica', nombre: 'Capitán América', emoji: '⭐', colores: ['#1f4e9c', '#d43a2f'], categoria: 'marvel' },
-    /* DC */
-    { id: 'batman',     nombre: 'Batman',          emoji: '🦇', colores: ['#23272e', '#f5c518'], categoria: 'dc' },
-    { id: 'superman',   nombre: 'Superman',        emoji: '💙', colores: ['#1e5aa8', '#e23636'], categoria: 'dc' },
-    { id: 'maravilla',  nombre: 'Mujer Maravilla', emoji: '⚔️', colores: ['#c8102e', '#f2a900'], categoria: 'dc' },
-    { id: 'flash',      nombre: 'Flash',           emoji: '🏃', colores: ['#d42a1e', '#f7c948'], categoria: 'dc' },
-    { id: 'aquaman',    nombre: 'Aquaman',         emoji: '🔱', colores: ['#1e7a5a', '#f2a900'], categoria: 'dc' },
-    /* Series famosas */
-    { id: 'goku',       nombre: 'Goku',            emoji: '🥋', colores: ['#f57c00', '#1e5aa8'], categoria: 'series' },
-    { id: 'naruto',     nombre: 'Naruto',          emoji: '🍥', colores: ['#f5821f', '#23272e'], categoria: 'series' },
-    { id: 'pikachu',    nombre: 'Pikachu',         emoji: '🐹', colores: ['#ffcb05', '#f5a623'], categoria: 'series' },
-    { id: 'sonic',      nombre: 'Sonic',           emoji: '🦔', colores: ['#1e6fd9', '#0d3b8c'], categoria: 'series' },
-    { id: 'harry',      nombre: 'Harry Potter',    emoji: '🧙', colores: ['#740001', '#d3a625'], categoria: 'series' },
-    { id: 'minecraft',  nombre: 'Minecraft',       emoji: '⛏️', colores: ['#5da130', '#8a5a2b'], categoria: 'series' }
+    /* Mario y amigos — con imagen real (v3.7.6) */
+    { id: 'mario',    nombre: 'Mario',             emoji: '🍄', colores: ['#e52521', '#049cd8'], categoria: 'mario', img: 'mario.png' },
+    { id: 'luigi',    nombre: 'Luigi',             emoji: '🧢', colores: ['#2fa84f', '#2456a6'], categoria: 'mario', img: 'luigi.png' },
+    { id: 'peach',    nombre: 'Princesa Peach',    emoji: '👑', colores: ['#f78fb3', '#f5cd30'], categoria: 'mario', img: 'peach.png' },
+    { id: 'bowser',   nombre: 'Bowser',            emoji: '🐢', colores: ['#5da130', '#f5821f'], categoria: 'mario', img: 'bowser.webp' },
+    { id: 'yoshi',    nombre: 'Yoshi',             emoji: '🦖', colores: ['#7ac74f', '#f39c3c'], categoria: 'mario', img: 'yoshi.png' },
+    { id: 'toad',     nombre: 'Toad',              emoji: '🍄✨', colores: ['#f6e8e8', '#e52521'], categoria: 'mario', img: 'toad.png' },
+    /* Marvel — con imagen real (v3.7.6) */
+    { id: 'spiderman',  nombre: 'Spider-Man',      emoji: '🕷️', colores: ['#d42a2a', '#1f3a93'], categoria: 'marvel', img: 'spiderman.png' },
+    { id: 'strange',    nombre: 'Doctor Strange',  emoji: '🔮', colores: ['#a31621', '#d4a017'], categoria: 'marvel', img: 'strange.webp' },
+    { id: 'ironman',    nombre: 'Iron Man',        emoji: '🦾', colores: ['#b71313', '#f5a623'], categoria: 'marvel', img: 'ironman.png' },
+    { id: 'hulk',       nombre: 'Hulk',            emoji: '💚', colores: ['#3fa34d', '#14532d'], categoria: 'marvel', img: 'hulk.webp' },
+    { id: 'thor',       nombre: 'Thor',            emoji: '🔨', colores: ['#2e5aa8', '#9fb6c9'], categoria: 'marvel', img: 'thor.webp' },
+    { id: 'panther',    nombre: 'Black Panther',   emoji: '🐾', colores: ['#241f31', '#7b2d8b'], categoria: 'marvel', img: 'panther.webp' },
+    { id: 'capamerica', nombre: 'Capitán América', emoji: '⭐', colores: ['#1f4e9c', '#d43a2f'], categoria: 'marvel', img: 'capamerica.webp' },
+    /* DC — con imagen real (v3.7.6) */
+    { id: 'batman',     nombre: 'Batman',          emoji: '🦇', colores: ['#23272e', '#f5c518'], categoria: 'dc', img: 'batman.webp' },
+    { id: 'superman',   nombre: 'Superman',        emoji: '💙', colores: ['#1e5aa8', '#e23636'], categoria: 'dc', img: 'superman.webp' },
+    { id: 'maravilla',  nombre: 'Mujer Maravilla', emoji: '⚔️', colores: ['#c8102e', '#f2a900'], categoria: 'dc', img: 'maravilla.webp' },
+    { id: 'flash',      nombre: 'Flash',           emoji: '🏃', colores: ['#d42a1e', '#f7c948'], categoria: 'dc', img: 'flash.webp' },
+    { id: 'aquaman',    nombre: 'Aquaman',         emoji: '🔱', colores: ['#1e7a5a', '#f2a900'], categoria: 'dc', img: 'aquaman.webp' },
+    /* Series famosas — con imagen real (v3.7.6) */
+    { id: 'goku',       nombre: 'Goku',            emoji: '🥋', colores: ['#f57c00', '#1e5aa8'], categoria: 'series', img: 'goku.png' },
+    { id: 'naruto',     nombre: 'Naruto',          emoji: '🍥', colores: ['#f5821f', '#23272e'], categoria: 'series', img: 'naruto.png' },
+    { id: 'pikachu',    nombre: 'Pikachu',         emoji: '🐹', colores: ['#ffcb05', '#f5a623'], categoria: 'series', img: 'pikachu.png' },
+    { id: 'sonic',      nombre: 'Sonic',           emoji: '🦔', colores: ['#1e6fd9', '#0d3b8c'], categoria: 'series', img: 'sonic.png' },
+    { id: 'harry',      nombre: 'Harry Potter',    emoji: '🧙', colores: ['#740001', '#d3a625'], categoria: 'series', img: 'harry.webp' },
+    { id: 'minecraft',  nombre: 'Minecraft',       emoji: '⛏️', colores: ['#5da130', '#8a5a2b'], categoria: 'series', img: 'minecraft.png' }
   ];
 
   var CLAVE_BASE = 'nr-skin';
@@ -286,6 +300,96 @@
     return null;
   }
 
+  /* ----------------- la FOTO del personaje (v3.7.6) -----------------
+     Las imágenes viven en el bucket PRIVADO «skins» de Supabase: se
+     descargan por el REST de Storage con el MISMO token de mi sesión
+     (y la anon key pública de config.js), una sola vez por archivo y
+     sesión, y se cachean como objectURL en memoria. Sin sesión, sin
+     bucket o sin red NO pasa nada visible: se queda el emoji (la
+     misma degradación silenciosa que con perfiles.skin) y la foto
+     se reintenta pasado un minuto. El service worker NO toca estas
+     URLs: van con autenticación y son de otro origen. */
+
+  var fotos = {}; // archivo -> { estado: 'cargando'|'ok'|'falla', url, intento }
+
+  function asegurarFoto(skin) {
+    if (!skin || !skin.img) return;
+    var f = fotos[skin.img];
+    if (f) {
+      if (f.estado === 'cargando' || f.estado === 'ok') return;
+      if (f.estado === 'falla' && Date.now() - f.intento < 60000) return; // reintento tranquilo
+    }
+    var cfg = cfgSupa();
+    if (!cfg || !tokenActual() || typeof fetch !== 'function') return;
+    fotos[skin.img] = { estado: 'cargando', url: null, intento: Date.now() };
+    var archivo = skin.img;
+    fetch(cfg.SUPABASE_URL + '/storage/v1/object/skins/' + encodeURIComponent(archivo), {
+      headers: cabecerasRest(false)
+    }).then(function (r) {
+      if (!r.ok) throw new Error('storage ' + r.status);
+      return r.blob();
+    }).then(function (blob) {
+      var url = null;
+      try {
+        if (typeof URL !== 'undefined' && URL.createObjectURL) url = URL.createObjectURL(blob);
+      } catch (e) { url = null; }
+      if (!url) throw new Error('sin objectURL');
+      fotos[archivo] = { estado: 'ok', url: url, intento: Date.now() };
+      refrescarDecoracion(); // ya llegó: repintar todo con la foto puesta
+    }).catch(function () {
+      fotos[archivo] = { estado: 'falla', url: null, intento: Date.now() };
+      // degradación silenciosa: se queda el emoji, como con perfiles
+    });
+  }
+
+  /* La objectURL de la foto de un skin, o null si aún no está (y de
+     paso dispara su descarga). Skins sin `img` devuelven null. */
+  function urlFoto(skin) {
+    if (!skin || !skin.img) return null;
+    var f = fotos[skin.img];
+    if (f && f.estado === 'ok') return f.url;
+    asegurarFoto(skin);
+    return null;
+  }
+
+  /* La <img class="skin-foto"> que ya vive dentro de un elemento, si la hay. */
+  function fotoHija(el) {
+    var hijos = (el && el.childNodes) || [];
+    for (var i = 0; i < hijos.length; i++) {
+      var n = hijos[i];
+      if (n.nodeType === 1 && n.classList && n.classList.contains('skin-foto')) return n;
+    }
+    return null;
+  }
+
+  /* Pone la foto dentro de el, llenando el círculo: limpia el texto
+     (el emoji) y deja una sola <img class="skin-foto">. Idempotente:
+     si la foto de ese skin ya está puesta, no toca nada. El elemento
+     queda marcado con dataset.skinFotoId para saber qué lleva. */
+  function ponerFoto(el, skin, url) {
+    if (!el || !skin || !url) return;
+    var img = fotoHija(el);
+    if (!img) {
+      el.textContent = '';
+      img = document.createElement('img');
+      img.className = 'skin-foto';
+      img.alt = '';
+      img.setAttribute('aria-hidden', 'true');
+      el.appendChild(img);
+    }
+    if (img.src !== url) img.src = url;
+    if (el.dataset.skinFotoId !== skin.id) el.dataset.skinFotoId = skin.id;
+  }
+
+  /* Quita la foto de el si la tenía puesta (vuelve el texto/emoji,
+     que repone quien llama). */
+  function quitarFoto(el) {
+    if (!el || el.dataset.skinFotoId == null) return;
+    var img = fotoHija(el);
+    if (img && img.parentNode) img.parentNode.removeChild(img);
+    delete el.dataset.skinFotoId;
+  }
+
   /* ------------------------- aplicación visual ------------------------- */
 
   function aplicar(skin) {
@@ -304,6 +408,7 @@
     pintarBoton();
     pintarPrevia();
     marcarRejilla();
+    pintarRejillaFotos();
     decorarChat();
     decorarMiFila();
     pintarAvatares();
@@ -355,11 +460,17 @@
     var disco = b.querySelector('.skin-chip-disco');
     var texto = b.querySelector('.skin-chip-texto');
     if (elegido) {
-      disco.textContent = elegido.emoji;
+      var url = urlFoto(elegido);
+      if (url) ponerFoto(disco, elegido, url);
+      else {
+        quitarFoto(disco);
+        if (disco.textContent !== elegido.emoji) disco.textContent = elegido.emoji;
+      }
       disco.style.background = 'linear-gradient(135deg,' + elegido.colores[0] + ',' + elegido.colores[1] + ')';
       texto.textContent = elegido.nombre;
     } else {
-      disco.textContent = '🦸';
+      quitarFoto(disco);
+      if (disco.textContent !== '🦸') disco.textContent = '🦸';
       disco.style.background = '';
       texto.textContent = 'Mi héroe';
     }
@@ -428,18 +539,47 @@
     });
   }
 
+  var previaClave = null; // lo último pintado en la previa, para no reconstruir de más
+
   function pintarPrevia() {
     var previa = document.getElementById('skins-previa');
     if (!previa) return;
+    var url = elegido ? urlFoto(elegido) : null;
+    var clave = elegido ? elegido.id + (url ? '|foto' : '|emoji') : 'sin-heroe';
+    if (clave === previaClave) return;
+    previaClave = clave;
     if (elegido) {
       previa.style.background = 'linear-gradient(135deg,' + elegido.colores[0] + ',' + elegido.colores[1] + ')';
-      previa.innerHTML = '<span class="skins-previa-emoji" aria-hidden="true">' + elegido.emoji + '</span>' +
-        '<span class="skins-previa-nombre">' + elegido.nombre + '</span>';
+      previa.innerHTML = url
+        ? '<span class="skins-previa-emoji" aria-hidden="true"><img class="skin-foto" src="' + url + '" alt=""></span>' +
+          '<span class="skins-previa-nombre">' + elegido.nombre + '</span>'
+        : '<span class="skins-previa-emoji" aria-hidden="true">' + elegido.emoji + '</span>' +
+          '<span class="skins-previa-nombre">' + elegido.nombre + '</span>';
     } else {
       previa.style.background = '';
       previa.innerHTML = '<span class="skins-previa-emoji" aria-hidden="true">🦸</span>' +
         '<span class="skins-previa-nombre">Todavía no tienes héroe</span>';
     }
+  }
+
+  /* Las tarjetas del selector también enseñan la FOTO del personaje
+     (v3.7.6). Como la capa se construye oculta, las descargas de las
+     tarjetas se disparan solo con el selector a la vista (al arrancar
+     la app no se baja nada de esto); si la foto de una tarjeta ya
+     está cacheada —p. ej. porque es mi héroe—, se pinta aunque la
+     capa siga cerrada. */
+  function pintarRejillaFotos() {
+    var capa = document.getElementById('capa-skins');
+    var aLaVista = !!capa && !capa.classList.contains('oculto');
+    $$('#skins-rejilla .skin-opcion').forEach(function (b) {
+      var skin = porId(b.dataset.skin);
+      if (!skin || !skin.img) return;
+      var disco = b.querySelector('.skin-disco');
+      if (!disco) return;
+      var f = fotos[skin.img];
+      if (f && f.estado === 'ok') ponerFoto(disco, skin, f.url);
+      else if (aLaVista) urlFoto(skin); // dispara la descarga; al llegar se repinta
+    });
   }
 
   function marcarRejilla() {
@@ -486,6 +626,7 @@
     if (aviso) aviso.textContent = '';
     bloquearFondo();
     document.getElementById('capa-skins').classList.remove('oculto');
+    pintarRejillaFotos(); // ya a la vista: que bajen las fotos de las tarjetas
   }
 
   function cerrarSelector() {
@@ -527,8 +668,13 @@
         ins.className = 'skin-insignia';
         quien.appendChild(ins);
       }
-      var texto = ' ' + skin.emoji;
-      if (ins.textContent !== texto) ins.textContent = texto;
+      var urlC = urlFoto(skin);
+      if (urlC) ponerFoto(ins, skin, urlC);
+      else {
+        quitarFoto(ins);
+        var texto = ' ' + skin.emoji;
+        if (ins.textContent !== texto) ins.textContent = texto;
+      }
       if (ins.title !== skin.nombre) ins.title = skin.nombre;
     });
   }
@@ -539,6 +685,16 @@
      cuando el valor cambia: así los MutationObserver no giran. */
   function aplicarEnAvatar(el, skin) {
     if (!el) return;
+    var url = skin ? urlFoto(skin) : null;
+    if (skin && url) {
+      // Con foto: el animal original se guarda (del texto, si aún lo
+      // hay) y la imagen llena el círculo; el emoji queda de título.
+      if (el.dataset.skinOriginal == null && el.textContent) el.dataset.skinOriginal = el.textContent;
+      ponerFoto(el, skin, url);
+      if (el.title !== skin.nombre) el.title = skin.nombre;
+      return;
+    }
+    quitarFoto(el);
     if (skin) {
       if (el.dataset.skinOriginal == null) el.dataset.skinOriginal = el.textContent;
       if (el.textContent !== skin.emoji) el.textContent = skin.emoji;
@@ -560,7 +716,36 @@
     Array.prototype.forEach.call(contenedor.childNodes, function (n) {
       if (!nodo && n.nodeType === 3 && /\S/.test(n.nodeValue)) nodo = n;
     });
+    if (!nodo && contenedor.dataset.skinFotoId != null) {
+      // Con la foto puesta, el nodo quedó como un espacio separador.
+      Array.prototype.forEach.call(contenedor.childNodes, function (n) {
+        if (!nodo && n.nodeType === 3) nodo = n;
+      });
+    }
     if (!nodo) return;
+    var url = skin ? urlFoto(skin) : null;
+    if (skin && url) {
+      // Con foto: la <img> va justo antes del nombre y el nodo queda
+      // como separador; el texto original se guarda para restaurar.
+      if (contenedor.dataset.skinOriginal == null) contenedor.dataset.skinOriginal = nodo.nodeValue;
+      if (nodo.nodeValue !== ' ') nodo.nodeValue = ' ';
+      var imgT = fotoHija(contenedor);
+      if (!imgT) {
+        imgT = document.createElement('img');
+        imgT.className = 'skin-foto';
+        imgT.alt = '';
+        imgT.setAttribute('aria-hidden', 'true');
+        contenedor.insertBefore(imgT, nodo);
+      }
+      if (imgT.src !== url) imgT.src = url;
+      if (contenedor.dataset.skinFotoId !== skin.id) contenedor.dataset.skinFotoId = skin.id;
+      return;
+    }
+    if (contenedor.dataset.skinFotoId != null) {
+      var imgQ = fotoHija(contenedor);
+      if (imgQ && imgQ.parentNode) imgQ.parentNode.removeChild(imgQ);
+      delete contenedor.dataset.skinFotoId;
+    }
     if (skin) {
       if (contenedor.dataset.skinOriginal == null) contenedor.dataset.skinOriginal = nodo.nodeValue;
       var nuevo = skin.emoji + ' ';
@@ -638,6 +823,9 @@
      segunda pasada no muta nada y la cadena se detiene sola. */
   var refrescoPendiente = false;
   function refrescarDecoracion() {
+    pintarBoton();
+    pintarPrevia();
+    pintarRejillaFotos();
     decorarChat();
     decorarMiFila();
     pintarAvatares();
@@ -663,8 +851,18 @@
         ins.className = 'skin-insignia skin-insignia-fila';
         fuerte.parentNode.insertBefore(ins, fuerte.nextSibling);
       }
-      var texto = elegido.emoji + ' ' + elegido.nombre;
-      if (ins.textContent !== texto) ins.textContent = texto;
+      var urlF = urlFoto(elegido);
+      if (urlF) {
+        if (ins.dataset.skinFotoId !== elegido.id || !fotoHija(ins)) {
+          ins.textContent = '';
+          ponerFoto(ins, elegido, urlF);
+          ins.appendChild(document.createTextNode(' ' + elegido.nombre));
+        }
+      } else {
+        quitarFoto(ins);
+        var texto = elegido.emoji + ' ' + elegido.nombre;
+        if (ins.textContent !== texto) ins.textContent = texto;
+      }
     });
   }
 
