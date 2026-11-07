@@ -8,18 +8,20 @@
    ===================================================================== */
 'use strict';
 
-var CACHE = 'nuestro-rincon-v3-7-6';
+var CACHE = 'nuestro-rincon-v3-7-7';
 var ARCHIVOS_APP = [
   './',
   './index.html',
   './styles.css',
   './skins.css',
+  './cine-familiar.css',
   './config.js',
   './logic.js',
   './games.js',
   './fun.js',
   './app.js',
   './skins.js',
+  './cine-familiar.js',
   './manifest.json'
 ];
 
