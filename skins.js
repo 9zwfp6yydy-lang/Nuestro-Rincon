@@ -8,32 +8,42 @@
    (requisito del dueño, 2026-11-07). El cambio surte efecto al
    instante, sin recargar la página.
 
-   DÓNDE SE VE el skin:
-   - En el botón «🦸 Mi héroe» de la cabecera (disco con el emoji y
-     los colores del héroe). Ese botón vive SIEMPRE en la cabecera y
-     abre el selector: así el skin se puede cambiar en cualquier
-     momento, no solo la primera vez.
-   - En la Sala, junto a tu nombre en «¿Quién anda por aquí?» (tu fila
-     es la que dice «(tú)»).
-   - En el chat: tus mensajes llevan el emoji de tu héroe junto a tu
-     nombre y tu burbuja se tiñe con los colores de tu héroe.
+   DÓNDE SE VE el skin (v3.7.4 — pedido de Rafiel: «Quiero que
+   cambien el zorro»): el héroe REEMPLAZA al avatar de siempre
+   (🦊/🌸/🦁) en los avatares de quien lo tenga elegido:
+   - El círculo grande de su fila en la Sala («¿Quién anda por aquí?»).
+   - Su chip de presencia de la cabecera.
+   - Su avatar en la Tabla de campeones.
+   - El chat: el emoji del héroe acompaña a su nombre (y MI burbuja
+     se tiñe con los colores de mi héroe).
+   - El botón «🦸 Mi héroe» de la cabecera (disco con el emoji y los
+     colores). Ese botón vive SIEMPRE en la cabecera y abre el
+     selector: así el skin se puede cambiar en cualquier momento.
+   Además (2026-11-07): MI avatar es TOCABLE — el círculo de mi fila
+   en la Sala, mi chip de la cabecera y mi fila de campeones abren el
+   mismo selector («si presionamos nuestros animales podamos elegir
+   cambiarlo»). El avatar de otro no abre nada. Y junto a mi nombre
+   en la Sala sigue la insignia con el nombre del héroe.
 
-   CÓMO SE GUARDA (honesto): en ESTE aparato, en localStorage, con una
-   clave por usuario (nr-skin::<id de Supabase>) y una copia genérica
-   (nr-skin). NO viaja a Supabase: la tabla perfiles no tiene columna
-   de skin y agregarla exige migración + tocar app.js (archivo en
-   conflicto durante el arreglo de partidas). Por eso, hoy cada
-   aparato recuerda la elección de quien lo usa; Maryelin y Ethan
-   eligen el suyo en su aparato. La vía futura, cuando se quiera que
-   el skin se vea en los aparatos de los demás, está documentada en
-   INTEGRACIÓN SUPABASE al final de este archivo (window.NRSkins ya
-   expone la API para engancharla con un cambio mínimo en app.js).
+   CÓMO SE GUARDA (v3.7.4): DOBLE — en este aparato (localStorage,
+   clave por usuario nr-skin::<id> + copia genérica nr-skin) Y en el
+   perfil de Supabase (columna perfiles.skin, que guarda el id del
+   héroe): al elegir/cambiar/quitar se actualiza MI fila, y una
+   sincronización (al abrir, al entrar, periódica y tras repintados)
+   lee los skins de TODA la familia para pintar el avatar de cada
+   quien en cada aparato: el skin VIAJA. Se habla con el REST de
+   Supabase con el token de la sesión que la app ya guarda (no se
+   crea cliente nuevo ni se toca la sesión). DEGRADACIÓN ELEGANTE:
+   si la columna no existe o la lectura falla, todo sigue como en
+   v3.7.3 (solo localStorage), sin errores visibles, y se reintenta
+   en las siguientes sincronizaciones.
 
-   API pública (para la integración final):
-     window.NRSkins.catalogo()  -> copia del catálogo
-     window.NRSkins.actual()    -> skin elegido o null
-     window.NRSkins.elegir(id)  -> aplica y guarda al instante
-     window.NRSkins.abrir()     -> abre el selector
+   API pública:
+     window.NRSkins.catalogo()     -> copia del catálogo
+     window.NRSkins.actual()       -> skin elegido o null
+     window.NRSkins.elegir(id)     -> aplica y guarda al instante
+     window.NRSkins.abrir()        -> abre el selector
+     window.NRSkins.sincronizar()  -> relee perfiles.skin de la familia
    ===================================================================== */
 (function () {
   'use strict';
@@ -67,15 +77,25 @@
     return null;
   }
 
-  /* Mi id de usuario según la sesión que Supabase guarda en el aparato.
-     Solo se LEE localStorage: no se toca la sesión ni app.js. */
-  function miUid() {
+  /* La sesión que Supabase guarda en el aparato, parseada. Solo se
+     LEE localStorage: no se toca la sesión ni app.js. De ella salen
+     mi id (para mi clave y mi fila) y mi token (para el REST). */
+  function datosSesion() {
     try {
       var crudo = localStorage.getItem('sb-' + REF_SUPABASE + '-auth-token');
       if (!crudo) return null;
-      var datos = JSON.parse(crudo);
-      return (datos && datos.user && datos.user.id) || null;
+      return JSON.parse(crudo);
     } catch (e) { return null; }
+  }
+
+  function miUid() {
+    var datos = datosSesion();
+    return (datos && datos.user && datos.user.id) || null;
+  }
+
+  function tokenActual() {
+    var datos = datosSesion();
+    return (datos && datos.access_token) || null;
   }
 
   function clave() {
@@ -102,6 +122,124 @@
     } catch (e) { /* aparato sin localStorage: el skin vive solo en pantalla */ }
   }
 
+  /* ----------------- Supabase: el skin viaja en perfiles.skin -----------------
+     Se habla con el REST de Supabase usando el token de MI sesión (la
+     misma que app.js mantiene guardada): GET de los perfiles para
+     pintar el avatar de cada quien y PATCH de SOLO mi fila al elegir.
+     Sin cliente nuevo, sin tocar la sesión, sin credenciales nuevas
+     (la URL y la clave anónima salen de window.APP_CONFIG, el mismo
+     config.js público de la app). Si la columna skin no existe o la
+     red falla, columnaOk=false y todo sigue en modo local. */
+
+  var mapaRemoto = null;        // nombre normalizado -> skin (objeto) o null, según el servidor
+  var miNombre = null;          // mi nombre según mi fila en perfiles
+  var columnaOk = true;         // false tras un rechazo del servidor (p. ej. falta la columna)
+  var eleccionDeSesion = false; // true si elegí/quité héroe en esta sesión de página
+  var syncEnCurso = false;
+  var ultimoSync = 0;
+
+  function normNombre(s) {
+    return String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+  }
+
+  function cfgSupa() {
+    var c = window.APP_CONFIG || {};
+    return (c.SUPABASE_URL && c.SUPABASE_ANON_KEY) ? c : null;
+  }
+
+  function cabecerasRest(conCuerpo) {
+    var cfg = cfgSupa();
+    var h = {
+      apikey: cfg.SUPABASE_ANON_KEY,
+      Authorization: 'Bearer ' + tokenActual()
+    };
+    if (conCuerpo) {
+      h['Content-Type'] = 'application/json';
+      h.Prefer = 'return=minimal';
+    }
+    return h;
+  }
+
+  /* Guarda MI skin en mi fila de perfiles (fire-and-forget: si el
+     servidor lo rechaza —columna ausente—, se anota y se sigue en
+     local, sin molestar a nadie). */
+  function guardarSkinRemoto(id) {
+    var cfg = cfgSupa();
+    var uid = miUid();
+    if (!cfg || !uid || !tokenActual() || typeof fetch !== 'function') return;
+    try {
+      fetch(cfg.SUPABASE_URL + '/rest/v1/perfiles?id=eq.' + encodeURIComponent(uid), {
+        method: 'PATCH',
+        headers: cabecerasRest(true),
+        body: JSON.stringify({ skin: id || null })
+      }).then(function (r) {
+        if (!r.ok) columnaOk = false;
+      }).catch(function () { columnaOk = false; });
+    } catch (e) { columnaOk = false; }
+  }
+
+  /* Lee id/nombre/emoji/skin de TODA la familia y repinta avatares.
+     Conciliación de lo mío: si en esta página aún no elegí nada, el
+     servidor manda (p. ej. elegí mi héroe en otro aparato: aquí se
+     adopta y se guarda en local); si el servidor me trae sin skin y
+     en este aparato ya tenía uno de antes de existir la columna, se
+     sube (migración suave de las elecciones de v3.7.3). */
+  function sincronizarPerfiles() {
+    var cfg = cfgSupa();
+    if (!cfg || !tokenActual() || typeof fetch !== 'function') return Promise.resolve(false);
+    if (syncEnCurso) return Promise.resolve(false);
+    syncEnCurso = true;
+    ultimoSync = Date.now();
+    return fetch(cfg.SUPABASE_URL + '/rest/v1/perfiles?select=id,nombre,emoji,skin', {
+      headers: cabecerasRest(false)
+    }).then(function (r) {
+      if (!r.ok) throw new Error('rest ' + r.status);
+      return r.json();
+    }).then(function (filas) {
+      var uid = miUid();
+      var mapa = {};
+      var miFila = null;
+      (filas || []).forEach(function (f) {
+        mapa[normNombre(f.nombre)] = porId(f.skin) || null;
+        if (uid && f.id === uid) miFila = f;
+      });
+      mapaRemoto = mapa;
+      columnaOk = true;
+      if (miFila) {
+        miNombre = normNombre(miFila.nombre);
+        if (!eleccionDeSesion) {
+          var remoto = porId(miFila.skin) || null;
+          if (remoto && (!elegido || remoto.id !== elegido.id)) {
+            guardar(remoto);
+            aplicar(remoto);
+          } else if (!remoto && elegido) {
+            guardarSkinRemoto(elegido.id); // elección previa a la columna: subirla
+          }
+        }
+      }
+      syncEnCurso = false;
+      refrescarDecoracion();
+      return true;
+    }).catch(function () {
+      columnaOk = false; // p. ej. falta la columna skin: modo local, en silencio
+      syncEnCurso = false;
+      return false;
+    });
+  }
+
+  function quizaSincronizar() {
+    if (Date.now() - ultimoSync > 8000) sincronizarPerfiles();
+  }
+
+  /* El skin que toca pintar para un nombre: lo mío manda mi elección
+     local (es la última palabra y ya va PATCH camino del servidor);
+     lo de los demás, lo que diga el servidor (o nada si aún no llegó). */
+  function skinDeNombre(nombre, esMio) {
+    if (esMio) return elegido;
+    if (mapaRemoto && Object.prototype.hasOwnProperty.call(mapaRemoto, nombre)) return mapaRemoto[nombre];
+    return null;
+  }
+
   /* ------------------------- aplicación visual ------------------------- */
 
   function aplicar(skin) {
@@ -122,11 +260,14 @@
     marcarRejilla();
     decorarChat();
     decorarMiFila();
+    pintarAvatares();
   }
 
   function elegir(id) {
     var skin = id ? porId(id) : null;
+    eleccionDeSesion = true;
     guardar(skin);
+    guardarSkinRemoto(skin ? skin.id : null); // que viaje a los demás aparatos
     aplicar(skin);
     if (window.Fun) {
       try {
@@ -201,8 +342,10 @@
         '<div class="capa-cuerpo">' +
           '<div class="tarjeta tarjeta-en-capa">' +
             '<div class="skins-previa" id="skins-previa"></div>' +
-            '<p>Elige el héroe que te representa en el rincón. <strong>Puedes cambiarlo ' +
-            'cuando quieras, las veces que quieras</strong>: es gratis, sin puntos y sin esperas. 💛</p>' +
+            '<p>Elige el héroe que te representa en el rincón: <strong>reemplaza a tu animal</strong> ' +
+            'en la Sala, en la cabecera y en los campeones, y la familia lo ve en sus aparatos. ' +
+            '<strong>Puedes cambiarlo cuando quieras, las veces que quieras</strong>: es gratis, sin ' +
+            'puntos y sin esperas — también tocando tu animal en la Sala. 💛</p>' +
             '<div class="skins-rejilla" id="skins-rejilla"></div>' +
             '<p class="subtitulo" id="skins-aviso" style="margin-top:12px"></p>' +
             '<div class="botones-juego">' +
@@ -304,21 +447,155 @@
      cuando app.js repinta (p. ej. al reaccionar a un mensaje), y cada
      función es idempotente para no caer en bucles. */
 
+  /* Nombre visible de un «.quien» del chat sin contar mi insignia. */
+  function nombreEnQuien(quien) {
+    var texto = '';
+    Array.prototype.forEach.call(quien.childNodes, function (n) {
+      if (n.nodeType === 3) texto += n.nodeValue;
+    });
+    return normNombre(texto || quien.textContent);
+  }
+
+  /* En el chat no hay círculo de avatar: el «avatar» de cada mensaje
+     es la insignia junto a su nombre. Desde v3.7.4 la lleva TODO el
+     que tenga héroe (no solo yo): así el héroe de cada quien se ve
+     también junto a sus mensajes. Mi burbuja conserva su tinte. */
   function decorarChat() {
-    $$('#chat-caja .mensaje.mio').forEach(function (div) {
+    $$('#chat-caja .mensaje').forEach(function (div) {
       var quien = div.querySelector('.quien');
       if (!quien) return;
+      var nombre = nombreEnQuien(quien);
+      var skin = skinDeNombre(nombre, div.classList.contains('mio'));
       var ins = quien.querySelector('.skin-insignia');
-      if (!elegido) { if (ins) ins.parentNode.removeChild(ins); return; }
+      if (!skin) { if (ins) ins.parentNode.removeChild(ins); return; }
       if (!ins) {
         ins = document.createElement('span');
         ins.className = 'skin-insignia';
         quien.appendChild(ins);
       }
-      var texto = ' ' + elegido.emoji;
+      var texto = ' ' + skin.emoji;
       if (ins.textContent !== texto) ins.textContent = texto;
-      ins.title = elegido.nombre;
+      if (ins.title !== skin.nombre) ins.title = skin.nombre;
     });
+  }
+
+  /* Poner (o quitar) el héroe en un elemento-avatar que trae el emoji
+     de perfil como texto. El emoji original se guarda la primera vez
+     para poder restaurarlo al quitar el héroe. Solo se toca el DOM
+     cuando el valor cambia: así los MutationObserver no giran. */
+  function aplicarEnAvatar(el, skin) {
+    if (!el) return;
+    if (skin) {
+      if (el.dataset.skinOriginal == null) el.dataset.skinOriginal = el.textContent;
+      if (el.textContent !== skin.emoji) el.textContent = skin.emoji;
+      if (el.title !== skin.nombre) el.title = skin.nombre;
+    } else if (el.dataset.skinOriginal != null) {
+      if (el.textContent !== el.dataset.skinOriginal) el.textContent = el.dataset.skinOriginal;
+      delete el.dataset.skinOriginal;
+      el.title = '';
+    }
+  }
+
+  /* Lo mismo para avatares que viven en un nodo de texto suelto
+     (en la Tabla de campeones el emoji va como texto antes del
+     nombre, sin elemento propio): se guarda el texto original en
+     el dataset del contenedor y se reescribe solo el emoji. */
+  function aplicarEnNodoTexto(contenedor, skin) {
+    if (!contenedor) return;
+    var nodo = null;
+    Array.prototype.forEach.call(contenedor.childNodes, function (n) {
+      if (!nodo && n.nodeType === 3 && /\S/.test(n.nodeValue)) nodo = n;
+    });
+    if (!nodo) return;
+    if (skin) {
+      if (contenedor.dataset.skinOriginal == null) contenedor.dataset.skinOriginal = nodo.nodeValue;
+      var nuevo = skin.emoji + ' ';
+      if (nodo.nodeValue !== nuevo) nodo.nodeValue = nuevo;
+    } else if (contenedor.dataset.skinOriginal != null) {
+      if (nodo.nodeValue !== contenedor.dataset.skinOriginal) nodo.nodeValue = contenedor.dataset.skinOriginal;
+      delete contenedor.dataset.skinOriginal;
+    }
+  }
+
+  /* MI avatar abre el selector: pista visual sutil (clase skin-tocable,
+     cursor y título) y el toque enganchado UNA vez por elemento (los
+     repintados de app.js crean elementos nuevos sin la marca, y el
+     siguiente refresco los engancha). El avatar de otro no hace nada. */
+  function hacerTocable(el) {
+    if (!el) return;
+    if (!el.classList.contains('skin-tocable')) el.classList.add('skin-tocable');
+    var titulo = 'Toca para cambiar tu héroe 🦸';
+    if (el.title !== titulo) el.title = titulo;
+    if (!el.dataset.skinTocable) {
+      el.dataset.skinTocable = '1';
+      el.addEventListener('click', function (ev) {
+        if (ev && ev.stopPropagation) ev.stopPropagation();
+        abrirSelector();
+      });
+    }
+  }
+
+  /* EL REEMPLAZO (v3.7.4): donde app.js pinta el animal de perfil de
+     alguien con héroe, se pinta su héroe; y mi avatar queda tocable
+     en la Sala, la cabecera y la Tabla de campeones. La identidad de
+     cada elemento se resuelve por el NOMBRE visible que la propia
+     fila ya trae (la familia son tres y los nombres no se repiten),
+     con «(tú)» como marca extra de mi fila en la Sala. */
+  function pintarAvatares() {
+    // Sala · «¿Quién anda por aquí?»: círculo grande de cada fila.
+    $$('#lista-miembros .miembro').forEach(function (fila) {
+      var fuerte = fila.querySelector('strong');
+      var avatar = fila.querySelector('.avatar-grande');
+      if (!fuerte || !avatar) return;
+      var crudo = normNombre(fuerte.textContent);
+      var esMio = crudo.indexOf('(tú)') !== -1 || (!!miNombre && crudo === miNombre);
+      var nombre = crudo.replace(/\s*\(tú\)\s*$/, '');
+      aplicarEnAvatar(avatar, skinDeNombre(nombre, esMio));
+      if (esMio) hacerTocable(avatar);
+    });
+    // Cabecera · chips de presencia: avatar + nombre en el mismo chip.
+    $$('#presencia .chip-presencia').forEach(function (chip) {
+      var avatar = chip.querySelector('.avatar');
+      if (!avatar) return;
+      var nombre = '';
+      Array.prototype.forEach.call(chip.childNodes, function (n) {
+        if (n.nodeType === 3 && /\S/.test(n.nodeValue)) nombre = normNombre(n.nodeValue);
+      });
+      if (!nombre) return;
+      var esMio = !!miNombre && nombre === miNombre;
+      aplicarEnAvatar(avatar, skinDeNombre(nombre, esMio));
+      if (esMio) hacerTocable(chip);
+    });
+    // Tabla de campeones: emoji como texto antes del nombre (1ª celda).
+    $$('#tabla-campeones tr').forEach(function (tr) {
+      var celda = tr.querySelector('td');
+      var fuerte = tr.querySelector('td strong');
+      if (!celda || !fuerte) return;
+      var nombre = normNombre(fuerte.textContent);
+      var esMio = !!miNombre && nombre === miNombre;
+      aplicarEnNodoTexto(celda, skinDeNombre(nombre, esMio));
+      if (esMio) hacerTocable(celda);
+    });
+  }
+
+  /* Refresco único de toda la decoración, con programa anti-rebote:
+     nuestras propias pintadas disparan los observadores otra vez,
+     pero como cada función solo toca el DOM si el valor cambia, la
+     segunda pasada no muta nada y la cadena se detiene sola. */
+  var refrescoPendiente = false;
+  function refrescarDecoracion() {
+    decorarChat();
+    decorarMiFila();
+    pintarAvatares();
+  }
+  function programarRefresco() {
+    if (refrescoPendiente) return;
+    refrescoPendiente = true;
+    setTimeout(function () {
+      refrescoPendiente = false;
+      refrescarDecoracion();
+      quizaSincronizar(); // si el repintado vino de perfiles nuevos, releer skins
+    }, 40);
   }
 
   function decorarMiFila() {
@@ -339,18 +616,46 @@
 
   function observar() {
     if (!window.MutationObserver) return;
-    var chat = document.getElementById('chat-caja');
-    if (chat) new MutationObserver(decorarChat).observe(chat, { childList: true, subtree: true });
-    var miembros = document.getElementById('lista-miembros');
-    if (miembros) new MutationObserver(decorarMiFila).observe(miembros, { childList: true, subtree: true });
+    // Toda zona que app.js repinta queda vigilada: cualquier repintado
+    // (presencia, perfiles en vivo, reacciones del chat…) dispara el
+    // refresco completo de la decoración, avatares incluidos.
+    ['chat-caja', 'lista-miembros', 'presencia', 'tabla-campeones'].forEach(function (id) {
+      var zona = document.getElementById(id);
+      if (zona) new MutationObserver(programarRefresco).observe(zona, { childList: true, subtree: true });
+    });
     // Al entrar a la app (login hecho), mi clave pasa a ser la personal:
-    // se relee lo guardado por si este aparato lo compartió la familia.
+    // se relee lo guardado por si este aparato lo compartió la familia
+    // y se sincroniza con perfiles.skin (mi skin puede venir de otro
+    // aparato, y los de los demás pintan los avatares).
     var vista = document.getElementById('vista-app');
     if (vista) {
       new MutationObserver(function () {
-        if (!vista.classList.contains('oculto')) aplicar(leerGuardado());
+        if (!vista.classList.contains('oculto')) {
+          aplicar(leerGuardado());
+          sincronizarPerfiles();
+        }
       }).observe(vista, { attributes: true, attributeFilter: ['class'] });
     }
+  }
+
+  /* Arranque de la sincronización: se espera a que exista sesión
+     (skins.js carga antes del login) y luego se relee cada minuto
+     con la app a la vista, por si alguien cambió su héroe en otro
+     aparato sin que este repintara nada. */
+  function arrancarSync() {
+    var intentos = 0;
+    var tic = setInterval(function () {
+      intentos++;
+      if (tokenActual()) {
+        clearInterval(tic);
+        sincronizarPerfiles();
+      } else if (intentos > 40) {
+        clearInterval(tic);
+      }
+    }, 1500);
+    setInterval(function () {
+      if (!document.hidden) sincronizarPerfiles();
+    }, 60000);
   }
 
   /* ------------------------- arranque ------------------------- */
@@ -358,27 +663,24 @@
   construirCapa();
   aplicar(leerGuardado());
   observar();
+  arrancarSync();
 
   window.NRSkins = {
     catalogo: function () { return CATALOGO.slice(); },
     actual: function () { return elegido; },
     elegir: elegir,
-    abrir: abrirSelector
+    abrir: abrirSelector,
+    sincronizar: sincronizarPerfiles
   };
 
   /* =====================================================================
-     INTEGRACIÓN SUPABASE (futura, cuando se quiera ver el skin de los
-     demás en mi aparato — NO aplicada a propósito en esta entrega):
-     1) Migración de una línea:  alter table perfiles add column if not
-        exists skin text;
-     2) En app.js, dentro de cargarPerfiles() y tras guardar mi perfil,
-        enganchar (dos líneas, fuera de la capa de partidas):
-          - al elegir: NRSkins ya guarda local; añadir un update
-            supa.from('perfiles').update({ skin: id }).eq('id', yo.id)
-          - al pintar miembros/presencia/chat de OTROS: leer
-            perfiles[id].skin y buscar el héroe en NRSkins.catalogo()
-            para pintar su disco junto a su nombre.
-     Mientras tanto, el skin es por aparato y eso está avisado en la
-     propia capa del selector (el texto no promete más de lo real).
+     INTEGRACIÓN SUPABASE — YA APLICADA en v3.7.4 (este mismo archivo):
+     la columna perfiles.skin existe (creada el 2026-11-07) y guarda el
+     id del héroe ('ninja', 'dragon'… o null). skins.js la mantiene:
+     PATCH de mi fila al elegir/cambiar/quitar y GET de todos los
+     perfiles al sincronizar, pintando el avatar de cada quien según
+     su skin. Todo con el token de la sesión guardada y el REST, sin
+     tocar app.js ni la sesión. Si algún día la columna faltara, el
+     modo local (localStorage) sigue solo, en silencio.
      ===================================================================== */
 })();
