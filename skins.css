@@ -74,6 +74,15 @@
    tiene tamaño fijo, así que la foto lleva el suyo en em/px. */
 .skin-foto{display:block; width:100%; height:100%;
   object-fit:cover; border-radius:50%}
+/* v3.7.8 · REGLA DE ORO de esta foto: width/height 100% significa que el
+   CONTENEDOR manda — todo elemento que aloje una .skin-foto debe ser un
+   disco de tamaño FIJO. En la cabecera, .chip-presencia .avatar no lo
+   era (solo font-size) y la foto de 256px estiró el chip a un óvalo
+   gigante que rompió la Sala en el iPad (2026-11-09). Discos fijos
+   verificados: .chip de presencia 30px · .avatar-grande de miembro
+   64px · .avatar-grande de mosaico de video 64px · disco de cabecera
+   38px · disco del selector 64px. Si nace un avatar nuevo, nace con
+   su disco fijo en styles.css o repetimos el fallo. */
 .skins-previa-emoji .skin-foto{width:72px; height:72px}
 .skin-insignia .skin-foto{display:inline-block; width:1.5em; height:1.5em;
   vertical-align:-.35em}
