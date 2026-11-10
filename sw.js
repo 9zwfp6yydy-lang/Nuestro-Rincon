@@ -8,7 +8,7 @@
    ===================================================================== */
 'use strict';
 
-var CACHE = 'nuestro-rincon-v3-7-7';
+var CACHE = 'nuestro-rincon-v3-7-8';
 var ARCHIVOS_APP = [
   './',
   './index.html',
