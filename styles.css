@@ -75,7 +75,13 @@ header .titulo{font-size:1.45rem; font-weight:900; white-space:nowrap;
 .presencia{display:flex; gap:8px; align-items:center; flex:1; flex-wrap:wrap}
 .chip-presencia{display:flex; align-items:center; gap:7px; background:#fff; border:2px solid var(--borde);
   border-radius:999px; padding:5px 13px 5px 6px; font-weight:700; font-size:.95rem}
-.chip-presencia .avatar{font-size:1.4rem}
+/* v3.7.8 · el avatar del chip es un DISCO FIJO (30px): antes solo llevaba
+   font-size y, cuando skins.js mete la FOTO real (256px) dentro, la foto
+   mandaba en el tamaño y estiraba el chip a un óvalo gigante que rompía
+   la cabecera en el iPad (captura del dueño, 2026-11-09). */
+.chip-presencia .avatar{font-size:1.4rem; width:30px; height:30px; flex:none;
+  display:inline-flex; align-items:center; justify-content:center;
+  border-radius:50%; overflow:hidden; line-height:1}
 .punto{width:11px;height:11px;border-radius:50%;background:#cfc4bd}
 .punto.en-linea{background:var(--verde); box-shadow:0 0 0 4px rgba(29,209,161,.22); animation:pulso 1.8s infinite}
 
@@ -98,8 +104,8 @@ main{max-width:1200px; margin:0 auto; padding:14px 16px 130px}
 /* ---------- Sala / campeones ---------- */
 .miembro{display:flex; align-items:center; gap:14px; padding:10px 6px; border-bottom:1px dashed var(--borde)}
 .miembro:last-child{border-bottom:none}
-.miembro .avatar-grande{font-size:2.6rem; width:64px; height:64px; border-radius:50%;
-  background:#fff1e3; display:flex; align-items:center; justify-content:center}
+.miembro .avatar-grande{font-size:2.6rem; width:64px; height:64px; border-radius:50%; flex:none;
+  overflow:hidden; background:#fff1e3; display:flex; align-items:center; justify-content:center}
 table.campeones{width:100%; border-collapse:collapse; font-size:1.02rem}
 table.campeones td, table.campeones th{padding:9px 8px; text-align:left; border-bottom:1px dashed var(--borde)}
 table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius:10px}
@@ -245,7 +251,7 @@ table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius
   .presencia{flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none}
   .presencia::-webkit-scrollbar{display:none}
   .chip-presencia{padding:3px 9px 3px 4px; font-size:.8rem; white-space:nowrap}
-  .chip-presencia .avatar{font-size:1.05rem}
+  .chip-presencia .avatar{font-size:1.05rem; width:24px; height:24px}
   header .btn-chico{min-height:44px; padding:6px 12px; font-size:.9rem}
   nav.pestanas{padding:10px 10px 2px; gap:6px}
   nav.pestanas button{min-width:100px; min-height:56px; font-size:1rem; padding:10px 8px}
@@ -339,7 +345,10 @@ button.celda-naval.disparo:disabled{cursor:default; opacity:1}
   background:linear-gradient(135deg,#ffe3ba,#ffd1dc); display:flex; align-items:center; justify-content:center}
 .mosaico-video video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover}
 .mosaico-video video.espejo{transform:scaleX(-1)}
-.mosaico-video .avatar-grande{font-size:2.4rem}
+/* v3.7.8 · también disco fijo: sin tamaño, la foto del héroe (256px)
+   desbordaba el recuadro de video igual que en la cabecera. */
+.mosaico-video .avatar-grande{font-size:2.4rem; width:64px; height:64px; flex:none;
+  border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center}
 .mosaico-nombre{position:absolute; left:6px; bottom:4px; background:rgba(20,16,14,.55); color:#fff;
   font-size:.72rem; font-weight:700; padding:1px 7px; border-radius:99px}
 
@@ -356,7 +365,7 @@ button.celda-naval.disparo:disabled{cursor:default; opacity:1}
      robe los toques de los recuadros (medido en el arnés). */
   .franja-videos{bottom:308px; padding:6px 8px}
   .mosaico-video{width:92px; height:70px}
-  .mosaico-video .avatar-grande{font-size:1.7rem}
+  .mosaico-video .avatar-grande{font-size:1.7rem; width:46px; height:46px}
   .tabla-basta{font-size:.8rem}
   .tabla-basta th,.tabla-basta td{padding:5px}
   .campo-basta{flex-direction:column; align-items:stretch; gap:4px}
@@ -554,7 +563,7 @@ body.con-capa{position:fixed; left:0; right:0; width:100%; overflow:hidden}
 .videos-mosaicos.con-escenario{width:100%}
 .videos-mosaicos .mosaico-video.mosaico-grande{width:100%; flex:1 1 100%; height:auto;
   aspect-ratio:16/10; max-height:54vh; max-width:none; order:-1}
-.videos-mosaicos .mosaico-video.mosaico-grande .avatar-grande{font-size:4rem}
+.videos-mosaicos .mosaico-video.mosaico-grande .avatar-grande{font-size:4rem; width:120px; height:120px}
 
 /* ================= V3.6.2 · INTERFAZ MÁS DIVERTIDA Y CÓMODA =================
    Pedido del dueño: «quiero más juegos… y te pedí que hagas la interfaz
