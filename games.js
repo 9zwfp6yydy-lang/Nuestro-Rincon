@@ -468,26 +468,28 @@
   function crearNaval(jugadores, rng) {
     // Los barcos nacen colocados al azar: antes de empezar cada quien puede
     // ver los suyos y recolocarlos con 🔀 (recolocarNaval).
+    // v3.7.11: la batalla admite 2 o 3 almirantes; con 3, cada quien elige
+    // a qué rival dispara y las flotas caen por fuego combinado.
     var barcos = {};
-    (jugadores || []).slice(0, 2).forEach(function (id) { barcos[id] = colocarBarcosNaval(rng); });
+    (jugadores || []).slice(0, 3).forEach(function (id) { barcos[id] = colocarBarcosNaval(rng); });
     return {
-      tipo: 'naval', jugadores: (jugadores || []).slice(0, 2),
+      tipo: 'naval', jugadores: (jugadores || []).slice(0, 3),
       fase: 'esperando', // esperando | batalla
-      barcos: barcos, disparos: {}, turno: 0,
+      barcos: barcos, disparos: {}, turno: 0, eliminados: [],
       ganador: null, terminado: false, ultimoDisparo: null
     };
   }
 
   function iniciarNaval(estado, rng) {
     if (estado.fase !== 'esperando') throw new Error('La partida ya empezó');
-    if (estado.jugadores.length !== 2) throw new Error('La batalla naval es de 2 jugadores');
+    if (estado.jugadores.length < 2 || estado.jugadores.length > 3) throw new Error('La batalla naval es de 2 o 3 jugadores');
     var barcos = {}, disparos = {};
     estado.jugadores.forEach(function (id) {
       // Respeta los barcos ya colocados/recolocados; solo coloca a quien no tenga.
       barcos[id] = (estado.barcos && estado.barcos[id]) || colocarBarcosNaval(rng);
       disparos[id] = {}; // casilla -> 'tocado' | 'agua' (disparos QUE HIZO este jugador)
     });
-    return Object.assign({}, estado, { fase: 'batalla', barcos: barcos, disparos: disparos });
+    return Object.assign({}, estado, { fase: 'batalla', barcos: barcos, disparos: disparos, eliminados: estado.eliminados || [] });
   }
 
   function recolocarNaval(estado, userId, rng) {
@@ -503,29 +505,85 @@
     return set;
   }
 
-  function dispararNaval(estado, jugadorIdx, casilla) {
+  // Disparos de un atacante contra UN defensor. Las partidas viejas de 2
+  // guardaban un mapa plano por atacante; con 3, el mapa va por rival.
+  // Esta lectura acepta las dos formas sin perder ningún disparo.
+  function disparosNavalContra(estado, atacanteId, defensorId) {
+    var d = (estado.disparos || {})[atacanteId];
+    if (!d) return {};
+    if (d[defensorId] && typeof d[defensorId] === 'object') return d[defensorId];
+    var plano = Object.keys(d).some(function (k) { return typeof d[k] === 'string'; });
+    return plano ? d : {};
+  }
+  function disparosNavalNormalizados(estado) {
+    // Pasa los disparos guardados a la forma por-rival sin perder ninguno.
+    var salida = {};
+    (estado.jugadores || []).forEach(function (id) {
+      var d = (estado.disparos || {})[id];
+      if (!d) { salida[id] = {}; return; }
+      var anidado = Object.keys(d).some(function (k) { return d[k] && typeof d[k] === 'object'; });
+      if (anidado) { salida[id] = copia(d); return; }
+      var rival = (estado.jugadores || []).filter(function (o) { return o !== id; })[0];
+      salida[id] = {};
+      if (rival) salida[id][rival] = copia(d);
+    });
+    return salida;
+  }
+  function navalSigueVivo(estado, userId) {
+    return (estado.eliminados || []).indexOf(userId) === -1;
+  }
+  function tocadosContra(estado, defensorId) {
+    var tocados = {};
+    (estado.jugadores || []).forEach(function (id) {
+      var m = disparosNavalContra(estado, id, defensorId);
+      Object.keys(m).forEach(function (c) { if (m[c] === 'tocado') tocados[c] = true; });
+    });
+    return tocados;
+  }
+
+  function dispararNaval(estado, jugadorIdx, casilla, objetivoIdx) {
     exigirTurno(estado, jugadorIdx);
     if (estado.fase !== 'batalla') throw new Error('La batalla aún no empieza');
     if (typeof casilla !== 'number' || casilla < 0 || casilla > 63) throw new Error('Casilla inválida');
-    var atacante = estado.jugadores[jugadorIdx];
-    var defensor = estado.jugadores[1 - jugadorIdx];
-    var disparos = copia(estado.disparos);
-    if (disparos[atacante][casilla]) throw new Error('Ahí ya disparaste');
+    var jugadores = estado.jugadores || [];
+    var atacante = jugadores[jugadorIdx];
+    if (!navalSigueVivo(estado, atacante)) throw new Error('Tu flota ya se hundió: miras la batalla 👀');
+    if (objetivoIdx === undefined || objetivoIdx === null) {
+      if (jugadores.length === 2) objetivoIdx = 1 - jugadorIdx;
+      else throw new Error('Elige a qué rival disparas');
+    }
+    var defensor = jugadores[objetivoIdx];
+    if (!defensor || objetivoIdx === jugadorIdx) throw new Error('A ti mismo no, almirante 😄');
+    if (!navalSigueVivo(estado, defensor)) throw new Error('Esa flota ya está hundida');
+    var disparos = disparosNavalNormalizados(estado);
+    if (!disparos[atacante]) disparos[atacante] = {};
+    if (!disparos[atacante][defensor]) disparos[atacante][defensor] = {};
+    if (disparos[atacante][defensor][casilla]) throw new Error('Ahí ya disparaste');
     var esBarco = !!celdasBarco(estado.barcos[defensor])[casilla];
-    disparos[atacante][casilla] = esBarco ? 'tocado' : 'agua';
+    disparos[atacante][defensor][casilla] = esBarco ? 'tocado' : 'agua';
+    var nuevo = Object.assign({}, estado, { disparos: disparos });
+    var tocados = tocadosContra(nuevo, defensor);
     var hundido = false;
     if (esBarco) {
       var barco = estado.barcos[defensor].filter(function (b) { return b.indexOf(casilla) !== -1; })[0];
-      hundido = barco.every(function (c) { return disparos[atacante][c] === 'tocado'; });
+      hundido = barco.every(function (c) { return tocados[c]; });
     }
-    var nuevo = Object.assign({}, estado, {
-      disparos: disparos,
-      ultimoDisparo: { de: atacante, casilla: casilla, resultado: esBarco ? (hundido ? 'hundido' : 'tocado') : 'agua' }
-    });
-    var totalBarco = Object.keys(celdasBarco(estado.barcos[defensor])).length;
-    var tocados = Object.keys(disparos[atacante]).filter(function (c) { return disparos[atacante][c] === 'tocado'; }).length;
-    if (tocados >= totalBarco) { nuevo.terminado = true; nuevo.ganador = atacante; }
-    else if (!esBarco) nuevo.turno = 1 - jugadorIdx; // con acierto se repite turno
+    nuevo.ultimoDisparo = { de: atacante, a: defensor, casilla: casilla, resultado: esBarco ? (hundido ? 'hundido' : 'tocado') : 'agua' };
+    if (esBarco) {
+      // ¿La flota entera cayó entre todos los atacantes? → eliminado.
+      var celdasFlota = Object.keys(celdasBarco(estado.barcos[defensor]));
+      if (celdasFlota.every(function (c) { return tocados[c]; })) {
+        var eliminados = (estado.eliminados || []).concat([defensor]);
+        nuevo = Object.assign({}, nuevo, { eliminados: eliminados });
+        var vivos = jugadores.filter(function (id) { return eliminados.indexOf(id) === -1; });
+        if (vivos.length === 1) { nuevo.terminado = true; nuevo.ganador = vivos[0]; }
+      }
+      return nuevo; // con acierto se repite turno
+    }
+    // Agua: el turno pasa al siguiente que siga a flote.
+    var sig = jugadorIdx;
+    do { sig = (sig + 1) % jugadores.length; } while (!navalSigueVivo(nuevo, jugadores[sig]));
+    nuevo.turno = sig;
     return nuevo;
   }
 
@@ -1668,6 +1726,125 @@
       if (estado.puntajes[uid] > mejorPts) { mejorPts = estado.puntajes[uid]; mejor = uid; }
     });
     return mejorPts > 0 ? mejor : null;
+  }
+
+  /* ============ UNIÓN A UNA PARTIDA EN CURSO (v3.7.11) ============
+     Entrar a mitad de partida CON el estado propio inicializado: la
+     plantilla es una partida recién creada del mismo tipo con la lista
+     ya ampliada; de ahí se copian SOLO las entradas del jugador nuevo
+     en los mapas por jugador (fichas, manos, barcos, puntajes…), sin
+     tocar el estado compartido. Una red genérica cubre los mapas que
+     la plantilla no traiga y dos casos especiales reparten lo suyo.
+     Antes, quien se unía entraba solo con el nombre en la lista y se
+     quedaba sin fichas ni mano: no podía jugar de verdad. */
+  function crearPlantilla(tipo, jugadores, rng) {
+    rng = rng || Math.random;
+    function orden(n, k) {
+      var idxs = [];
+      for (var i = 0; i < n; i++) idxs.push(i);
+      return barajar(idxs, rng).slice(0, k);
+    }
+    switch (tipo) {
+      case 'conecta': return crearConecta(jugadores);
+      case 'serpientes': return crearSerpientes(jugadores);
+      case 'ahorcado': return crearAhorcado(jugadores, rng);
+      case 'dibujo': return crearDibujo(jugadores, rng);
+      case 'parchis': return crearParchis(jugadores);
+      case 'domino': return crearDomino(jugadores);
+      case 'naval': return crearNaval(jugadores, rng);
+      case 'sopa': return crearSopa(jugadores, rng);
+      case 'basta': return crearBasta(jugadores, rng);
+      case 'simon': return crearSimon(jugadores, rng);
+      case 'calculo': return crearCalculo(jugadores, rng);
+      case 'ppt': return crearPPT(jugadores);
+      case 'adivina': return crearAdivina(jugadores, rng);
+      case 'versiculo': return crearVersiculo(jugadores, orden(BANCO_COMPLETA.length, 10));
+      case 'quef': return crearQueFalta(jugadores, rng);
+      case 'orden': return crearOrden(jugadores, rng);
+      case 'numeros': return crearNumeros(jugadores, rng);
+      case 'damas': return crearDamas(jugadores);
+      case 'loteria': return crearLoteria(jugadores, rng);
+      case 'guerra': return crearGuerra(jugadores, rng);
+      case 'tesoro': return crearTesoro(jugadores, rng);
+      case 'verdad': return crearVerdad(jugadores);
+      case 'carrera': return crearCarrera(jugadores);
+      case 'encadenada': return crearEncadenada(jugadores, rng);
+      case 'puzzle': return crearPuzzle(jugadores, rng);
+      case 'quien': return crearQuizBiblico('quien', jugadores, orden(BANCO_QUIEN.length, 10));
+      case 'vf': return crearQuizBiblico('vf', jugadores, orden(BANCO_VF.length, 10));
+      case 'encuentra': return crearQuizBiblico('encuentra', jugadores, orden(BANCO_ENCUENTRA.length, 10));
+      case 'ordenab': return crearOrdena(jugadores, undefined, rng);
+      case 'misterio': return crearMisterio(jugadores, rng);
+      case 'obby': return crearObby(jugadores);
+      case 'tycoon': return crearTycoon(jugadores);
+      case 'mascotas': return crearMascotas(jugadores);
+      case 'torre': return crearTorre(jugadores);
+      case 'impostor': return crearImpostor(jugadores, rng);
+      case 'jonas': return crearJonas(jugadores);
+      case 'arca': return crearArca(jugadores, rng);
+      case 'goliat': return crearGoliat(jugadores, rng);
+      case 'cohete': return crearCohete(jugadores);
+      case 'blanco': return crearBlanco(jugadores);
+      case 'granja': return crearGranja(jugadores, rng);
+      default: return null;
+    }
+  }
+
+  function incorporarJugador(estado, userId, rng) {
+    if (!estado || !userId) return estado;
+    var actuales = estado.jugadores || [];
+    if (actuales.indexOf(userId) !== -1 || actuales.length >= 3) return estado;
+    var nuevo = copia(estado);
+    nuevo.jugadores = actuales.concat([userId]);
+    try {
+      var fresco = crearPlantilla(nuevo.tipo, nuevo.jugadores, rng);
+      if (fresco) Object.keys(fresco).forEach(function (k) {
+        var fv = fresco[k], cv = nuevo[k];
+        if (fv && cv && typeof fv === 'object' && typeof cv === 'object' && !Array.isArray(fv) && !Array.isArray(cv)
+          && Object.prototype.hasOwnProperty.call(fv, userId) && !Object.prototype.hasOwnProperty.call(cv, userId)) {
+          cv[userId] = fv[userId];
+        }
+      });
+    } catch (eTpl) { /* la red genérica de abajo cubre lo esencial */ }
+    // Red genérica: todo mapa cuyas claves sean los jugadores actuales.
+    Object.keys(nuevo).forEach(function (k) {
+      var v = nuevo[k];
+      if (!v || typeof v !== 'object' || Array.isArray(v) || (userId in v)) return;
+      var claves = Object.keys(v);
+      if (!claves.length) return;
+      if (!claves.every(function (c) { return actuales.indexOf(c) !== -1; })) return;
+      var muestra = v[claves[0]];
+      v[userId] = Array.isArray(muestra) ? [] : (typeof muestra === 'number' ? 0 : (muestra && typeof muestra === 'object' ? {} : muestra));
+    });
+    // Dominó en curso: el nuevo roba su mano del pozo.
+    if (nuevo.tipo === 'domino' && nuevo.fase === 'jugando' && nuevo.manos && (!nuevo.manos[userId] || !nuevo.manos[userId].length)) {
+      var pozo = (nuevo.pozo || []).slice();
+      var mano = [];
+      while (mano.length < 7 && pozo.length) mano.push(pozo.pop());
+      var manos = Object.assign({}, nuevo.manos);
+      manos[userId] = mano;
+      nuevo = Object.assign({}, nuevo, { manos: manos, pozo: pozo });
+    }
+    // Naval: barcos propios siempre; en batalla, su mapa de disparos.
+    if (nuevo.tipo === 'naval') {
+      if (!nuevo.barcos || !nuevo.barcos[userId]) {
+        var bs = Object.assign({}, nuevo.barcos);
+        bs[userId] = colocarBarcosNaval(rng);
+        nuevo = Object.assign({}, nuevo, { barcos: bs });
+      }
+      if (nuevo.fase === 'batalla' && (!nuevo.disparos || !nuevo.disparos[userId])) {
+        var ds = Object.assign({}, nuevo.disparos);
+        ds[userId] = {};
+        nuevo = Object.assign({}, nuevo, { disparos: ds });
+      }
+    }
+    // El Impostor: quien entra a mitad de ronda es civil y da su pista.
+    if (nuevo.tipo === 'impostor' && nuevo.roles && !(userId in nuevo.roles)) {
+      var rs = Object.assign({}, nuevo.roles);
+      rs[userId] = 'civil';
+      nuevo = Object.assign({}, nuevo, { roles: rs });
+    }
+    return nuevo;
   }
 
   function puntosDePartidaExtra(estado) {
@@ -3572,6 +3749,7 @@
     robarDomino: robarDomino, pasarDomino: pasarDomino, extremosDomino: extremosDomino, puedeJugarDomino: puedeJugarDomino,
     crearNaval: crearNaval, iniciarNaval: iniciarNaval, recolocarNaval: recolocarNaval,
     dispararNaval: dispararNaval, colocarBarcosNaval: colocarBarcosNaval, celdasBarco: celdasBarco,
+    disparosNavalContra: disparosNavalContra, incorporarJugador: incorporarJugador,
     PALABRAS_SOPA: PALABRAS_SOPA, crearSopa: crearSopa, marcarSopa: marcarSopa, caminoSopa: caminoSopa,
     CATEGORIAS_BASTA: CATEGORIAS_BASTA, crearBasta: crearBasta, enviarRespuestasBasta: enviarRespuestasBasta,
     cerrarBasta: cerrarBasta, marcarBasta: marcarBasta, puntuarBasta: puntuarBasta, siguienteBasta: siguienteBasta,
