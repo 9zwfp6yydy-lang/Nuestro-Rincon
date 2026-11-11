@@ -3325,10 +3325,10 @@
     var zona = $('#zona-juego');
     var yoListo = (e.listos || []).indexOf(yo.id) !== -1;
     var html = tituloJuego(p, e, '🕵️ El Impostor') +
-      '<p><strong>Ronda ' + e.ronda + '</strong> · Categoría: <strong>' + escapar(e.categoria) + '</strong> 🎭 Todos conocen la palabra secreta… ¡menos el impostor!</p>' +
+      '<p><strong>Ronda ' + e.ronda + '</strong> · Categoría: <strong>' + escapar(e.categoria) + '</strong> 🎭 Todos reciben una palabra de la categoría… pero UNO recibió una <strong>distinta</strong> 😏</p>' +
       marcadorPuntos(e, ' pts');
     if (e.fase === 'roles') {
-      html += '<p>Cada quien mira su rol <strong>en su propio aparato</strong>, en secreto 🤫</p>';
+      html += '<p>Cada quien mira su palabra <strong>en su propio aparato</strong>, en secreto 🤫 Casi todos tienen LA MISMA; el impostor tiene otra parecida… ¡y ni él lo sabe!</p>';
       if (yoListo) {
         html += '<p>✅ Ya viste tu rol. Esperando a los demás (' + (e.listos || []).length + '/' + e.jugadores.length + ')…</p>';
       } else {
@@ -3337,16 +3337,17 @@
           '<div class="botones-juego"><button class="btn-verde" id="impostor-listo">🙈 Ya lo vi, ¡a jugar!</button></div>';
       }
     } else if (e.fase === 'pistas') {
-      html += '<p>Por turnos, cada quien escribe <strong>UNA palabra</strong> de pista sobre la palabra secreta. El impostor improvisa… 😏</p>';
-      html += e.jugadores.map(function (uid) {
+      var ordenP = G.ordenDePistasImpostor(e);
+      html += '<p>Por turnos, cada quien escribe <strong>UNA palabra</strong> de pista sobre SU palabra. El orden se mezcla cada ronda 🎲</p>';
+      html += ordenP.map(function (uid) {
         return '<p>' + emojiDe(uid) + ' ' + escapar(nombreDe(uid)) + ': ' +
           (e.pistas[uid] ? '«<strong>' + escapar(e.pistas[uid]) + '</strong>»' : '<em>pensando…</em>') + '</p>';
       }).join('');
-      if (e.jugadores[e.turnoPista] === yo.id) {
+      if (ordenP[e.turnoPista] === yo.id) {
         html += '<div class="botones-juego"><input type="text" id="impostor-pista" maxlength="20" placeholder="Tu pista (una palabra)" autocomplete="off">' +
           '<button class="btn-principal" id="impostor-dar">💬 Dar pista</button></div><p class="subtitulo" id="impostor-error"></p>';
       } else {
-        html += '<p>Turno de pista de ' + emojiDe(e.jugadores[e.turnoPista]) + ' <strong>' + escapar(nombreDe(e.jugadores[e.turnoPista])) + '</strong>…</p>';
+        html += '<p>Turno de pista de ' + emojiDe(ordenP[e.turnoPista]) + ' <strong>' + escapar(nombreDe(ordenP[e.turnoPista])) + '</strong>…</p>';
       }
     } else if (e.fase === 'votacion') {
       html += '<p>🗳️ <strong>¡A votar!</strong> ¿Quién es el impostor?</p>';
@@ -3365,7 +3366,9 @@
         ? '<h3>🎉 ¡Descubrieron al impostor!</h3>'
         : '<h3>😎 ¡El impostor se escapó!</h3>';
       html += '<p>El impostor era ' + emojiDe(e.impostor) + ' <strong>' + escapar(nombreDe(e.impostor)) + '</strong> 🕵️<br>' +
-        'La palabra secreta era: <strong>' + escapar(e.palabra) + '</strong> (' + escapar(e.categoria) + ')</p>';
+        'La palabra de todos era: <strong>' + escapar(e.palabra) + '</strong>' +
+        (e.palabraImpostor ? '<br>La del impostor: <strong>' + escapar(e.palabraImpostor) + '</strong>' : '') +
+        ' (' + escapar(e.categoria) + ')</p>';
       html += e.jugadores.map(function (uid) {
         return '<p>' + emojiDe(uid) + ' ' + escapar(nombreDe(uid)) + ' votó por ' + (e.votos[uid] ? escapar(nombreDe(e.votos[uid])) : '—') + '</p>';
       }).join('');
@@ -3378,9 +3381,13 @@
       var cajaRol = $('#impostor-rol');
       var mostrar = function () {
         if (!rol || !cajaRol) return;
-        cajaRol.innerHTML = rol.esImpostor
-          ? '🕵️ ¡Eres el <strong>IMPOSTOR</strong>!<br><small>Solo sabes la categoría: ' + escapar(rol.categoria) + '. ¡Improvisa tu pista y que no te cacen! 😏</small>'
-          : '🤫 Tu palabra secreta es:<br><strong>' + escapar(rol.palabra) + '</strong><br><small>(' + escapar(rol.categoria) + ') Da una pista sin decirla.</small>';
+        // v3.7.9: TODOS ven lo mismo — su palabra; el impostor también
+        // recibe una (distinta) y ni él sabe que es el impostor. Solo
+        // una partida vieja sin palabra del impostor cae al texto de
+        // «solo la categoría».
+        cajaRol.innerHTML = rol.palabra
+          ? '🤫 Tu palabra es:<br><strong>' + escapar(rol.palabra) + '</strong><br><small>(' + escapar(rol.categoria) + ') Da una pista sin decirla. Si las pistas de los demás no encajan con tu palabra… ¡puedes ser el impostor sin saberlo! 😏</small>'
+          : '🕵️ ¡Eres el <strong>IMPOSTOR</strong>!<br><small>Solo sabes la categoría: ' + escapar(rol.categoria) + '. ¡Improvisa tu pista y que no te cacen! 😏</small>';
         cajaRol.classList.remove('oculto');
       };
       var esconder = function () { if (cajaRol) cajaRol.classList.add('oculto'); };
