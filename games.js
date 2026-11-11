@@ -2852,19 +2852,29 @@
   }
 
   /* ----- 🕵️ El Impostor (el clásico de fiesta, en línea) -----
-     Cada ronda hay una palabra secreta de una categoría: TODOS la ven
-     en su aparato menos UNO, el impostor, que solo ve la categoría.
-     Por turnos cada quien escribe UNA palabra de pista (el impostor
-     improvisa sin saber la palabra) y al final todos votan quién es.
-     Si lo descubren, los que votaron bien ganan 10 pts; si no, el
+     Cada ronda hay una palabra de una categoría que reciben CASI
+     todos; el impostor recibe OTRA palabra de la misma categoría
+     (palabraImpostor) y NO sabe que es el impostor: su pantalla se
+     ve igual que la de los demás. Por turnos cada quien escribe UNA
+     palabra de pista y al final todos votan quién es. Si lo
+     descubren, los que votaron bien ganan 10 pts; si no, el
      impostor se lleva 15 pts.
+     v3.7.9 (correcciones del dueño, 2026-11-11): (1) el impostor
+     también recibe palabra — «el impostor no recibe palabras» —;
+     (2) el orden de las pistas (ordenPistas) se mezcla cada ronda:
+     antes salía siempre en el orden de la lista de jugadores y, como
+     las partidas nacen de un jugador que va sumando a los demás en
+     orden fijo, el turno «siempre era el primero»; (3) el impostor
+     ROTA: nadie repite el papel dos rondas seguidas (con 2+
+     jugadores), para que la partida tenga rondas de verdad y no se
+     sienta de una sola.
      ⚠️ SECRETO (honesto, como en Batalla Naval y Dibujo y Adivina):
-     el modelo de partidas de la app es estado compartido, así que la
-     palabra y quién es el impostor VIAJAN en el estado; la pantalla
-     solo pinta el rol de cada quien en SU aparato tras tocar
-     «ver mi rol» y lo vuelve a ocultar. Es sistema de honor familiar:
-     nadie espía el aparato del otro. rolDeImpostor es la única puerta
-     que la pantalla debe usar para pintar roles. */
+     el modelo de partidas de la app es estado compartido, así que
+     las palabras y quién es el impostor VIAJAN en el estado; la
+     pantalla solo pinta la palabra de cada quien en SU aparato tras
+     tocar «ver mi rol» y la vuelve a ocultar. Es sistema de honor
+     familiar: nadie espía el aparato del otro. rolDeImpostor es la
+     única puerta que la pantalla debe usar para pintar roles. */
   var BANCO_IMPOSTOR = {
     'Comida': ['PIZZA', 'HELADO', 'PASTEL', 'TACO', 'HAMBURGUESA', 'MANZANA', 'PLATANO', 'QUESO',
       'CHOCOLATE', 'GALLETA', 'SOPA', 'ARROZ', 'POLLO', 'PESCADO', 'UVAS', 'SANDIA'],
@@ -2878,17 +2888,37 @@
       'ARBOL', 'NUBE', 'MAR', 'MONTANA', 'RAYO', 'OLA', 'BOSQUE', 'CASCADA']
   };
 
-  function estadoRondaImpostor(jugadores, puntajes, ronda, rng) {
+  function estadoRondaImpostor(jugadores, puntajes, ronda, rng, impostorAnterior) {
     var r = rng || Math.random;
+    var lista = (jugadores || []).slice(0, 3);
     var categorias = Object.keys(BANCO_IMPOSTOR);
     var categoria = categorias[Math.floor(r() * categorias.length)];
     var palabras = BANCO_IMPOSTOR[categoria];
+    var palabra = palabras[Math.floor(r() * palabras.length)];
+    // El impostor recibe OTRA palabra de la misma categoría: también
+    // tiene palabra y no sabe que la suya es la distinta.
+    var otras = palabras.filter(function (p) { return p !== palabra; });
+    var palabraImpostor = otras[Math.floor(r() * otras.length)];
+    // El impostor rota: nunca el mismo dos rondas seguidas.
+    var candidatos = lista.slice();
+    if (impostorAnterior && lista.length > 1) {
+      candidatos = lista.filter(function (id) { return id !== impostorAnterior; });
+    }
+    var impostor = candidatos.length ? candidatos[Math.floor(r() * candidatos.length)] : null;
+    // Orden de pistas mezclado por ronda (Fisher-Yates con el rng).
+    var ordenPistas = lista.slice();
+    for (var i = ordenPistas.length - 1; i > 0; i--) {
+      var j = Math.floor(r() * (i + 1));
+      var tmp = ordenPistas[i]; ordenPistas[i] = ordenPistas[j]; ordenPistas[j] = tmp;
+    }
     return {
-      tipo: 'impostor', jugadores: (jugadores || []).slice(0, 3),
+      tipo: 'impostor', jugadores: lista,
       ronda: ronda, fase: 'roles', // roles | pistas | votacion | final
       categoria: categoria,
-      palabra: palabras[Math.floor(r() * palabras.length)],
-      impostor: jugadores[Math.floor(r() * jugadores.length)],
+      palabra: palabra,
+      palabraImpostor: palabraImpostor,
+      impostor: impostor,
+      ordenPistas: ordenPistas,
       listos: [], turnoPista: 0, pistas: {}, votos: {},
       puntajes: puntajes || {},
       descubierto: null, masVotado: null,
@@ -2903,15 +2933,30 @@
   }
 
   // La ÚNICA puerta para pintar roles: lo que cada jugador puede ver
-  // en SU aparato. El impostor nunca recibe la palabra por aquí.
+  // en SU aparato. TODOS reciben palabra: la mayoría, la de la ronda;
+  // el impostor, su palabra distinta — por eso su pantalla se pinta
+  // igual que la de los demás y ni él sabe que es el impostor.
+  // (Partidas viejas sin palabraImpostor: el impostor recibe null,
+  // como antes, y la pantalla cae a «solo la categoría».)
   function rolDeImpostor(estado, userId) {
     if (!estado || (estado.jugadores || []).indexOf(userId) === -1) return null;
     var esImpostor = estado.impostor === userId;
     return {
       esImpostor: esImpostor,
-      palabra: esImpostor ? null : estado.palabra,
+      palabra: esImpostor ? (estado.palabraImpostor || null) : estado.palabra,
       categoria: estado.categoria
     };
+  }
+
+  // El orden en que se dan las pistas esta ronda: el mezclado al
+  // crearla; en partidas viejas (sin ordenPistas) se cae a la lista
+  // de jugadores, como antes.
+  function ordenDePistasImpostor(estado) {
+    var lista = (estado && estado.jugadores) || [];
+    var o = estado && estado.ordenPistas;
+    if (o && o.length === lista.length &&
+        lista.every(function (uid) { return o.indexOf(uid) !== -1; })) return o;
+    return lista;
   }
 
   function marcarRolImpostor(estado, userId) {
@@ -2929,12 +2974,15 @@
   function darPistaImpostor(estado, userId, texto) {
     if (estado.terminado) throw new Error('La partida ya terminó');
     if (estado.fase !== 'pistas') throw new Error('Todavía no es la hora de las pistas');
-    if (estado.jugadores[estado.turnoPista] !== userId) throw new Error('Todavía no es tu turno de pista');
+    if (ordenDePistasImpostor(estado)[estado.turnoPista] !== userId) throw new Error('Todavía no es tu turno de pista');
     var t = normalizarTexto(texto || '');
     if (!t) throw new Error('Escribe una pista');
     if (t.indexOf(' ') !== -1) throw new Error('La pista es UNA sola palabra 🙊');
     if (t.length > 16) throw new Error('Pista muy larga: una palabrita, porfa');
-    if (t === normalizarTexto(estado.palabra)) throw new Error('¡Esa es la palabra secreta! Di una pista, no la palabra 🙊');
+    // Nadie puede dar SU palabra como pista (la suya: la de la ronda
+    // o, si es el impostor sin saberlo, su palabra distinta).
+    var miPalabra = userId === estado.impostor ? (estado.palabraImpostor || estado.palabra) : estado.palabra;
+    if (t === normalizarTexto(miPalabra)) throw new Error('¡Esa es tu palabra! Di una pista, no la palabra 🙊');
     var pistas = Object.assign({}, estado.pistas);
     pistas[userId] = String(texto || '').trim();
     var turnoPista = estado.turnoPista + 1;
@@ -2985,7 +3033,7 @@
 
   function siguienteRondaImpostor(estado, rng) {
     if (estado.fase !== 'final') throw new Error('La ronda todavía no termina');
-    return estadoRondaImpostor(estado.jugadores, Object.assign({}, estado.puntajes), estado.ronda + 1, rng);
+    return estadoRondaImpostor(estado.jugadores, Object.assign({}, estado.puntajes), estado.ronda + 1, rng, estado.impostor);
   }
 
   /* ================= v3.7: BÍBLICOS NUEVOS + DIVERSIÓN =================
@@ -3551,7 +3599,7 @@
     EDIFICIOS_TYCOON: EDIFICIOS_TYCOON, crearTycoon: crearTycoon, jugarTycoon: jugarTycoon, ingresoTycoon: ingresoTycoon, patrimonioTycoon: patrimonioTycoon,
     MASCOTAS: MASCOTAS, crearMascotas: crearMascotas, explorarMascotas: explorarMascotas, bonusMascotas: bonusMascotas, mascotaDe: mascotaDe,
     TORRES: TORRES, TORRE_PISTA: TORRE_PISTA, crearTorre: crearTorre, colocarTorre: colocarTorre, pasarTorre: pasarTorre, lanzarOleada: lanzarOleada, globosDeOleada: globosDeOleada,
-    BANCO_IMPOSTOR: BANCO_IMPOSTOR, crearImpostor: crearImpostor, rolDeImpostor: rolDeImpostor, marcarRolImpostor: marcarRolImpostor, darPistaImpostor: darPistaImpostor, votarImpostor: votarImpostor, siguienteRondaImpostor: siguienteRondaImpostor,
+    BANCO_IMPOSTOR: BANCO_IMPOSTOR, crearImpostor: crearImpostor, rolDeImpostor: rolDeImpostor, ordenDePistasImpostor: ordenDePistasImpostor, marcarRolImpostor: marcarRolImpostor, darPistaImpostor: darPistaImpostor, votarImpostor: votarImpostor, siguienteRondaImpostor: siguienteRondaImpostor,
     JONAS_META: JONAS_META, JONAS_CONCHAS: JONAS_CONCHAS, JONAS_TORMENTA: JONAS_TORMENTA, JONAS_OLA: JONAS_OLA, JONAS_BALLENA: JONAS_BALLENA, crearJonas: crearJonas, tirarJonas: tirarJonas,
     ANIMALES_ARCA: ANIMALES_ARCA, ARCA_PAREJAS_META: ARCA_PAREJAS_META, ARCA_AGUA_MAX: ARCA_AGUA_MAX, crearArca: crearArca, buscarArca: buscarArca, animalArca: animalArca,
     PIEDRAS_GOLIAT: PIEDRAS_GOLIAT, GOLIAT_DISTANCIA: GOLIAT_DISTANCIA, GOLIAT_RONDAS: GOLIAT_RONDAS, crearGoliat: crearGoliat, lanzarGoliat: lanzarGoliat, piedraGoliat: piedraGoliat,
