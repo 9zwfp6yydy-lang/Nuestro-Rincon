@@ -237,17 +237,23 @@
     });
   }
 
-  /* ====================== 5. PARCHÍS SIMPLIFICADO ====================== */
+  /* ====================== 5. PARCHÍS ======================
+     v3.7.10: 4 fichas por jugador como el original (antes 2) y la tirada
+     queda guardada en ultimoDado/ultimoDadoDe para que el dado SE VEA en
+     pantalla también después de mover. El tablero clásico (anillo con las
+     salidas en las esquinas, casas de colores y meta al centro) lo dibuja
+     app.js; el circuito sigue siendo de 40 casillas con seguros cada 5. */
   var PARCHIS_CASILLAS = 40;
   var PARCHIS_SEGUROS = [0, 5, 10, 15, 20, 25, 30, 35]; // casillas absolutas seguras
   function salidaParchis(jugadorIdx) { return jugadorIdx * 10; }
 
   function crearParchis(jugadores) {
     var fichas = {};
-    (jugadores || []).forEach(function (id) { fichas[id] = [-1, -1]; }); // -1 = en casa
+    (jugadores || []).forEach(function (id) { fichas[id] = [-1, -1, -1, -1]; }); // -1 = en casa; 4 fichas como el original
     return {
       tipo: 'parchis', jugadores: (jugadores || []).slice(0, 3),
       fichas: fichas, turno: 0, fase: 'dado', dado: null,
+      ultimoDado: null, ultimoDadoDe: null, // última tirada, para mostrar la cara del dado
       evento: null, ganador: null, terminado: false
     };
   }
@@ -276,7 +282,7 @@
     if (estado.fase !== 'dado') throw new Error('Ya tiraste el dado');
     rng = rng || Math.random;
     var dado = 1 + Math.floor(rng() * 6);
-    var nuevo = Object.assign({}, estado, { dado: dado, evento: null });
+    var nuevo = Object.assign({}, estado, { dado: dado, evento: null, ultimoDado: dado, ultimoDadoDe: jugadorIdx });
     if (!movimientosParchis(estado, jugadorIdx, dado).length) {
       // Sin movimientos posibles: el turno pasa solito, sin dramas.
       nuevo.fase = 'dado'; nuevo.dado = null;
