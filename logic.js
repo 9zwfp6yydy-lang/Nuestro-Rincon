@@ -8,43 +8,65 @@
 
   var UMBRAL_DERIVA_SEG = 1.5; // si la diferencia pasa de esto, se re-sincroniza
 
-  /* ============================ GATO (tres en raya) ============================ */
-  var LINEAS_GATO = [
-    [0, 1, 2], [3, 4, 5], [6, 7, 8], // filas
-    [0, 3, 6], [1, 4, 7], [2, 5, 8], // columnas
-    [0, 4, 8], [2, 4, 6]             // diagonales
-  ];
+  /* ==================== GATO GRANDE (tres en raya, hasta 3) ====================
+     v3.7.10 — pedido del dueño (2026-11-11): tablero 5×5, hasta 3 jugadores
+     (❌ X · ⭕ O · ⭐ ★) y gana el primero que haga 4 EN RAYA. Las partidas
+     viejas de 3×3 que quedaran abiertas siguen con su regla de 3 en raya:
+     el tamaño del tablero manda. */
+  var MARCAS_GATO = ['X', 'O', '★'];
+
+  // Primera línea de marcas iguales seguidas (fila, columna o diagonal), o
+  // null. Hacen falta 3 en el tablero clásico de 3×3 y 4 en el grande de 5×5.
+  function lineaGanadoraGato(tablero) {
+    var n = Math.sqrt(tablero.length);
+    if (n !== Math.floor(n) || n < 3) return null;
+    var req = n === 3 ? 3 : 4;
+    var dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
+    for (var f = 0; f < n; f++) {
+      for (var c = 0; c < n; c++) {
+        var m = tablero[f * n + c];
+        if (!m) continue;
+        for (var d = 0; d < dirs.length; d++) {
+          var celdas = [], ok = true;
+          for (var k = 0; k < req; k++) {
+            var ff = f + dirs[d][0] * k, cc = c + dirs[d][1] * k;
+            if (ff < 0 || ff >= n || cc < 0 || cc >= n || tablero[ff * n + cc] !== m) { ok = false; break; }
+            celdas.push(ff * n + cc);
+          }
+          if (ok) return { marca: m, celdas: celdas };
+        }
+      }
+    }
+    return null;
+  }
 
   function crearGato(jugadores) {
     return {
       tipo: 'gato',
-      tablero: [null, null, null, null, null, null, null, null, null],
-      jugadores: (jugadores || []).slice(0, 2), // ids de los 2 jugadores (el resto mira)
+      tablero: Array(25).fill(null),            // 5×5: el gato GRANDE
+      jugadores: (jugadores || []).slice(0, 3),  // hasta 3 jugadores (el resto mira)
       turno: 0,                                 // índice en jugadores[]
-      ganador: null,                            // 'X' | 'O' | null
+      ganador: null,                            // 'X' | 'O' | '★' | null
       empate: false,
       terminado: false
     };
   }
 
   function ganadorGato(tablero) {
-    for (var i = 0; i < LINEAS_GATO.length; i++) {
-      var l = LINEAS_GATO[i];
-      if (tablero[l[0]] && tablero[l[0]] === tablero[l[1]] && tablero[l[0]] === tablero[l[2]]) {
-        return tablero[l[0]];
-      }
-    }
+    var l = lineaGanadoraGato(tablero);
+    if (l) return l.marca;
     if (tablero.every(function (c) { return !!c; })) return 'empate';
     return null;
   }
 
-  // jugadorIdx: 0 (X) o 1 (O). Devuelve un estado NUEVO (no muta el anterior).
+  // jugadorIdx: 0 (X), 1 (O) o 2 (★). Devuelve un estado NUEVO (no muta el anterior).
   function jugadaGato(estado, jugadorIdx, casilla) {
     if (estado.terminado) throw new Error('La partida ya terminó');
     if (jugadorIdx !== estado.turno) throw new Error('No es tu turno');
-    if (typeof casilla !== 'number' || casilla < 0 || casilla > 8) throw new Error('Casilla inválida');
+    if (typeof casilla !== 'number' || casilla < 0 || casilla >= estado.tablero.length) throw new Error('Casilla inválida');
     if (estado.tablero[casilla]) throw new Error('Esa casilla ya está ocupada');
-    var simbolo = jugadorIdx === 0 ? 'X' : 'O';
+    var simbolo = MARCAS_GATO[jugadorIdx];
+    if (!simbolo) throw new Error('Jugador inválido');
     var tablero = estado.tablero.slice();
     tablero[casilla] = simbolo;
     var g = ganadorGato(tablero);
@@ -54,7 +76,8 @@
     } else if (g) {
       nuevo.terminado = true; nuevo.ganador = g;
     } else {
-      nuevo.turno = 1 - estado.turno;
+      var total = (estado.jugadores && estado.jugadores.length) || 1;
+      nuevo.turno = (estado.turno + 1) % total;
     }
     return nuevo;
   }
@@ -328,7 +351,7 @@
     var suma = {};
     if (!estado || !estado.terminado && estado.tipo !== 'trivia') return suma;
     if (estado.tipo === 'gato' && estado.ganador && estado.jugadores) {
-      var idx = estado.ganador === 'X' ? 0 : 1;
+      var idx = MARCAS_GATO.indexOf(estado.ganador);
       if (estado.jugadores[idx]) suma[estado.jugadores[idx]] = 50;
     } else if (estado.tipo === 'memoria') {
       Object.keys(estado.puntajes || {}).forEach(function (uid) {
@@ -352,6 +375,7 @@
   var API = {
     UMBRAL_DERIVA_SEG: UMBRAL_DERIVA_SEG,
     crearGato: crearGato, ganadorGato: ganadorGato, jugadaGato: jugadaGato,
+    MARCAS_GATO: MARCAS_GATO, lineaGanadoraGato: lineaGanadoraGato,
     BANCO_PREGUNTAS: BANCO_PREGUNTAS, TIEMPO_PREGUNTA_SEG: TIEMPO_PREGUNTA_SEG,
     crearTrivia: crearTrivia, preguntaActual: preguntaActual, puntosRespuesta: puntosRespuesta,
     responderTrivia: responderTrivia, revelarTrivia: revelarTrivia,
