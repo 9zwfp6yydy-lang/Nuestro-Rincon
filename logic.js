@@ -347,6 +347,22 @@
   }
 
   // Puntos que suma cada juego al acumulado familiar cuando termina.
+  // Une a un jugador a mitad de partida (v3.7.11): en los juegos de este
+  // motor su sitio en la lista ya lo habilita (el gato marca por índice;
+  // trivia y memoria puntúan con contadores que nacen en cero aquí).
+  function incorporarJugador(estado, userId) {
+    if (!estado || !userId) return estado;
+    var actuales = estado.jugadores || [];
+    if (actuales.indexOf(userId) !== -1 || actuales.length >= 3) return estado;
+    var nuevo = Object.assign({}, estado, { jugadores: actuales.concat([userId]) });
+    if (nuevo.puntajes && typeof nuevo.puntajes === 'object' && !(userId in nuevo.puntajes)) {
+      var p = Object.assign({}, nuevo.puntajes);
+      p[userId] = 0;
+      nuevo = Object.assign({}, nuevo, { puntajes: p });
+    }
+    return nuevo;
+  }
+
   function puntosDePartida(estado) {
     var suma = {};
     if (!estado || !estado.terminado && estado.tipo !== 'trivia') return suma;
@@ -383,7 +399,8 @@
     EMOJIS_MEMORIA: EMOJIS_MEMORIA, crearMemoria: crearMemoria,
     voltearMemoria: voltearMemoria, resolverMemoria: resolverMemoria,
     posicionRemota: posicionRemota, correccionDeriva: correccionDeriva, interpretarSync: interpretarSync,
-    TITULOS_CAMPEON: TITULOS_CAMPEON, rankingCampeones: rankingCampeones, puntosDePartida: puntosDePartida
+    TITULOS_CAMPEON: TITULOS_CAMPEON, rankingCampeones: rankingCampeones, puntosDePartida: puntosDePartida,
+    incorporarJugador: incorporarJugador
   };
 
   global.FamilyLogic = API;
