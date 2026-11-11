@@ -977,7 +977,7 @@
     dibujo: { icono: '🎨', nombre: 'Dibujo y Adivina', tope: 3 },
     parchis: { icono: '🎲', nombre: 'Parchís', tope: 3 },
     domino: { icono: '🁢', nombre: 'Dominó', tope: 3 },
-    naval: { icono: '🚢', nombre: 'Batalla Naval', tope: 2 },
+    naval: { icono: '🚢', nombre: 'Batalla Naval', tope: 3 },
     sopa: { icono: '🔎', nombre: 'Sopa de Letras', tope: 3 },
     basta: { icono: '✋', nombre: '¡Basta!', tope: 3 },
     simon: { icono: '🔴', nombre: 'Simón Dice', tope: 3 },
@@ -1254,6 +1254,22 @@
       // el estado real se adopta al confirmar y desde ahí todo guarda.
       return Promise.resolve();
     }
+    // Red anti-expulsión (v3.7.11): un guardado hecho desde una foto vieja
+    // de la partida NO puede sacar a un jugador que ya consta unido en la
+    // copia fresca; se le reincorpora con su estado antes de guardar.
+    try {
+      var fresca = partidasPorId[partida.id];
+      if (fresca && fresca.estado && Array.isArray(fresca.estado.jugadores)
+        && nuevoEstado && Array.isArray(nuevoEstado.jugadores)) {
+        fresca.estado.jugadores.forEach(function (id) {
+          if (nuevoEstado.jugadores.indexOf(id) === -1) {
+            nuevoEstado = (nuevoEstado.tipo === 'gato' || nuevoEstado.tipo === 'trivia' || nuevoEstado.tipo === 'memoria')
+              ? L.incorporarJugador(nuevoEstado, id)
+              : G.incorporarJugador(nuevoEstado, id);
+          }
+        });
+      }
+    } catch (eRed) { /* si algo falla, se guarda como siempre */ }
     return supa.from('partidas')
       .update({ estado: nuevoEstado, actualizada_en: new Date().toISOString() })
       .eq('id', partida.id)
@@ -1309,7 +1325,11 @@
     partidaActualId = p.id;
     if (dentro) { abrirYMostrar(p); return; }
     var estado = JSON.parse(JSON.stringify(p.estado));
-    estado.jugadores = (estado.jugadores || []).concat([yo.id]);
+    // Unión segura (v3.7.11): quien se une entra CON su estado propio
+    // inicializado (fichas, mano, barcos, puntajes), no solo en la lista.
+    estado = (p.tipo === 'gato' || p.tipo === 'trivia' || p.tipo === 'memoria')
+      ? L.incorporarJugador(estado, yo.id)
+      : G.incorporarJugador(estado, yo.id);
     // Se muestra al instante (optimista) en la capa sobrepuesta; el guardado confirma la unión.
     try { abrirYMostrar({ id: p.id, tipo: p.tipo, estado: estado, creada_por: p.creada_por }); }
     catch (eAbrir) { abrirCapa('capa-juego'); }
@@ -2320,9 +2340,9 @@
           return '<div class="celda-naval">' + (misBarcos[i] ? '🚢' : '🌊') + '</div>';
         }) +
         '<div class="botones-juego" style="margin-top:10px"><button class="btn-suave" id="naval-recolocar">🔀 Recolocar mis barcos</button>' +
-        (e.jugadores.length === 2
+        (e.jugadores.length >= 2
           ? (p.creada_por === yo.id ? '<button class="btn-principal" id="naval-iniciar">⚓ ¡A la batalla!</button>' : '<span class="subtitulo">El anfitrión da la salida…</span>')
-          : '<span class="subtitulo">Falta el rival: que se una con un toque.</span>') + '</div>';
+          : '<span class="subtitulo">Falta un rival: que se una con un toque.</span>') + '</div>';
       var reco = $('#naval-recolocar');
       if (reco) reco.addEventListener('click', function () {
         try { guardarEstado(p, G.recolocarNaval(e, yo.id)); } catch (err) { Fun.sonido('error'); }
@@ -2333,34 +2353,51 @@
       });
       return;
     }
-    var rival = e.jugadores[1 - miIdx];
+    // v3.7.11: con 3 almirantes hay un mar por rival y se toca el mar de
+    // quien quieras atacar; quien pierde su flota mira la batalla 👀.
+    var eliminados = e.eliminados || [];
+    var yoFuera = eliminados.indexOf(yo.id) !== -1;
     avisoTurno(p, !e.terminado && miIdx !== -1 && e.turno === miIdx);
-    var misDisparos = e.disparos[yo.id] || {};
-    var barcosRival = G.celdasBarco(e.barcos[rival] || []);
-    // barcos hundidos del rival: grupos completos tocados
-    var hundidas = {};
-    (e.barcos[rival] || []).forEach(function (barco) {
-      if (barco.every(function (c) { return misDisparos[c] === 'tocado'; })) {
-        barco.forEach(function (c) { hundidas[c] = true; });
-      }
-    });
-    var disparosRival = rival ? (e.disparos[rival] || {}) : {};
-    var misBarcos2 = G.celdasBarco(e.barcos[yo.id] || []);
     var ultimo = e.ultimoDisparo
-      ? '<p>Último disparo: ' + escapar(nombreDe(e.ultimoDisparo.de)) + ' → ' +
+      ? '<p>Último disparo: ' + escapar(nombreDe(e.ultimoDisparo.de)) + (e.ultimoDisparo.a ? ' → ' + escapar(nombreDe(e.ultimoDisparo.a)) : '') + ': ' +
         (e.ultimoDisparo.resultado === 'agua' ? '🌊 ¡agua!' : e.ultimoDisparo.resultado === 'hundido' ? '🔥 ¡tocado y hundido!' : '💥 ¡tocado!') + '</p>' : '';
     var html = tituloJuego(p, e, '🚢 Batalla Naval') + honor + ultimo +
+      '<p>' + e.jugadores.map(function (id) { return emojiDe(id) + ' ' + escapar(nombreDe(id)) + (eliminados.indexOf(id) !== -1 ? ' ☠️' : ''); }).join(' · ') + '</p>' +
       '<p><strong>' + (e.terminado ? '🏆 ¡Ganó ' + escapar(nombreDe(e.ganador)) + '! Flota a salvo (más o menos 😄)'
-        : (miIdx === -1 ? '' : e.turno === miIdx ? '¡Tu turno! Toca una casilla del mar enemigo 🎯' : 'Turno de ' + escapar(nombreDe(e.jugadores[e.turno])) + '…')) + '</strong></p>' +
-      '<h4>🌊 Mar enemigo (tus disparos)</h4>' +
+        : (miIdx === -1 ? '' : yoFuera ? '☠️ Tu flota se hundió: ahora miras la batalla 👀'
+          : e.turno === miIdx ? '¡Tu turno! Toca una casilla en el mar de un rival 🎯' : 'Turno de ' + escapar(nombreDe(e.jugadores[e.turno])) + '…')) + '</strong></p>';
+    e.jugadores.forEach(function (rivalId) {
+      if (rivalId === yo.id) return;
+      var fuera = eliminados.indexOf(rivalId) !== -1;
+      var misDisp = G.disparosNavalContra(e, yo.id, rivalId);
+      var tocadosTodos = {};
+      e.jugadores.forEach(function (aId) {
+        var m = G.disparosNavalContra(e, aId, rivalId);
+        Object.keys(m).forEach(function (c) { if (m[c] === 'tocado') tocadosTodos[c] = true; });
+      });
+      var hundidas = {};
+      (e.barcos[rivalId] || []).forEach(function (barco) {
+        if (barco.every(function (c) { return tocadosTodos[c]; })) {
+          barco.forEach(function (c) { hundidas[c] = true; });
+        }
+      });
+      html += '<h4>🌊 Mar de ' + escapar(nombreDe(rivalId)) + (fuera ? ' ☠️ (flota hundida)' : '') + '</h4>' +
+        rejillaNavalHTML(function (i) {
+          var d = misDisp[i];
+          var contenido = d === 'tocado' ? (hundidas[i] ? '🔥' : '💥') : d === 'agua' ? '·' : '';
+          return '<button class="celda-naval disparo" data-disparo="' + i + '" data-objetivo="' + rivalId + '"' + (e.terminado || fuera || yoFuera || miIdx !== e.turno || d ? ' disabled' : '') + '>' + contenido + '</button>';
+        });
+    });
+    var recibidos = {};
+    e.jugadores.forEach(function (aId) {
+      if (aId === yo.id) return;
+      var m = G.disparosNavalContra(e, aId, yo.id);
+      Object.keys(m).forEach(function (c) { recibidos[c] = m[c]; });
+    });
+    var misBarcos2 = G.celdasBarco(e.barcos[yo.id] || []);
+    html += '<h4 style="margin-top:14px">🚢 Tu flota</h4>' +
       rejillaNavalHTML(function (i) {
-        var d = misDisparos[i];
-        var contenido = d === 'tocado' ? (hundidas[i] ? '🔥' : '💥') : d === 'agua' ? '·' : '';
-        return '<button class="celda-naval disparo" data-disparo="' + i + '"' + (e.terminado || miIdx !== e.turno || d ? ' disabled' : '') + '>' + contenido + '</button>';
-      }) +
-      '<h4 style="margin-top:14px">🚢 Tu flota</h4>' +
-      rejillaNavalHTML(function (i) {
-        var d = disparosRival[i];
+        var d = recibidos[i];
         var contenido = d === 'tocado' ? '💥' : misBarcos2[i] ? '🚢' : d === 'agua' ? '·' : '🌊';
         return '<div class="celda-naval">' + contenido + '</div>';
       });
@@ -2368,13 +2405,13 @@
     $$('#zona-juego [data-disparo]').forEach(function (b) {
       b.addEventListener('click', function () {
         try {
-          var nuevo = G.dispararNaval(e, miIdx, Number(b.dataset.disparo));
+          var nuevo = G.dispararNaval(e, miIdx, Number(b.dataset.disparo), e.jugadores.indexOf(b.dataset.objetivo));
           Fun.sonido(nuevo.ultimoDisparo.resultado === 'agua' ? 'error' : 'acierto');
           guardarConPuntos(p, e, nuevo);
         } catch (err) { Fun.sonido('error'); }
       });
     });
-    celebrarGanador(p, e, '¡Almirante de la familia! 🚢🏆', 'Hundiste toda la flota rival');
+    celebrarGanador(p, e, '¡Almirante de la familia! 🚢🏆', 'Hundiste las flotas rivales');
   }
 
   /* ----- Sopa de Letras ----- */
