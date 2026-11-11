@@ -968,7 +968,7 @@
 
   // Catálogo completo de juegos: icono, nombre y tope de jugadores.
   var CATALOGO = {
-    gato: { icono: '❌⭕', nombre: 'Gato', tope: 2 },
+    gato: { icono: '❌⭕⭐', nombre: 'Gato grande', tope: 3 },
     trivia: { icono: '🧠', nombre: 'Trivia', tope: 3 },
     memoria: { icono: '🃏', nombre: 'Memoria', tope: 3 },
     conecta: { icono: '🔴', nombre: 'Conecta 4', tope: 3 },
@@ -1490,20 +1490,26 @@
   }
 
   /* ----- Gato ----- */
+  var GATO_EMOJI = ['❌', '⭕', '⭐'];
   function renderGato(p) {
     var e = p.estado;
     var miIdx = e.jugadores.indexOf(yo.id);
     var zona = $('#zona-juego');
+    var idxGanador = e.ganador ? L.MARCAS_GATO.indexOf(e.ganador) : -1;
     var turnoTxt = e.terminado
-      ? (e.empate ? '¡Empate! Nadie se rinde en esta familia 🤝' : '🏆 Ganó ' + escapar(nombreDe(e.jugadores[e.ganador === 'X' ? 0 : 1])))
-      : (miIdx === -1 ? 'Estás mirando la partida 👀' : e.turno === miIdx ? '¡Tu turno, ' + (miIdx === 0 ? '❌' : '⭕') + '!' : 'Turno de ' + escapar(nombreDe(e.jugadores[e.turno])) + '…');
+      ? (e.empate ? '¡Empate! Nadie se rinde en esta familia 🤝' : '🏆 Ganó ' + escapar(nombreDe(e.jugadores[idxGanador])))
+      : (miIdx === -1 ? 'Estás mirando la partida 👀' : e.turno === miIdx ? '¡Tu turno, ' + GATO_EMOJI[miIdx] + '!' : 'Turno de ' + escapar(nombreDe(e.jugadores[e.turno])) + '…');
     avisoTurno(p, !e.terminado && miIdx !== -1 && e.turno === miIdx);
-    var ganadora = lineaGanadora(e.tablero);
-    var html = '<h3>❌⭕ Gato</h3><p>' +
-      e.jugadores.map(function (id, i) { return (i === 0 ? '❌ ' : '⭕ ') + escapar(nombreDe(id)); }).join('  ·  ') +
-      '</p><p><strong>' + turnoTxt + '</strong></p><div class="tablero-gato">';
+    var lin = L.lineaGanadoraGato(e.tablero);
+    var ganadora = lin ? lin.celdas : null;
+    var grande = e.tablero.length > 9;
+    var html = '<h3>❌⭕⭐ Gato' + (grande ? ' grande' : '') + '</h3><p>' +
+      e.jugadores.map(function (id, i) { return GATO_EMOJI[i] + ' ' + escapar(nombreDe(id)); }).join('  ·  ') +
+      '</p>' + (grande ? '<p class="subtitulo">Tablero grande de 5×5, hasta 3 jugadores: el primero que haga <strong>4 en raya</strong> gana 🎯</p>' : '') +
+      '<p><strong>' + turnoTxt + '</strong></p><div class="tablero-gato' + (grande ? ' grande' : '') + '">';
     e.tablero.forEach(function (celda, i) {
-      var clase = 'casilla-gato' + (celda === 'X' ? ' x' : celda === 'O' ? ' o' : '') + (ganadora && ganadora.indexOf(i) !== -1 ? ' ganadora' : '');
+      var mi = celda ? L.MARCAS_GATO.indexOf(celda) : -1;
+      var clase = 'casilla-gato' + (mi === 0 ? ' x' : mi === 1 ? ' o' : mi === 2 ? ' s' : '') + (ganadora && ganadora.indexOf(i) !== -1 ? ' ganadora' : '');
       html += '<button class="' + clase + '" data-casilla="' + i + '">' + (celda || '') + '</button>';
     });
     html += '</div>';
@@ -1521,17 +1527,8 @@
       });
     });
     if (e.terminado && e.ganador) {
-      celebrarSiGane(p, e.jugadores[e.ganador === 'X' ? 0 : 1] === yo.id, '¡Ganaste al gato! 🎉', 'Las ❌ y ⭕ tiemblan ante ti');
+      celebrarSiGane(p, e.jugadores[idxGanador] === yo.id, '¡Ganaste al gato! 🎉', 'Las ❌, ⭕ y ⭐ tiemblan ante ti');
     }
-  }
-
-  function lineaGanadora(tablero) {
-    var lineas = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-    for (var i = 0; i < lineas.length; i++) {
-      var l = lineas[i];
-      if (tablero[l[0]] && tablero[l[0]] === tablero[l[1]] && tablero[l[0]] === tablero[l[2]]) return l;
-    }
-    return null;
   }
 
   /* ----- Trivia ----- */
@@ -2078,34 +2075,74 @@
   }
 
   /* ----- Parchís ----- */
+  /* ----- Parchís: tablero como el original (v3.7.10) -----
+     Anillo de 40 casillas sobre una rejilla de 11×11: las 4 esquinas son las
+     SALIDAS de cada color (abs 0, 10, 20 y 30), cada jugador tiene su CASA
+     de su color junto a su esquina con sus 4 fichas a la vista, el centro es
+     la META y el dado se VE con su cara (⚀…⚅) y queda visible tras tirar. */
+  var PARCHIS_POS = (function () {
+    var pos = [], f, c;
+    for (c = 0; c <= 10; c++) pos.push([0, c]);   // arriba → abs 0..10
+    for (f = 1; f <= 10; f++) pos.push([f, 10]);  // derecha → abs 11..20
+    for (c = 9; c >= 0; c--) pos.push([10, c]);    // abajo → abs 21..30
+    for (f = 9; f >= 1; f--) pos.push([f, 0]);    // izquierda → abs 31..39
+    return pos;
+  })();
+  // Huecos (2×2) de las fichas en casa de cada jugador, junto a su esquina.
+  var PARCHIS_CASAS = [
+    [[1, 1], [1, 2], [2, 1], [2, 2]],
+    [[1, 8], [1, 9], [2, 8], [2, 9]],
+    [[8, 8], [8, 9], [9, 8], [9, 9]],
+    [[8, 1], [8, 2], [9, 1], [9, 2]]
+  ];
+  var PARCHIS_CARAS_DADO = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+
   function renderParchis(p) {
     var e = p.estado;
     var miIdx = e.jugadores.indexOf(yo.id);
     var zona = $('#zona-juego');
     avisoTurno(p, !e.terminado && miIdx !== -1 && e.turno === miIdx);
-    var colores = ['🔴', '🔵', '🟢'];
-    // Fichas por casilla absoluta
+    var colores = ['🔴', '🔵', '🟢', '🟡'];
+    // Mis fichas que se pueden mover con el dado actual (se resaltan en el tablero).
+    var movibles = {};
+    if (!e.terminado && miIdx === e.turno && e.fase === 'mover' && e.dado != null) {
+      G.movimientosParchis(e, miIdx, e.dado).forEach(function (m) { movibles[m.ficha] = true; });
+    }
+    function disco(i, f) {
+      return '<span class="ficha-parchis f' + i + ((i === miIdx && movibles[f]) ? ' movible' : '') + '">' + (f + 1) + '</span>';
+    }
+    // Fichas por casilla absoluta del anillo
     var porCasilla = {};
     e.jugadores.forEach(function (id, i) {
-      (e.fichas[id] || []).forEach(function (prog) {
+      (e.fichas[id] || []).forEach(function (prog, f) {
         if (prog >= 0 && prog < 40) {
           var abs = (i * 10 + prog) % 40;
-          (porCasilla[abs] = porCasilla[abs] || []).push(colores[i]);
+          (porCasilla[abs] = porCasilla[abs] || []).push(disco(i, f));
         }
       });
     });
     var html = tituloJuego(p, e, '🎲 Parchís') +
       e.jugadores.map(function (id, i) {
-        var f = (e.fichas[id] || []).map(function (prog) {
-          return prog === -1 ? '🏠' : prog === 40 ? '🏁' : '▸' + (prog + 1);
-        }).join(' ');
-        return '<p>' + colores[i] + ' <strong>' + escapar(nombreDe(id)) + '</strong>: ' + f + '</p>';
+        var fs = e.fichas[id] || [];
+        var enCasa = fs.filter(function (x) { return x === -1; }).length;
+        var enMeta = fs.filter(function (x) { return x === 40; }).length;
+        return '<p>' + colores[i] + ' <strong>' + escapar(nombreDe(id)) + '</strong>: ' +
+          '🏠 ' + enCasa + ' en casa · 🚶 ' + (fs.length - enCasa - enMeta) + ' en camino · 🏁 ' + enMeta + ' en la meta</p>';
       }).join('') +
       '<p><strong>' + (e.terminado ? '🏆 ¡Ganó ' + escapar(nombreDe(e.ganador)) + '!' :
         (e.evento === 'captura' ? '😱 ¡Hubo captura! ' : '') +
         (miIdx === -1 ? '' : e.turno === miIdx
           ? (e.fase === 'dado' ? '¡Tu turno! Tira el dado 🎲' : 'Dado: <strong>' + e.dado + '</strong> · elige qué ficha mover')
           : 'Turno de ' + escapar(nombreDe(e.jugadores[e.turno])) + '…')) + '</strong></p>';
+    // EL DADO, bien visible con su cara, y se queda en pantalla tras la tirada.
+    if (e.ultimoDado) {
+      html += '<div class="dado-zona"><span class="dado-cara">' + PARCHIS_CARAS_DADO[e.ultimoDado - 1] + '</span>' +
+        '<span>' + escapar(nombreDe(e.jugadores[e.ultimoDadoDe])) + ' sacó un <strong>' + e.ultimoDado + '</strong></span></div>';
+    } else if (!e.terminado && e.fase === 'mover' && e.dado) {
+      // Partidas abiertas antes de v3.7.10: aún sin ultimoDado guardado.
+      html += '<div class="dado-zona"><span class="dado-cara">' + PARCHIS_CARAS_DADO[e.dado - 1] + '</span>' +
+        '<span>En el dado hay un <strong>' + e.dado + '</strong></span></div>';
+    }
     if (!e.terminado && miIdx === e.turno && e.fase === 'dado') {
       html += '<button class="btn-principal" id="parchis-dado">🎲 Tirar el dado</button>';
     }
@@ -2115,14 +2152,54 @@
           (m.desde === -1 ? ' (¡sale de casa!)' : ' (a la ' + (m.destino + 1) + ')') + '</button>';
       }).join('') + '</div>';
     }
-    if (e.dado && e.fase === 'mover') html += '<p class="subtitulo">🎲 En el dado hay un ' + e.dado + '</p>';
-    html += '<div class="tablero-parchis">';
-    for (var n = 0; n < 40; n++) {
-      var esSeguro = G.PARCHIS_SEGUROS.indexOf(n) !== -1;
-      var esSalida = n % 10 === 0;
-      html += '<div class="celda-parchis' + (esSeguro ? ' segura' : '') + (esSalida ? ' salida' : '') + '"><small>' + (n + 1) + (esSeguro ? '⭐' : '') + '</small><span>' + (porCasilla[n] || []).join('') + '</span></div>';
+    // EL TABLERO: rejilla 11×11 (anillo + casas de colores + meta al centro)
+    var celdas = {}; // "f,c" -> html
+    PARCHIS_POS.forEach(function (rc, abs) {
+      var esSeguro = G.PARCHIS_SEGUROS.indexOf(abs) !== -1;
+      var esSalida = abs % 10 === 0;
+      celdas[rc[0] + ',' + rc[1]] = '<div class="celda-parchis' + (esSeguro ? ' segura' : '') +
+        (esSalida ? ' salida s' + (abs / 10) : '') + '"><small>' + (abs + 1) + (esSeguro ? '⭐' : '') + '</small>' +
+        '<span class="discos">' + (porCasilla[abs] || []).join('') + '</span></div>';
+    });
+    // Huecos de casa con las fichas que aún no salen
+    e.jugadores.forEach(function (id, i) {
+      if (i > 3) return;
+      var enCasaIdx = [];
+      (e.fichas[id] || []).forEach(function (prog, f) { if (prog === -1) enCasaIdx.push(f); });
+      PARCHIS_CASAS[i].forEach(function (rc, k) {
+        var fIdx = enCasaIdx[k];
+        celdas[rc[0] + ',' + rc[1]] = '<div class="celda-parchis casilla-casa c' + i + '">' +
+          (fIdx != null ? disco(i, fIdx) : '<span class="hueco-casa"></span>') + '</div>';
+      });
+    });
+    // Fondo de las 4 casas (3×3) con el color de cada esquina, haya o no jugador
+    for (var zi = 0; zi < 4; zi++) {
+      var zf = zi < 2 ? [1, 2, 3] : [7, 8, 9];
+      var zc = (zi === 0 || zi === 3) ? [1, 2, 3] : [7, 8, 9];
+      zf.forEach(function (f) {
+        zc.forEach(function (c) {
+          var clave = f + ',' + c;
+          if (!celdas[clave]) celdas[clave] = '<div class="celda-parchis casilla-casa c' + zi + '"></div>';
+        });
+      });
     }
-    html += '</div><p class="subtitulo">⭐ = casilla segura (nadie te captura ahí). Con un 5 sales de casa; si caes donde hay un rival fuera de seguro… ¡a su casa! 😱</p>';
+    // META al centro, con las fichas que ya llegaron
+    var enMetaHtml = '';
+    e.jugadores.forEach(function (id, i) {
+      (e.fichas[id] || []).forEach(function (prog, f) { if (prog === 40) enMetaHtml += disco(i, f); });
+    });
+    [[4, 4], [4, 5], [4, 6], [5, 4], [5, 6], [6, 4], [6, 5], [6, 6]].forEach(function (rc) {
+      var clave = rc[0] + ',' + rc[1];
+      if (!celdas[clave]) celdas[clave] = '<div class="celda-parchis meta-suave"></div>';
+    });
+    celdas['5,5'] = '<div class="celda-parchis meta">🏁<span class="discos">' + enMetaHtml + '</span></div>';
+    html += '<div class="tablero-parchis">';
+    for (var f2 = 0; f2 < 11; f2++) {
+      for (var c2 = 0; c2 < 11; c2++) {
+        html += celdas[f2 + ',' + c2] || '<div class="celda-parchis vacia"></div>';
+      }
+    }
+    html += '</div><p class="subtitulo">⭐ = casilla segura (nadie te captura ahí). Las esquinas de colores son las SALIDAS y junto a cada una está la casa de su color. Con un 5 sales de casa; si caes donde hay un rival fuera de seguro… ¡a su casa! 😱</p>';
     zona.innerHTML = html;
     var btnDado = $('#parchis-dado');
     if (btnDado) btnDado.addEventListener('click', function () {
