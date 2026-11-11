@@ -121,6 +121,10 @@ table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius
   border-radius:18px; min-height:96px; min-width:0; display:flex; align-items:center; justify-content:center}
 .casilla-gato.x{color:var(--coral)} .casilla-gato.o{color:var(--azul)}
 .casilla-gato.ganadora{background:#e7fff6; border-color:var(--verde); animation:pulso 1s infinite}
+/* v3.7.10 · GATO GRANDE: 5×5 y la tercera marca ⭐ */
+.tablero-gato.grande{grid-template-columns:repeat(5,minmax(0,1fr)); max-width:540px; gap:8px}
+.tablero-gato.grande .casilla-gato{font-size:1.9rem; min-height:60px; border-radius:14px}
+.casilla-gato.s{color:var(--ios-morado)}
 /* ===== v3.4.1 · TABLEROS QUE CABEN EN EL CELULAR =====
    Bug (captura del dueño, 2026-10-31 22:02): en Memoria Bíblica las
    cartas salían enormes, la rejilla se salía por la derecha y el dibujo
@@ -288,12 +292,28 @@ table.campeones tr.primero td{font-weight:800; background:#fff8e6; border-radius
 .lienzo-marco{background:#fff; border:3px solid var(--borde); border-radius:16px; overflow:hidden; max-width:640px; margin:10px auto}
 .lienzo-marco canvas{width:100%; height:auto; display:block; touch-action:none; background:#fffdf9}
 .palabra-secreta{color:var(--coral)}
-.tablero-parchis{display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:4px; max-width:520px; margin:12px auto}
-.celda-parchis{aspect-ratio:1; background:#fff; border:1.5px solid var(--borde); border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden}
-.celda-parchis small{font-size:.55rem; color:var(--suave); line-height:1}
-.celda-parchis span{font-size:.85rem; line-height:1.05}
+/* v3.7.10 · PARCHÍS COMO EL ORIGINAL: rejilla 11×11, anillo de 40 casillas,
+   salidas en las esquinas, casas de colores, meta al centro, fichas-discos
+   y el dado con su cara bien visible. */
+.tablero-parchis{display:grid; grid-template-columns:repeat(11,minmax(0,1fr)); gap:2px; max-width:560px; margin:12px auto}
+.celda-parchis{aspect-ratio:1; background:#fff; border:1.5px solid var(--borde); border-radius:5px; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; min-width:0}
+.celda-parchis small{font-size:.45rem; color:var(--suave); line-height:1}
+.celda-parchis .discos{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; line-height:1}
 .celda-parchis.segura{background:#fff7d6}
-.celda-parchis.salida{background:#e7fff6}
+.celda-parchis.salida.s0{background:#ffd6d6}.celda-parchis.salida.s1{background:#cfe4ff}
+.celda-parchis.salida.s2{background:#d3f9d8}.celda-parchis.salida.s3{background:#fff3bf}
+.celda-parchis.vacia{background:transparent; border-color:transparent}
+.celda-parchis.casilla-casa.c0{background:#ffe3e3}.celda-parchis.casilla-casa.c1{background:#dbeafe}
+.celda-parchis.casilla-casa.c2{background:#dcfce7}.celda-parchis.casilla-casa.c3{background:#fef9c3}
+.celda-parchis.meta{background:#fff3d6; border-color:#f0c75e; font-size:.8rem}
+.celda-parchis.meta-suave{background:#fff8e6; border-color:#f5e3b3}
+.celda-parchis .ficha-parchis{display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; border-radius:50%; color:#fff; font-size:.55rem; font-weight:800; border:1.5px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.35); margin:.5px}
+.celda-parchis .ficha-parchis.f0{background:#e03131}.celda-parchis .ficha-parchis.f1{background:#1971c2}
+.celda-parchis .ficha-parchis.f2{background:#2f9e44}.celda-parchis .ficha-parchis.f3{background:#f08c00}
+.celda-parchis .ficha-parchis.movible{animation:pulso 1s infinite; outline:2px solid #333}
+.celda-parchis .hueco-casa{width:14px; height:14px; border-radius:50%; border:1.5px dashed rgba(0,0,0,.25)}
+.dado-zona{display:flex; align-items:center; justify-content:center; gap:10px; margin:10px 0}
+.dado-cara{font-size:3rem; line-height:1; background:#fff; border:2.5px solid var(--borde); border-radius:12px; padding:3px 9px; box-shadow:0 3px 8px rgba(0,0,0,.15)}
 .mesa-domino{display:flex; flex-wrap:wrap; gap:6px; background:#fdf3e3; border:2px solid var(--borde); border-radius:14px; padding:12px; min-height:56px; align-items:center; margin:10px 0}
 .ficha-domino{background:#fff; border:2px solid #cbb59a; border-radius:8px; padding:6px 9px; font-weight:900; letter-spacing:.06em}
 .mano-domino{display:flex; flex-wrap:wrap; gap:8px}
