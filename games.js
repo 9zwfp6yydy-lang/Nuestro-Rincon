@@ -1462,7 +1462,35 @@
     { categoria: 'Biblia', pregunta: '¿Qué día descansó Dios después de crear el mundo?', opciones: ['El primero', 'El sexto', 'El séptimo', 'El décimo'], correcta: 2 },
     { categoria: 'Biblia', pregunta: '¿Quién recibió al niño Jesús en el templo y era un profeta anciano?', opciones: ['Simeón', 'Zacarías', 'Nicodemo', 'Anás'], correcta: 0 },
     { categoria: 'Biblia', pregunta: '¿Qué pájaro volvió al arca llevando una ramita de olivo?', opciones: ['Un cuervo', 'Una paloma', 'Un águila', 'Un gorrión'], correcta: 1 },
-    { categoria: 'Biblia', pregunta: '¿Cuántos discípulos eligió Jesús?', opciones: ['7', '10', '12', '40'], correcta: 2 }
+    { categoria: 'Biblia', pregunta: '¿Cuántos discípulos eligió Jesús?', opciones: ['7', '10', '12', '40'], correcta: 2 },
+    { categoria: 'Biblia', pregunta: '¿Qué creó Dios en el primer día de la creación?', opciones: ['Las plantas', 'La luz', 'Los animales', 'Las estrellas'], correcta: 1 },
+    { categoria: 'Biblia', pregunta: '¿Cómo se llamaba el jardín donde vivían Adán y Eva?', opciones: ['El Edén', 'El Sinaí', 'El Jordán', 'El Getsemaní'], correcta: 0 },
+    { categoria: 'Biblia', pregunta: '¿Cómo se llamaba la esposa de Abraham?', opciones: ['Rebeca', 'Raquel', 'Sara', 'Lea'], correcta: 2 },
+    { categoria: 'Biblia', pregunta: '¿Qué nombre nuevo recibió Jacob tras luchar junto al río?', opciones: ['Israel', 'Judá', 'Esaú', 'Betuel'], correcta: 0 },
+    { categoria: 'Biblia', pregunta: '¿Qué vio Jacob en un sueño mientras dormía en Betel?', opciones: ['Un arca de madera', 'Una escalera que llegaba al cielo', 'Un pozo de agua', 'Una zarza ardiendo'], correcta: 1 },
+    { categoria: 'Biblia', pregunta: '¿Cómo se llamaba la mamá de Moisés, que lo escondió cuando era bebé?', opciones: ['Jocabed', 'Séfora', 'Miriam', 'Débora'], correcta: 0 },
+    { categoria: 'Biblia', pregunta: '¿Cómo se llamaba el hermano de Moisés que fue el primer sacerdote?', opciones: ['Josué', 'Caleb', 'Aarón', 'Hur'], correcta: 2 },
+    { categoria: 'Biblia', pregunta: '¿Qué comida especial envió Dios a su pueblo en el desierto?', opciones: ['Pescado del mar', 'Maná', 'Miel silvestre', 'Dátiles'], correcta: 1 },
+    { categoria: 'Biblia', pregunta: '¿Qué ciudad cayó después de que el pueblo de Israel marchó alrededor de sus muros?', opciones: ['Jerusalén', 'Belén', 'Jericó', 'Hebrón'], correcta: 2 },
+    { categoria: 'Biblia', pregunta: '¿Cómo se llamaba la mujer de Moab que cuidó con amor a su suegra Noemí?', opciones: ['Rut', 'Orfa', 'Tamar', 'Betsabé'], correcta: 0 },
+    { categoria: 'Biblia', pregunta: '¿Quién fue el primer rey de Israel?', opciones: ['David', 'Saúl', 'Salomón', 'Samuel'], correcta: 1 },
+    { categoria: 'Biblia', pregunta: '¿Quién era el papá del rey Salomón?', opciones: ['Saúl', 'Isaí', 'David', 'Joab'], correcta: 2 },
+    { categoria: 'Biblia', pregunta: '¿Qué profeta subió al cielo en un torbellino, según la Biblia?', opciones: ['Eliseo', 'Isaías', 'Elías', 'Jeremías'], correcta: 2 },
+    { categoria: 'Biblia', pregunta: '¿Qué reina valiente ayudó a salvar a su pueblo en Persia?', opciones: ['Vasti', 'Ester', 'Atalía', 'Jezabel'], correcta: 1 },
+    { categoria: 'Biblia', pregunta: '¿Qué animal habló con Balaam en el camino?', opciones: ['Un caballo', 'Una oveja', 'Una burra', 'Un camello'], correcta: 2 },
+    { categoria: 'Biblia', pregunta: '¿Cómo se llamaba el esposo de María, la mamá de Jesús?', opciones: ['Zacarías', 'José', 'Joaquín', 'Simeón'], correcta: 1 },
+    { categoria: 'Biblia', pregunta: '¿Cuál de estos fue uno de los regalos que los sabios llevaron a Jesús?', opciones: ['Plata', 'Mirra', 'Perlas', 'Seda'], correcta: 1 },
+    { categoria: 'Biblia', pregunta: '¿A qué país huyó la familia de Jesús para protegerlo del rey Herodes?', opciones: ['Egipto', 'Grecia', 'Italia', 'Persia'], correcta: 0 },
+    { categoria: 'Biblia', pregunta: '¿Qué convirtió Jesús en vino en las bodas de Caná?', opciones: ['El aceite', 'La leche', 'El agua', 'El jugo de uva'], correcta: 2 },
+    { categoria: 'Biblia', pregunta: '¿A qué amigo de Jesús, hermano de Marta y María, resucitó Jesús?', opciones: ['A Lázaro', 'A Bartimeo', 'A Zaqueo', 'A Nicodemo'], correcta: 0 },
+    { categoria: 'Biblia', pregunta: '¿Quién bautizó a Jesús?', opciones: ['Pedro', 'Juan el Bautista', 'Andrés', 'Pablo'], correcta: 1 },
+    { categoria: 'Biblia', pregunta: '¿En qué río fue bautizado Jesús?', opciones: ['En el Nilo', 'En el Éufrates', 'En el Jordán', 'En el Tigris'], correcta: 2 },
+    { categoria: 'Biblia', pregunta: 'En la parábola, ¿quién ayudó al hombre herido en el camino?', opciones: ['Un sacerdote', 'Un levita', 'Un samaritano', 'Un fariseo'], correcta: 2 },
+    { categoria: 'Biblia', pregunta: 'En la parábola del hijo pródigo, ¿qué hijo se fue de casa y luego volvió?', opciones: ['El hijo mayor', 'El hijo menor', 'El sobrino', 'El siervo'], correcta: 1 },
+    { categoria: 'Biblia', pregunta: '¿En qué fiesta recibieron los discípulos al Espíritu Santo con poder?', opciones: ['En la Pascua', 'En Pentecostés', 'En Navidad', 'En el Año Nuevo'], correcta: 1 },
+    { categoria: 'Biblia', pregunta: '¿Cómo se llamaba el apóstol Pablo antes de seguir a Jesús?', opciones: ['Saulo', 'Silas', 'Timoteo', 'Bernabé'], correcta: 0 },
+    { categoria: 'Biblia', pregunta: '¿Qué vio Pablo en el camino a Damasco que lo dejó sin ver por un tiempo?', opciones: ['Un ejército', 'Una luz muy fuerte del cielo', 'Un río crecido', 'Una nube de polvo'], correcta: 1 },
+    { categoria: 'Biblia', pregunta: '¿A qué árbol se subió Zaqueo para ver pasar a Jesús?', opciones: ['A una palmera', 'A un sicómoro', 'A un olivo', 'A un cedro'], correcta: 1 }
   ];
 
   /* ============ 16. COMPLETA EL VERSÍCULO (banco propio) ============ */
@@ -1786,6 +1814,8 @@
       case 'cohete': return crearCohete(jugadores);
       case 'blanco': return crearBlanco(jugadores);
       case 'granja': return crearGranja(jugadores, rng);
+      case 'arena': return crearArena(jugadores);
+      case 'pista': return crearPista(jugadores);
       default: return null;
     }
   }
@@ -1847,6 +1877,96 @@
     return nuevo;
   }
 
+  /* ==================== v3.8: JUEGOS EN TIEMPO REAL ====================
+     Arena de Pelea y Gran Premio NO son por turnos: se juegan en canvas
+     con sincronía por broadcast (ver tiempo-real.js). Aquí vive solo su
+     lógica PURA y probada: el estado inicial que crea la partida, el
+     daño de cada golpe, el tráfico que nace de la semilla compartida y
+     el cierre con puntos. La animación y la red no van en este motor. */
+  var ARENA_VIDA = 100;
+  var ARENA_DURACION_SEG = 90;
+  var DANIO_ARENA = { puno: 6, patada: 9 }; // puño: rápido y corto · patada: lenta y larga
+  var PISTA_META = 1200; // metros hasta la meta del Gran Premio
+
+  function puntajesEnCero(jugadores) {
+    var p = {};
+    (jugadores || []).forEach(function (id) { p[id] = 0; });
+    return p;
+  }
+  function semillaNueva(semilla) {
+    return semilla != null ? semilla : Math.floor(Math.random() * 1000000000);
+  }
+  function crearArena(jugadores, semilla) {
+    var js = (jugadores || []).slice(0, 3);
+    return {
+      tipo: 'arena', jugadores: js, puntajes: puntajesEnCero(js),
+      inicioEn: null, semilla: semillaNueva(semilla),
+      terminado: false, ganador: null
+    };
+  }
+  function crearPista(jugadores, semilla) {
+    var js = (jugadores || []).slice(0, 3);
+    return {
+      tipo: 'pista', jugadores: js, puntajes: puntajesEnCero(js),
+      inicioEn: null, semilla: semillaNueva(semilla), meta: PISTA_META,
+      terminado: false, ganador: null
+    };
+  }
+  // Daño de un golpe: bloquear recorta el 80 % (queda el 20 %, mínimo 1).
+  function danioArena(golpe, bloqueando) {
+    var base = DANIO_ARENA[golpe] || 0;
+    if (!base) return 0;
+    return bloqueando ? Math.max(1, Math.round(base * 0.2)) : base;
+  }
+  // Ganador de la arena: el único en pie; si se acabó el tiempo, el de
+  // más vida (en empate arriba, el primero de la lista con esa vida).
+  function ganadorArena(vidas, jugadores, tiempoAgotado) {
+    var js = jugadores || [];
+    var vivos = js.filter(function (id) { return (vidas[id] || 0) > 0; });
+    if (vivos.length === 1) return vivos[0];
+    if (!tiempoAgotado || !js.length) return null;
+    var mejor = null, mejorVida = -1;
+    js.forEach(function (id) {
+      var v = vidas[id] || 0;
+      if (v > mejorVida) { mejorVida = v; mejor = id; }
+    });
+    return mejor;
+  }
+  // Tráfico del Gran Premio desde la SEMILLA de la partida: todos los
+  // aparatos generan exactamente los mismos autos lentos, en el mismo
+  // sitio y carril, sin tener que mandarlos por la red.
+  function generarTraficoPista(semilla, cantidad) {
+    var rng = rngDeSemilla(semilla == null ? 'pista' : semilla);
+    var n = cantidad || 22, autos = [], dist = 170;
+    for (var i = 0; i < n; i++) {
+      dist += 70 + rng() * 85;
+      autos.push({
+        distancia: Math.round(dist),
+        carril: Math.floor(rng() * 3),
+        velocidad: 16 + Math.floor(rng() * 14) // lenta: el jugador va mucho más rápido
+      });
+    }
+    return autos;
+  }
+  function ganadorPista(distancias, jugadores, meta) {
+    var m = meta || PISTA_META;
+    var js = jugadores || [];
+    for (var i = 0; i < js.length; i++) {
+      if ((distancias[js[i]] || 0) >= m) return js[i];
+    }
+    return null;
+  }
+  // Cierre compartido de los dos juegos en vivo: terminado, ganador y
+  // 10 puntos de campeón para quien ganó (los suma puntosDePartidaExtra).
+  function cerrarRT(estado, ganador) {
+    var nuevo = copia(estado);
+    nuevo.terminado = true;
+    nuevo.ganador = ganador || null;
+    nuevo.puntajes = puntajesEnCero(nuevo.jugadores);
+    if (ganador) nuevo.puntajes[ganador] = 10;
+    return nuevo;
+  }
+
   function puntosDePartidaExtra(estado) {
     var suma = {};
     if (!estado || !estado.tipo) return suma;
@@ -1858,6 +1978,9 @@
     switch (estado.tipo) {
       case 'conecta': case 'parchis': case 'naval': case 'ppt': case 'damas':
         if (estado.terminado) dar(estado.ganador, 50);
+        break;
+      case 'arena': case 'pista': // v3.8 tiempo real: su puntaje ya trae los 10 del ganador (cerrarRT)
+        if (estado.terminado) copiarPuntajes(0);
         break;
       case 'guerra': case 'tesoro': case 'carrera': case 'loteria':
         if (estado.terminado) dar(estado.ganador, 50);
@@ -3791,6 +3914,9 @@
     BLANCO_RONDAS: BLANCO_RONDAS, crearBlanco: crearBlanco, lanzarBlanco: lanzarBlanco, plantarseBlanco: plantarseBlanco,
     CLIMAS_GRANJA: CLIMAS_GRANJA, GRANJA_RONDAS: GRANJA_RONDAS, crearGranja: crearGranja, jugarGranja: jugarGranja, patrimonioGranja: patrimonioGranja, climaDeGranja: climaDeGranja,
     rngDeSemilla: rngDeSemilla,
+    ARENA_VIDA: ARENA_VIDA, ARENA_DURACION_SEG: ARENA_DURACION_SEG, DANIO_ARENA: DANIO_ARENA, PISTA_META: PISTA_META,
+    crearArena: crearArena, crearPista: crearPista, danioArena: danioArena, ganadorArena: ganadorArena,
+    generarTraficoPista: generarTraficoPista, ganadorPista: ganadorPista, cerrarRT: cerrarRT,
     puntosDePartidaExtra: puntosDePartidaExtra, ganadorPorPuntajes: ganadorPorPuntajes
   };
 
