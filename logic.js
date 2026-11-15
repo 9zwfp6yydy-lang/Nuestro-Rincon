@@ -116,7 +116,67 @@
     { categoria: 'Arte', pregunta: '¿Qué instrumento tiene teclas blancas y negras?', opciones: ['La guitarra', 'El violín', 'El piano', 'La flauta'], correcta: 2 },
     { categoria: 'Cuerpo humano', pregunta: '¿Cuántos sentidos tiene el cuerpo humano?', opciones: ['4', '5', '6', '7'], correcta: 1 },
     { categoria: 'Cuerpo humano', pregunta: '¿Qué órgano bombea la sangre por todo el cuerpo?', opciones: ['El hígado', 'El pulmón', 'El corazón', 'El cerebro'], correcta: 2 },
-    { categoria: 'Cuerpo humano', pregunta: '¿Cuántos dientes tiene un adulto aproximadamente?', opciones: ['20', '28', '32', '40'], correcta: 2 }
+    { categoria: 'Cuerpo humano', pregunta: '¿Cuántos dientes tiene un adulto aproximadamente?', opciones: ['20', '28', '32', '40'], correcta: 2 },
+    { categoria: 'Naturaleza', pregunta: '¿Qué gas del aire usan las plantas para fabricar su comida?', opciones: ['Oxígeno', 'Dióxido de carbono', 'Helio', 'Humo'], correcta: 1 },
+    { categoria: 'Naturaleza', pregunta: '¿Cómo se llama el lugar natural donde vive un animal o una planta?', opciones: ['Su hábitat', 'Su jaula', 'Su nido', 'Su sombra'], correcta: 0 },
+    { categoria: 'Naturaleza', pregunta: '¿De qué están hechas las nubes principalmente?', opciones: ['De algodón', 'De humo', 'De gotitas de agua', 'De polvo'], correcta: 2 },
+    { categoria: 'Naturaleza', pregunta: '¿Qué árbol produce las bellotas?', opciones: ['El pino', 'El roble', 'El manzano', 'La palma'], correcta: 1 },
+    { categoria: 'Naturaleza', pregunta: '¿Cómo se llama la roca derretida que sale de un volcán?', opciones: ['Lava', 'Arena', 'Granizo', 'Ceniza fría'], correcta: 0 },
+    { categoria: 'Animales', pregunta: '¿Qué mamífero pone huevos?', opciones: ['El murciélago', 'El delfín', 'El ornitorrinco', 'El koala'], correcta: 2 },
+    { categoria: 'Animales', pregunta: '¿Cuántas jorobas tiene un dromedario?', opciones: ['Ninguna', 'Una', 'Dos', 'Tres'], correcta: 1 },
+    { categoria: 'Animales', pregunta: '¿Qué animal cambia de color para esconderse?', opciones: ['El camaleón', 'La rana toro', 'El flamenco', 'El oso polar'], correcta: 0 },
+    { categoria: 'Animales', pregunta: '¿Qué animal marino tiene ocho brazos?', opciones: ['La ballena', 'El pulpo', 'El caballito de mar', 'La tortuga marina'], correcta: 1 },
+    { categoria: 'Animales', pregunta: '¿Cómo se llama la bolsa donde la mamá canguro lleva a su cría?', opciones: ['Marsupio', 'Mochila', 'Nido', 'Madriguera'], correcta: 0 },
+    { categoria: 'Ciencia', pregunta: '¿Qué fuerza hace que las cosas caigan hacia el suelo?', opciones: ['El magnetismo', 'La gravedad', 'El viento', 'La electricidad'], correcta: 1 },
+    { categoria: 'Ciencia', pregunta: '¿En qué estado está el agua cuando se convierte en hielo?', opciones: ['Líquido', 'Gaseoso', 'Sólido', 'Plasma'], correcta: 2 },
+    { categoria: 'Ciencia', pregunta: '¿Qué instrumento ayuda a ver las estrellas y los planetas lejanos?', opciones: ['El microscopio', 'El telescopio', 'La brújula', 'El termómetro'], correcta: 1 },
+    { categoria: 'Ciencia', pregunta: '¿Qué metal es atraído con fuerza por un imán?', opciones: ['El oro', 'La plata', 'El hierro', 'El aluminio'], correcta: 2 },
+    { categoria: 'Ciencia', pregunta: '¿Qué necesita del aire una vela encendida para seguir ardiendo?', opciones: ['Nitrógeno', 'Oxígeno', 'Polvo', 'Vapor'], correcta: 1 },
+    { categoria: 'Espacio', pregunta: '¿Cómo se llama la galaxia donde está nuestro sistema solar?', opciones: ['Andrómeda', 'La Vía Láctea', 'El Triángulo', 'La Gran Nube'], correcta: 1 },
+    { categoria: 'Espacio', pregunta: '¿Quién fue la primera persona en viajar al espacio?', opciones: ['Neil Armstrong', 'Yuri Gagarin', 'Buzz Aldrin', 'Valentina Tereshkova'], correcta: 1 },
+    { categoria: 'Espacio', pregunta: '¿Qué planeta es famoso por sus anillos brillantes?', opciones: ['Marte', 'Venus', 'Saturno', 'Mercurio'], correcta: 2 },
+    { categoria: 'Espacio', pregunta: '¿Cuánto tarda la Tierra en dar una vuelta completa alrededor del Sol?', opciones: ['Un día', 'Un mes', 'Un año', 'Una semana'], correcta: 2 },
+    { categoria: 'Geografía', pregunta: '¿Cuál es la capital de Francia?', opciones: ['Londres', 'París', 'Roma', 'Berlín'], correcta: 1 },
+    { categoria: 'Geografía', pregunta: '¿Cuál es el desierto cálido más grande del mundo?', opciones: ['El Sahara', 'El Gobi', 'El de Atacama', 'El de Mojave'], correcta: 0 },
+    { categoria: 'Geografía', pregunta: '¿En qué continente está Brasil?', opciones: ['África', 'Asia', 'América', 'Europa'], correcta: 2 },
+    { categoria: 'Geografía', pregunta: '¿Cuál es la capital de México?', opciones: ['Guadalajara', 'Monterrey', 'Ciudad de México', 'Cancún'], correcta: 2 },
+    { categoria: 'Geografía', pregunta: '¿Qué país de Europa tiene forma de bota?', opciones: ['España', 'Grecia', 'Italia', 'Portugal'], correcta: 2 },
+    { categoria: 'Historia', pregunta: '¿Quién fue el primer presidente de los Estados Unidos?', opciones: ['Abraham Lincoln', 'George Washington', 'Thomas Jefferson', 'John Adams'], correcta: 1 },
+    { categoria: 'Historia', pregunta: '¿En qué país están las pirámides de Guiza?', opciones: ['México', 'Egipto', 'Perú', 'China'], correcta: 1 },
+    { categoria: 'Historia', pregunta: '¿Qué barco famoso se hundió tras chocar con un iceberg en 1912?', opciones: ['El Titanic', 'El Queen Mary', 'El Santa María', 'El Mayflower'], correcta: 0 },
+    { categoria: 'Deportes', pregunta: '¿Cuántos jugadores de un equipo de baloncesto juegan a la vez en la cancha?', opciones: ['4', '5', '6', '7'], correcta: 1 },
+    { categoria: 'Deportes', pregunta: '¿Con qué se golpea la pelota en el béisbol?', opciones: ['Con una raqueta', 'Con un palo de golf', 'Con un bate', 'Con la mano siempre'], correcta: 2 },
+    { categoria: 'Deportes', pregunta: '¿Qué deporte combina natación, ciclismo y carrera a pie?', opciones: ['El triatlón', 'El decatlón', 'El maratón', 'El pentatlón moderno'], correcta: 0 },
+    { categoria: 'Deportes', pregunta: '¿En qué deporte se celebra un «hoyo en uno»?', opciones: ['En el tenis', 'En el golf', 'En el bolos', 'En el billar'], correcta: 1 },
+    { categoria: 'Comida', pregunta: '¿Qué fruta amarilla y alargada les encanta a los monos en los cuentos?', opciones: ['La uva', 'El plátano', 'La cereza', 'El melón'], correcta: 1 },
+    { categoria: 'Comida', pregunta: '¿Qué alimento, hecho con leche, se derrite sobre la pizza?', opciones: ['El jamón', 'El queso', 'La mantequilla de maní', 'El huevo'], correcta: 1 },
+    { categoria: 'Comida', pregunta: '¿Qué verdura verde come Popeye para ponerse fuerte?', opciones: ['La lechuga', 'El brócoli', 'La espinaca', 'El pepino'], correcta: 2 },
+    { categoria: 'Comida', pregunta: '¿Qué fruta tropical tiene una corona de hojas y la cáscara con picos?', opciones: ['La sandía', 'La piña', 'El coco', 'El mango'], correcta: 1 },
+    { categoria: 'Música', pregunta: '¿Cuántas cuerdas tiene una guitarra normalmente?', opciones: ['4', '5', '6', '8'], correcta: 2 },
+    { categoria: 'Música', pregunta: '¿Quién dirige a los músicos de una orquesta?', opciones: ['El director', 'El cantante', 'El bailarín', 'El escenógrafo'], correcta: 0 },
+    { categoria: 'Música', pregunta: 'En la escala musical, ¿qué nota viene justo después de «mi»?', opciones: ['Sol', 'La', 'Fa', 'Si'], correcta: 2 },
+    { categoria: 'Música', pregunta: '¿Qué instrumento de viento-metal se toca con tres pistones y suena en las bandas?', opciones: ['La flauta', 'El clarinete', 'La trompeta', 'El oboe'], correcta: 2 },
+    { categoria: 'Películas', pregunta: 'En «El rey león», ¿cómo se llama el cachorro que será rey?', opciones: ['Nala', 'Simba', 'Timón', 'Zazú'], correcta: 1 },
+    { categoria: 'Películas', pregunta: '¿Cómo se llama el muñeco de nieve de «Frozen»?', opciones: ['Kristoff', 'Sven', 'Olaf', 'Hans'], correcta: 2 },
+    { categoria: 'Películas', pregunta: 'En «Toy Story», ¿cómo se llama el juguete vaquero?', opciones: ['Buzz', 'Woody', 'Rex', 'Slinky'], correcta: 1 },
+    { categoria: 'Películas', pregunta: '¿Qué pececito de color naranja buscan Marlin y Dory en su película?', opciones: ['Un pez globo', 'Un tiburón bebé', 'Nemo', 'Una tortuga'], correcta: 2 },
+    { categoria: 'Tecnología', pregunta: '¿Cómo se llama la red mundial que conecta computadoras de todo el planeta?', opciones: ['Internet', 'La impresora', 'El teclado', 'La antena'], correcta: 0 },
+    { categoria: 'Tecnología', pregunta: '¿Qué aparato vuela con hélices y se maneja a control remoto para grabar desde el aire?', opciones: ['Un dron', 'Un submarino', 'Una grúa', 'Un ventilador'], correcta: 0 },
+    { categoria: 'Tecnología', pregunta: '¿Qué parte de la computadora nos muestra las imágenes y los textos?', opciones: ['El ratón', 'La pantalla', 'El cable', 'La bocina'], correcta: 1 },
+    { categoria: 'Tecnología', pregunta: '¿Qué usamos para escribir letras en una computadora?', opciones: ['El monitor', 'La cámara', 'El teclado', 'El enchufe'], correcta: 2 },
+    { categoria: 'República Dominicana y el mundo', pregunta: '¿Cuál es la capital de la República Dominicana?', opciones: ['Santiago', 'Santo Domingo', 'La Vega', 'Puerto Plata'], correcta: 1 },
+    { categoria: 'República Dominicana y el mundo', pregunta: '¿Qué ritmo musical es típico de la República Dominicana?', opciones: ['El merengue', 'El tango', 'La samba', 'El flamenco'], correcta: 0 },
+    { categoria: 'República Dominicana y el mundo', pregunta: '¿Cuál es la montaña más alta de la República Dominicana?', opciones: ['La Pelona', 'El Pico Duarte', 'El Mogote', 'La Sierra de Bahoruco'], correcta: 1 },
+    { categoria: 'República Dominicana y el mundo', pregunta: '¿Qué isla comparte la República Dominicana con Haití?', opciones: ['Puerto Rico', 'Cuba', 'La Española', 'Jamaica'], correcta: 2 },
+    { categoria: 'República Dominicana y el mundo', pregunta: '¿Cuál es la capital de Canadá?', opciones: ['Toronto', 'Ottawa', 'Vancouver', 'Montreal'], correcta: 1 },
+    { categoria: 'Matemáticas', pregunta: '¿Cuánto es 7 + 8?', opciones: ['13', '14', '15', '16'], correcta: 2 },
+    { categoria: 'Matemáticas', pregunta: '¿Cuánto es 6 × 3?', opciones: ['12', '18', '21', '9'], correcta: 1 },
+    { categoria: 'Matemáticas', pregunta: '¿Cuánto es 100 − 40?', opciones: ['50', '70', '60', '40'], correcta: 2 },
+    { categoria: 'Matemáticas', pregunta: '¿Cuántos lados tiene un triángulo?', opciones: ['2', '3', '4', '5'], correcta: 1 },
+    { categoria: 'Cuerpo humano', pregunta: '¿Con qué parte del cuerpo escuchamos los sonidos?', opciones: ['Con los ojos', 'Con la nariz', 'Con los oídos', 'Con la lengua'], correcta: 2 },
+    { categoria: 'Cuerpo humano', pregunta: '¿Qué parte del cuerpo sostiene todo el cuerpo y protege órganos como el corazón?', opciones: ['La piel', 'Los huesos', 'El pelo', 'Las uñas'], correcta: 1 },
+    { categoria: 'Arte', pregunta: '¿Qué color se forma al mezclar pintura azul y amarilla?', opciones: ['Morado', 'Verde', 'Naranja', 'Rosa'], correcta: 1 },
+    { categoria: 'Arte', pregunta: '¿Cómo se llama una obra de arte con forma de persona o animal hecha en piedra o madera?', opciones: ['Una pintura', 'Una escultura', 'Una canción', 'Un poema'], correcta: 1 }
   ];
 
   var TIEMPO_PREGUNTA_SEG = 20;
@@ -130,14 +190,59 @@
     return BANCO_PREGUNTAS;
   }
 
-  function crearTrivia(jugadores, orden, banco) {
+  /* Garantía de NO repetición dentro de la ronda (pedido del dueño,
+     2026-11-14): el motor ya no confía ciegamente en el `orden` que recibe.
+     crearTrivia lo sanea (fuera duplicados y fuera índices que no existen
+     en el banco) y, si tras sanearlo quedan menos de 10 preguntas, lo
+     completa con preguntas del banco aún no usadas. Y al avanzar,
+     siguientePregunta salta cualquier índice ya servido en esta partida,
+     así ni una partida vieja o mal armada puede repetir pregunta. */
+  var PREGUNTAS_POR_RONDA_TRIVIA = 10;
+
+  function esIndiceTriviaValido(n, total) {
+    return typeof n === 'number' && isFinite(n) && Math.floor(n) === n && n >= 0 && n < total;
+  }
+
+  function sanearOrdenTrivia(orden, total, rng) {
+    var vistos = {}, limpio = [];
+    (orden || []).forEach(function (n) {
+      if (esIndiceTriviaValido(n, total) && !vistos[n]) { vistos[n] = true; limpio.push(n); }
+    });
+    if (limpio.length < PREGUNTAS_POR_RONDA_TRIVIA && limpio.length < total) {
+      var faltantes = [];
+      for (var i = 0; i < total; i++) if (!vistos[i]) faltantes.push(i);
+      var azar = typeof rng === 'function' ? rng : Math.random;
+      for (var j = faltantes.length - 1; j > 0; j--) {
+        var k = Math.floor(azar() * (j + 1));
+        var t = faltantes[j]; faltantes[j] = faltantes[k]; faltantes[k] = t;
+      }
+      while (limpio.length < PREGUNTAS_POR_RONDA_TRIVIA && faltantes.length) limpio.push(faltantes.shift());
+    }
+    return limpio;
+  }
+
+  // Primera posición de orden[] desde `desde` cuyo índice existe en el
+  // banco y NO aparece en las posiciones anteriores (ya servidas).
+  // Devuelve -1 si no queda ninguna pregunta servible.
+  function posicionTriviaServible(estado, desde) {
+    var orden = estado.orden || [];
+    var total = bancoDe(estado).length;
+    var usados = {};
+    for (var p = 0; p < desde && p < orden.length; p++) usados[orden[p]] = true;
+    for (var i = Math.max(0, desde); i < orden.length; i++) {
+      if (esIndiceTriviaValido(orden[i], total) && !usados[orden[i]]) return i;
+    }
+    return -1;
+  }
+
+  function crearTrivia(jugadores, orden, banco, rng) {
     var bancoElegido = banco === 'biblica' ? 'biblica' : 'general';
     var indices = bancoDe({ banco: bancoElegido }).map(function (_, i) { return i; });
     return {
       tipo: 'trivia',
       banco: bancoElegido,
       fase: 'esperando',          // esperando | pregunta | revelado | final
-      orden: orden ? orden.slice() : indices,
+      orden: orden ? sanearOrdenTrivia(orden, indices.length, rng) : indices,
       preguntaIdx: 0,             // posición dentro de orden[]
       jugadores: (jugadores || []).slice(),
       respuestas: {},             // userId -> { opcion, puntos, tiempoRestante }
@@ -147,8 +252,9 @@
   }
 
   function preguntaActual(estado) {
-    if (estado.preguntaIdx >= estado.orden.length) return null;
-    return bancoDe(estado)[estado.orden[estado.preguntaIdx]];
+    var pos = posicionTriviaServible(estado, estado.preguntaIdx || 0);
+    if (pos === -1) return null;
+    return bancoDe(estado)[estado.orden[pos]];
   }
 
   // Puntaje: 100 por acertar + hasta 50 de bono por rapidez.
@@ -177,7 +283,8 @@
     Object.keys(estado.respuestas).forEach(function (uid) {
       puntajes[uid] = (puntajes[uid] || 0) + estado.respuestas[uid].puntos;
     });
-    var esUltima = estado.preguntaIdx >= estado.orden.length - 1;
+    var posActual = posicionTriviaServible(estado, estado.preguntaIdx || 0);
+    var esUltima = posActual === -1 || posicionTriviaServible(estado, posActual + 1) === -1;
     return Object.assign({}, estado, {
       puntajes: puntajes,
       correctaRevelada: p.correcta,
@@ -187,9 +294,20 @@
 
   function siguientePregunta(estado) {
     if (estado.fase !== 'revelado') throw new Error('Todavía no se reveló la respuesta');
+    // Defensa extra: salta índices repetidos o inválidos que quedaran en
+    // el orden; si ya no queda ninguna pregunta sin servir, la ronda cierra.
+    var posActual = posicionTriviaServible(estado, estado.preguntaIdx || 0);
+    var siguiente = posActual === -1 ? -1 : posicionTriviaServible(estado, posActual + 1);
+    if (siguiente === -1) {
+      return Object.assign({}, estado, {
+        fase: 'final',
+        respuestas: {},
+        correctaRevelada: null
+      });
+    }
     return Object.assign({}, estado, {
       fase: 'pregunta',
-      preguntaIdx: estado.preguntaIdx + 1,
+      preguntaIdx: siguiente,
       respuestas: {},
       correctaRevelada: null
     });
