@@ -8,7 +8,7 @@
    ===================================================================== */
 'use strict';
 
-var CACHE = 'nuestro-rincon-v3-7-11';
+var CACHE = 'nuestro-rincon-v3-8-0';
 var ARCHIVOS_APP = [
   './',
   './index.html',
@@ -19,6 +19,7 @@ var ARCHIVOS_APP = [
   './logic.js',
   './games.js',
   './fun.js',
+  './tiempo-real.js',
   './app.js',
   './skins.js',
   './cine-familiar.js',
