@@ -31,13 +31,17 @@ create table if not exists public.mensajes (
   reacciones jsonb not null default '{}'::jsonb,
   audio_path text,
   audio_seg integer,
+  archivo_path text,
+  archivo_nombre text,
+  archivo_tipo text,
+  archivo_bytes integer,
   creado_en timestamptz not null default now()
 );
 
 -- Partidas de juegos: el estado completo vive en JSON (ver logic.js).
 create table if not exists public.partidas (
   id uuid primary key default gen_random_uuid(),
-  tipo text not null check (tipo in ('gato', 'trivia', 'memoria', 'conecta', 'serpientes', 'ahorcado', 'dibujo', 'parchis', 'domino', 'naval', 'sopa', 'basta', 'simon', 'calculo', 'ppt', 'adivina', 'numeros', 'orden', 'quef', 'versiculo', 'damas', 'loteria', 'guerra', 'tesoro', 'verdad', 'carrera', 'encadenada', 'puzzle', 'quien', 'vf', 'encuentra', 'ordenab', 'misterio')),
+  tipo text not null check (tipo in ('gato', 'trivia', 'memoria', 'conecta', 'serpientes', 'ahorcado', 'dibujo', 'parchis', 'domino', 'naval', 'sopa', 'basta', 'simon', 'calculo', 'ppt', 'adivina', 'numeros', 'orden', 'quef', 'versiculo', 'damas', 'loteria', 'guerra', 'tesoro', 'verdad', 'carrera', 'encadenada', 'puzzle', 'quien', 'vf', 'encuentra', 'ordenab', 'misterio', 'obby', 'tycoon', 'mascotas', 'torre', 'impostor', 'jonas', 'arca', 'goliat', 'cohete', 'blanco', 'granja', 'arena', 'pista')),
   estado jsonb not null default '{}'::jsonb,
   creada_por uuid references auth.users (id) on delete set null,
   activa boolean not null default true,
@@ -143,6 +147,30 @@ create policy "audios familia subir" on storage.objects
 create policy "audios familia borrar" on storage.objects
   for delete to authenticated
   using (bucket_id = 'audios' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- =====================================================================
+-- Storage: bucket privado `archivos` para los archivos del chat (v3.5).
+-- Mismo patrón que `audios`: privado, URLs firmadas, ruta
+-- <user_id>/<timestamp>-<nombre>; leer vale para la familia
+-- autenticada y cada quien sube/borra solo en su carpeta.
+-- =====================================================================
+insert into storage.buckets (id, name, public)
+values ('archivos', 'archivos', false)
+on conflict (id) do nothing;
+
+drop policy if exists "archivos familia leer" on storage.objects;
+drop policy if exists "archivos familia subir" on storage.objects;
+drop policy if exists "archivos familia borrar" on storage.objects;
+
+create policy "archivos familia leer" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'archivos');
+create policy "archivos familia subir" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'archivos' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "archivos familia borrar" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'archivos' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- =====================================================================
 -- Realtime: cambios en vivo para chat, partidas, cola y reproducción.
