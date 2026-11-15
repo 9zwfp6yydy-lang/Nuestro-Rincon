@@ -1011,7 +1011,9 @@
     goliat: { icono: '🪨', nombre: 'David y Goliat', tope: 3 },
     cohete: { icono: '🚀', nombre: 'Carrera Espacial', tope: 3 },
     blanco: { icono: '🎯', nombre: 'Tiro al Blanco', tope: 3 },
-    granja: { icono: '🌻', nombre: 'Granja de Monedas', tope: 3 }
+    granja: { icono: '🌻', nombre: 'Granja de Monedas', tope: 3 },
+    arena: { icono: '🥊', nombre: 'Arena de Pelea', tope: 3 },
+    pista: { icono: '🏎️', nombre: 'Gran Premio', tope: 3 }
   };
 
   /* ----- v3.4: los juegos POR CATEGORÍAS, en barras que se deslizan -----
@@ -1046,7 +1048,8 @@
     { id: 'memoria', icono: '🧠', nombre: 'Memoria y reflejos', juegos: ['memoria', 'memoria-tema', 'simon', 'quef', 'orden', 'numeros'] },
     { id: 'risas', icono: '😂', nombre: 'Para reírse', juegos: ['dibujo', 'verdad', 'puzzle', 'ppt', 'impostor', 'blanco'] },
     { id: 'roblox', icono: '🕹️', nombre: 'Mundo Roblox', juegos: ['obby', 'tycoon', 'mascotas', 'torre', 'cohete', 'granja'] },
-    { id: 'biblicos', icono: '📖', nombre: 'Bíblicos', juegos: ['trivia-biblica', 'memoria-biblica', 'versiculo', 'quien', 'vf', 'encuentra', 'ordenab', 'misterio', 'jonas', 'arca', 'goliat'] }
+    { id: 'biblicos', icono: '📖', nombre: 'Bíblicos', juegos: ['trivia-biblica', 'memoria-biblica', 'versiculo', 'quien', 'vf', 'encuentra', 'ordenab', 'misterio', 'jonas', 'arca', 'goliat'] },
+    { id: 'accion', icono: '⚡', nombre: 'Acción en vivo', juegos: ['arena', 'pista'] }
   ];
   function infoCrear(clave) { return CATALOGO[clave] || EXTRA_CREAR[clave] || { icono: '🎮', nombre: clave }; }
 
@@ -1093,6 +1096,7 @@
   }
   function cerrarJuegoVista() {
     partidaActualId = null;
+    if (window.JuegosRT) JuegosRT.detener(); // v3.8: sin canal ni bucle colgados al salir de un juego en vivo
     if (typeof soltarSimon === 'function') soltarSimon(); // v3.4.3: ninguna reproducción queda colgada al salir
     var zona = $('#zona-juego');
     if (zona) zona.innerHTML = '';
@@ -1213,6 +1217,8 @@
       case 'cohete': estado = G.crearCohete([yo.id]); break;
       case 'blanco': estado = G.crearBlanco([yo.id]); break;
       case 'granja': estado = G.crearGranja([yo.id]); break;
+      case 'arena': estado = G.crearArena([yo.id]); break;
+      case 'pista': estado = G.crearPista([yo.id]); break;
       default: return;
     }
     // v3.3: la capa se abre AL TOQUE con la partida provisional; el insert
@@ -1384,6 +1390,7 @@
       case 'cohete': renderCohete(p); break;
       case 'blanco': renderBlanco(p); break;
       case 'granja': renderGranja(p); break;
+      case 'arena': case 'pista': renderTiempoReal(p); break;
       default: $('#zona-juego').innerHTML = '<p>Este juego todavía no tiene pantalla. 🙈</p>';
     }
     } catch (eRender) {
@@ -1402,6 +1409,42 @@
     // dispara en su propio render: el sonido acompaña a esa misma
     // pantalla, no la sustituye.
     sonarFinDePartida(p);
+  }
+
+  /* ----- v3.8: juegos EN TIEMPO REAL (Arena / Gran Premio) -----
+     El tablero no se pinta por turnos: se delega en JuegosRT
+     (tiempo-real.js), que monta el canvas, la sala de espera, el canal
+     broadcast por partida y el bucle de animación. Este render se
+     repite con cada refresco de la lista de partidas: JuegosRT.iniciar
+     es idempotente por partida (si ya corre esa, solo adopta la fila
+     nueva: uniones, inicio coordinado o el final ya guardado). */
+  function renderTiempoReal(p) {
+    var zona = $('#zona-juego');
+    if (!window.JuegosRT) {
+      zona.innerHTML = '<p>Este juego en vivo no cargó 🙈 Cierra con la ✖ y vuelve a intentarlo.</p>';
+      return;
+    }
+    JuegosRT.iniciar(p.tipo, p, {
+      zona: zona,
+      supa: supa,
+      yoId: yo.id,
+      nombreDe: nombreDe,
+      emojiDe: emojiDe,
+      // El creador da la salida: se anota el inicio (+3 s) y la semilla
+      // en la fila para que todos cuenten atrás a la vez.
+      iniciarPartida: function (partida, inicioEn, semilla) {
+        var nuevo = JSON.parse(JSON.stringify(partida.estado));
+        nuevo.inicioEn = inicioEn;
+        nuevo.semilla = semilla;
+        guardarEstado(partida, nuevo);
+      },
+      // El resultado final lo guarda UNA vez el anfitrión, por el mismo
+      // camino de puntos de los demás juegos (guardarConPuntos).
+      guardarFinal: function (partida, estadoFinal) {
+        var copiaPartida = Object.assign({}, partida, { estado: estadoFinal });
+        guardarConPuntos(copiaPartida, partida.estado, estadoFinal);
+      }
+    });
   }
 
   /* ----- v3.4.3: sonido de fin de partida (camino compartido) ----- */
