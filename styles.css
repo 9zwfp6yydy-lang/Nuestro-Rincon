@@ -810,3 +810,26 @@ select{appearance:none; -webkit-appearance:none; padding-right:38px;
 .mensaje:not(.mio)[data-autor="0"]{background:#e8f9ee}
 .mensaje:not(.mio)[data-autor="1"]{background:#fff3e0}
 .mensaje:not(.mio)[data-autor="2"]{background:#f3e8ff}
+
+/* ---------- v3.8 · Juegos en tiempo real (Arena / Gran Premio) ----------
+   Canvas de aspecto fijo escalado por CSS: nunca desborda el ancho
+   (medido a 390 px) y en iPad (820 px) se ve grande, con controles
+   táctiles de 64 px pensados para dedos de niño y de adulto. */
+.rt-caja{max-width:940px; margin:0 auto}
+.rt-canvas{display:block; width:100%; height:auto; max-width:100%; border-radius:16px;
+  border:3px solid var(--borde); background:#8ed8ff; touch-action:none}
+.rt-hud{display:flex; flex-wrap:wrap; gap:8px; margin:10px 0}
+.rt-barra{display:inline-block; width:74px; height:10px; border-radius:6px;
+  background:rgba(0,0,0,.15); overflow:hidden; vertical-align:middle}
+.rt-barra span{display:block; height:100%}
+.rt-final{font-size:1.12rem; font-weight:700; margin:8px 0 0}
+.rt-controles{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; justify-content:center}
+.rt-btn{flex:1 1 30%; min-width:96px; min-height:64px; font-size:1.7rem; line-height:1.05;
+  border-radius:16px; border:2px solid var(--borde); background:#fff; color:var(--tinta);
+  box-shadow:0 4px 0 rgba(190,130,70,.20); touch-action:none; user-select:none; -webkit-user-select:none}
+.rt-btn small{display:block; font-size:.78rem; font-weight:700}
+.rt-btn:active{transform:translateY(2px) scale(.97)}
+.rt-golpe{background:linear-gradient(135deg,var(--naranja),var(--coral)); color:#fff; border-color:transparent}
+@media (min-width:820px){
+  .rt-btn{min-height:76px; font-size:2rem}
+}
