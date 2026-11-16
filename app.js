@@ -989,6 +989,7 @@
     orden: { icono: '🔢', nombre: 'Recuerda el Orden', tope: 3 },
     numeros: { icono: '🧮', nombre: 'Memoria de Números', tope: 3 },
     damas: { icono: '🔴', nombre: 'Damas', tope: 2 },
+    ajedrez: { icono: '♟️', nombre: 'Ajedrez', tope: 2 },
     loteria: { icono: '🎴', nombre: 'Lotería', tope: 3 },
     guerra: { icono: '⚔️', nombre: 'Guerra de Cartas', tope: 3 },
     tesoro: { icono: '🗺️', nombre: 'El Tesoro Escondido', tope: 3 },
@@ -1042,7 +1043,7 @@
   };
   var BASE_CREAR = { 'memoria-tema': 'memoria', 'trivia-biblica': 'trivia', 'memoria-biblica': 'memoria' };
   var CATEGORIAS_JUEGOS = [
-    { id: 'mesa', icono: '🎲', nombre: 'Mesa clásica', juegos: ['gato', 'conecta', 'serpientes', 'domino', 'naval', 'damas', 'tesoro'] },
+    { id: 'mesa', icono: '🎲', nombre: 'Mesa clásica', juegos: ['gato', 'conecta', 'serpientes', 'domino', 'naval', 'damas', 'ajedrez', 'tesoro'] },
     { id: 'cartas', icono: '🃏', nombre: 'Cartas y dados', juegos: ['parchis', 'loteria', 'guerra', 'carrera'] },
     { id: 'mente', icono: '🔤', nombre: 'Mente y palabras', juegos: ['trivia', 'ahorcado', 'sopa', 'basta', 'calculo', 'adivina', 'encadenada'] },
     { id: 'memoria', icono: '🧠', nombre: 'Memoria y reflejos', juegos: ['memoria', 'memoria-tema', 'simon', 'quef', 'orden', 'numeros'] },
@@ -1194,6 +1195,7 @@
       case 'orden': estado = G.crearOrden([yo.id]); estado.vistaInicio = Date.now(); break;
       case 'numeros': estado = G.crearNumeros([yo.id]); estado.vistaInicio = Date.now(); break;
       case 'damas': estado = G.crearDamas([yo.id]); break;
+      case 'ajedrez': estado = G.crearAjedrez([yo.id]); break;
       case 'loteria': estado = G.crearLoteria([yo.id]); break;
       case 'guerra': estado = G.crearGuerra([yo.id]); break;
       case 'tesoro': estado = G.crearTesoro([yo.id]); break;
@@ -1369,6 +1371,7 @@
       case 'orden': renderOrden(p); break;
       case 'numeros': renderNumeros(p); break;
       case 'damas': renderDamas(p); break;
+      case 'ajedrez': renderAjedrez(p); break;
       case 'loteria': renderLoteria(p); break;
       case 'guerra': renderGuerra(p); break;
       case 'tesoro': renderTesoro(p); break;
@@ -3110,6 +3113,105 @@
       });
     });
     celebrarGanador(p, e, '¡Damas de campeón! 🔴🏆', 'Estrategia pura, paso a paso');
+  }
+
+  /* ----- Ajedrez ----- */
+  var ajedrezSeleccion = -1;
+  var ajedrezPromoPendiente = null; // { de, hasta } esperando elegir pieza de coronación
+  var GLIFOS_AJEDREZ = { P: '♟', C: '♞', A: '♝', T: '♜', D: '♛', R: '♚' };
+  function renderAjedrez(p) {
+    var e = p.estado;
+    var zona = $('#zona-juego');
+    var miIdx = e.jugadores.indexOf(yo.id);
+    avisoTurno(p, !e.terminado && miIdx !== -1 && e.turno === miIdx);
+    var esMiTurno = !e.terminado && miIdx !== -1 && e.turno === miIdx;
+    var legales = esMiTurno ? G.movimientosLegalesAjedrez(e, miIdx) : [];
+    var destinos = [];
+    if (ajedrezSeleccion >= 0) {
+      legales.forEach(function (m) { if (m.de === ajedrezSeleccion && destinos.indexOf(m.hasta) === -1) destinos.push(m.hasta); });
+    }
+    var reyJaque = -1;
+    if (e.jaque && !e.terminado) {
+      var reyBuscado = e.turno === 0 ? 'R' : 'r';
+      reyJaque = e.tablero.indexOf(reyBuscado);
+    }
+    var turnoTxt;
+    if (e.terminado) {
+      turnoTxt = e.ganador ? '🏆 ¡Jaque mate! Ganó ' + escapar(nombreDe(e.ganador)) : '🤝 ¡Empate!';
+    } else if (miIdx === -1) {
+      turnoTxt = (e.jaque ? '¡Jaque! ' : '') + 'Turno de ' + escapar(nombreDe(e.jugadores[e.turno])) + '…';
+    } else {
+      turnoTxt = (e.jaque ? '¡Jaque! ' : '') + (e.turno === miIdx ? '¡Tu turno! Toca tu pieza y luego la casilla ✨' : 'Turno de ' + escapar(nombreDe(e.jugadores[e.turno])) + '…');
+    }
+    function capturadasDe(idx) {
+      var caps = (e.capturadas && e.capturadas[idx]) || [];
+      if (!caps.length) return '';
+      return ' · comió: ' + caps.map(function (pz) {
+        return '<span class="pieza-ajedrez ' + (pz === pz.toUpperCase() ? 'blanca' : 'negra') + ' en-linea">' + GLIFOS_AJEDREZ[pz.toUpperCase()] + '</span>';
+      }).join(' ');
+    }
+    var html = tituloJuego(p, e, '♟️ Ajedrez') +
+      '<p>' + e.jugadores.map(function (id, i) { return (i === 0 ? '⚪ ' : '⚫ ') + escapar(nombreDe(id)) + capturadasDe(i); }).join('<br>') +
+      '</p><p><strong>' + turnoTxt + '</strong></p><div class="tablero-ajedrez">';
+    // Las negras ven el tablero girado: sus piezas abajo.
+    var filas = [0, 1, 2, 3, 4, 5, 6, 7], cols = [0, 1, 2, 3, 4, 5, 6, 7];
+    if (miIdx === 1) { filas = filas.slice().reverse(); cols = cols.slice().reverse(); }
+    filas.forEach(function (f) {
+      cols.forEach(function (c) {
+        var i = f * 8 + c;
+        var celda = e.tablero[i];
+        var clase = 'casilla-ajedrez ' + ((f + c) % 2 === 1 ? 'oscura' : 'clara')
+          + (i === ajedrezSeleccion ? ' sel' : '')
+          + (e.ultimaJugada && (i === e.ultimaJugada.de || i === e.ultimaJugada.hasta) ? ' ultima' : '')
+          + (i === reyJaque ? ' en-jaque' : '');
+        var extra = destinos.indexOf(i) !== -1 ? ' style="outline:3px solid #51cf66; outline-offset:-3px"' : '';
+        var piezaHtml = celda ? '<span class="pieza-ajedrez ' + (celda === celda.toUpperCase() ? 'blanca' : 'negra') + '">' + GLIFOS_AJEDREZ[celda.toUpperCase()] + '</span>' : '';
+        html += '<button class="' + clase + '"' + extra + ' data-ajedrez="' + i + '">' + piezaHtml + '</button>';
+      });
+    });
+    html += '</div>';
+    if (ajedrezPromoPendiente) {
+      html += '<p><strong>👑 ¿Con qué pieza coronas?</strong></p><p>'
+        + ['D', 'T', 'C', 'A'].map(function (pr) {
+          return '<button class="boton" data-promo="' + pr + '"><span class="pieza-ajedrez ' + (miIdx === 0 ? 'blanca' : 'negra') + '">' + GLIFOS_AJEDREZ[pr] + '</span> ' + ({ D: 'Dama', T: 'Torre', C: 'Caballo', A: 'Alfil' })[pr] + '</button>';
+        }).join(' ')
+        + ' <button class="boton secundario" data-promo="">Cancelar</button></p>';
+    }
+    html += '<p class="subtitulo">Reglas completas: enroque, captura al paso y coronación. Las blancas (⚪) mueven primero; si juegas con negras, el tablero se gira para ti.</p>';
+    zona.innerHTML = html;
+    function aplicar(de, hasta, promocion) {
+      try {
+        var nuevo = G.jugadaAjedrez(e, miIdx, de, hasta, promocion);
+        ajedrezSeleccion = -1; ajedrezPromoPendiente = null;
+        Fun.sonido(nuevo.jaque || nuevo.terminado ? 'turno' : 'pop');
+        guardarConPuntos(p, e, nuevo);
+      } catch (err) { Fun.sonido('error'); }
+    }
+    $$('#zona-juego [data-promo]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (!ajedrezPromoPendiente) return;
+        var pr = b.dataset.promo;
+        var pend = ajedrezPromoPendiente;
+        ajedrezPromoPendiente = null;
+        if (!pr) { renderAjedrez(p); return; }
+        aplicar(pend.de, pend.hasta, pr);
+      });
+    });
+    $$('#zona-juego [data-ajedrez]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (!esMiTurno || ajedrezPromoPendiente) return;
+        var i = Number(b.dataset.ajedrez);
+        var pieza = e.tablero[i];
+        var esMia = pieza && (miIdx === 0 ? pieza === pieza.toUpperCase() : pieza === pieza.toLowerCase());
+        if (esMia) { ajedrezSeleccion = i; renderAjedrez(p); return; }
+        if (ajedrezSeleccion >= 0 && destinos.indexOf(i) !== -1) {
+          var esPromo = legales.some(function (m) { return m.de === ajedrezSeleccion && m.hasta === i && m.promocion; });
+          if (esPromo) { ajedrezPromoPendiente = { de: ajedrezSeleccion, hasta: i }; renderAjedrez(p); return; }
+          aplicar(ajedrezSeleccion, i);
+        }
+      });
+    });
+    celebrarGanador(p, e, '¡Jaque mate de campeón! ♟️🏆', 'Estrategia pura, como en casa');
   }
 
   /* ----- Lotería ----- */
