@@ -41,7 +41,7 @@ create table if not exists public.mensajes (
 -- Partidas de juegos: el estado completo vive en JSON (ver logic.js).
 create table if not exists public.partidas (
   id uuid primary key default gen_random_uuid(),
-  tipo text not null check (tipo in ('gato', 'trivia', 'memoria', 'conecta', 'serpientes', 'ahorcado', 'dibujo', 'parchis', 'domino', 'naval', 'sopa', 'basta', 'simon', 'calculo', 'ppt', 'adivina', 'numeros', 'orden', 'quef', 'versiculo', 'damas', 'loteria', 'guerra', 'tesoro', 'verdad', 'carrera', 'encadenada', 'puzzle', 'quien', 'vf', 'encuentra', 'ordenab', 'misterio', 'obby', 'tycoon', 'mascotas', 'torre', 'impostor', 'jonas', 'arca', 'goliat', 'cohete', 'blanco', 'granja', 'arena', 'pista')),
+  tipo text not null check (tipo in ('gato', 'trivia', 'memoria', 'conecta', 'serpientes', 'ahorcado', 'dibujo', 'parchis', 'domino', 'naval', 'sopa', 'basta', 'simon', 'calculo', 'ppt', 'adivina', 'numeros', 'orden', 'quef', 'versiculo', 'damas', 'loteria', 'guerra', 'tesoro', 'verdad', 'carrera', 'encadenada', 'puzzle', 'quien', 'vf', 'encuentra', 'ordenab', 'misterio', 'obby', 'tycoon', 'mascotas', 'torre', 'impostor', 'jonas', 'arca', 'goliat', 'cohete', 'blanco', 'granja', 'arena', 'pista', 'ajedrez')),
   estado jsonb not null default '{}'::jsonb,
   creada_por uuid references auth.users (id) on delete set null,
   activa boolean not null default true,
