@@ -1791,6 +1791,7 @@
       case 'orden': return crearOrden(jugadores, rng);
       case 'numeros': return crearNumeros(jugadores, rng);
       case 'damas': return crearDamas(jugadores);
+      case 'ajedrez': return crearAjedrez(jugadores);
       case 'loteria': return crearLoteria(jugadores, rng);
       case 'guerra': return crearGuerra(jugadores, rng);
       case 'tesoro': return crearTesoro(jugadores, rng);
@@ -1976,7 +1977,7 @@
       if (extraGanador) dar(ganadorPorPuntajes(estado), extraGanador);
     }
     switch (estado.tipo) {
-      case 'conecta': case 'parchis': case 'naval': case 'ppt': case 'damas':
+      case 'conecta': case 'parchis': case 'naval': case 'ppt': case 'damas': case 'ajedrez':
         if (estado.terminado) dar(estado.ganador, 50);
         break;
       case 'arena': case 'pista': // v3.8 tiempo real: su puntaje ya trae los 10 del ganador (cerrarRT)
@@ -2143,6 +2144,269 @@
     if (!piezasRival || !tieneMovimientosDamas(nuevo, rival)) {
       nuevo.terminado = true;
       nuevo.ganador = estado.jugadores[idxJug];
+    }
+    return nuevo;
+  }
+
+  /* ----- Ajedrez (reglas completas: enroque, captura al paso, coronación,
+     jaque, mate, ahogado, material insuficiente y regla de las 50 jugadas) -----
+     Tablero: fila 0 = fila 8 (negras, jugador 1, arriba) y fila 7 = fila 1
+     (blancas, jugador 0, abajo). Piezas con letra española: P peón, C caballo,
+     A alfil, T torre, D dama, R rey; mayúsculas = blancas, minúsculas = negras. */
+  var SALTOS_CABALLO = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
+  var DIRS_REY = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+  var DIRS_ALFIL = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+  var DIRS_TORRE = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+  function crearAjedrez(jugadores) {
+    var tablero = [];
+    for (var i = 0; i < 64; i++) tablero.push('');
+    var traseras = ['t', 'c', 'a', 'd', 'r', 'a', 'c', 't'];
+    for (var c = 0; c < 8; c++) {
+      tablero[c] = traseras[c];                    // fila 8: negras
+      tablero[8 + c] = 'p';                        // fila 7: peones negros
+      tablero[48 + c] = 'P';                       // fila 2: peones blancos
+      tablero[56 + c] = traseras[c].toUpperCase(); // fila 1: blancas
+    }
+    return {
+      tipo: 'ajedrez', jugadores: (jugadores || []).slice(0, 2), tablero: tablero,
+      turno: 0, ganador: null, terminado: false, empate: false,
+      enroque: { BC: true, BL: true, NC: true, NL: true }, // B/N color · C corto (rey) · L largo (dama)
+      paso: null,   // casilla donde un peón puede ser capturado al paso
+      medios: 0,    // medios movimientos sin peón ni captura (regla de las 50 jugadas)
+      jaque: false, ultimaJugada: null,
+      capturadas: [[], []], // piezas que cada jugador ha comido, por índice
+      historial: []         // jugadas en texto simple: «e2e4», «e7e8D»…
+    };
+  }
+  function colorPiezaAjedrez(pieza) {
+    if (!pieza) return -1;
+    return pieza === pieza.toUpperCase() ? 0 : 1;
+  }
+  function casillaAtacadaAjedrez(tablero, pos, atacante) {
+    var f = Math.floor(pos / 8), c = pos % 8;
+    var dirPeon = atacante === 0 ? 1 : -1; // el peón atacante está una fila «detrás» de su avance
+    for (var dc = -1; dc <= 1; dc += 2) {
+      var fp = f + dirPeon, cp = c + dc;
+      if (fp >= 0 && fp < 8 && cp >= 0 && cp < 8 && tablero[fp * 8 + cp] === (atacante === 0 ? 'P' : 'p')) return true;
+    }
+    var i, f1, c1, p1, pieza;
+    for (i = 0; i < SALTOS_CABALLO.length; i++) {
+      f1 = f + SALTOS_CABALLO[i][0]; c1 = c + SALTOS_CABALLO[i][1];
+      if (f1 < 0 || f1 > 7 || c1 < 0 || c1 > 7) continue;
+      if (tablero[f1 * 8 + c1] === (atacante === 0 ? 'C' : 'c')) return true;
+    }
+    for (i = 0; i < DIRS_REY.length; i++) {
+      f1 = f + DIRS_REY[i][0]; c1 = c + DIRS_REY[i][1];
+      if (f1 < 0 || f1 > 7 || c1 < 0 || c1 > 7) continue;
+      if (tablero[f1 * 8 + c1] === (atacante === 0 ? 'R' : 'r')) return true;
+    }
+    var grupos = [
+      { dirs: DIRS_ALFIL, piezas: atacante === 0 ? ['A', 'D'] : ['a', 'd'] },
+      { dirs: DIRS_TORRE, piezas: atacante === 0 ? ['T', 'D'] : ['t', 'd'] }
+    ];
+    for (var g = 0; g < grupos.length; g++) {
+      for (i = 0; i < grupos[g].dirs.length; i++) {
+        f1 = f; c1 = c;
+        while (true) {
+          f1 += grupos[g].dirs[i][0]; c1 += grupos[g].dirs[i][1];
+          if (f1 < 0 || f1 > 7 || c1 < 0 || c1 > 7) break;
+          pieza = tablero[f1 * 8 + c1];
+          if (!pieza) continue;
+          if (grupos[g].piezas.indexOf(pieza) !== -1) return true;
+          break;
+        }
+      }
+    }
+    return false;
+  }
+  function enJaqueAjedrez(tablero, idxJug) {
+    var rey = idxJug === 0 ? 'R' : 'r';
+    for (var pos = 0; pos < 64; pos++) {
+      if (tablero[pos] === rey) return casillaAtacadaAjedrez(tablero, pos, 1 - idxJug);
+    }
+    return false;
+  }
+  // Movimientos pseudo-legales de la pieza en «pos» (sin mirar si dejan al rey en jaque).
+  function movimientosPiezaAjedrez(estado, pos) {
+    var tablero = estado.tablero;
+    var pieza = tablero[pos];
+    if (!pieza) return [];
+    var idx = colorPiezaAjedrez(pieza);
+    var f = Math.floor(pos / 8), c = pos % 8;
+    var res = [];
+    function libreOEnemiga(p) {
+      var v = tablero[p];
+      return !v || colorPiezaAjedrez(v) !== idx;
+    }
+    function deslizar(dirs) {
+      dirs.forEach(function (d) {
+        var f1 = f, c1 = c;
+        while (true) {
+          f1 += d[0]; c1 += d[1];
+          if (f1 < 0 || f1 > 7 || c1 < 0 || c1 > 7) break;
+          var p = f1 * 8 + c1, v = tablero[p];
+          if (!v) { res.push({ de: pos, hasta: p }); continue; }
+          if (colorPiezaAjedrez(v) !== idx) res.push({ de: pos, hasta: p });
+          break;
+        }
+      });
+    }
+    function saltar(deltas) {
+      deltas.forEach(function (d) {
+        var f1 = f + d[0], c1 = c + d[1];
+        if (f1 < 0 || f1 > 7 || c1 < 0 || c1 > 7) return;
+        var p = f1 * 8 + c1;
+        if (libreOEnemiga(p)) res.push({ de: pos, hasta: p });
+      });
+    }
+    var tipo = pieza.toUpperCase();
+    if (tipo === 'P') {
+      var dir = idx === 0 ? -1 : 1;
+      var filaIni = idx === 0 ? 6 : 1;
+      var filaCorona = idx === 0 ? 0 : 7;
+      function empujaPeon(p) {
+        if (Math.floor(p / 8) === filaCorona) {
+          ['D', 'T', 'C', 'A'].forEach(function (pr) { res.push({ de: pos, hasta: p, promocion: pr }); });
+        } else res.push({ de: pos, hasta: p });
+      }
+      var f1 = f + dir;
+      if (f1 >= 0 && f1 < 8) {
+        var p1 = f1 * 8 + c;
+        if (!tablero[p1]) {
+          empujaPeon(p1);
+          var f2 = f + 2 * dir;
+          if (f === filaIni && !tablero[f2 * 8 + c]) res.push({ de: pos, hasta: f2 * 8 + c, doble: true });
+        }
+        for (var dc = -1; dc <= 1; dc += 2) {
+          var c1 = c + dc;
+          if (c1 < 0 || c1 > 7) continue;
+          var pc = f1 * 8 + c1, v = tablero[pc];
+          if (v && colorPiezaAjedrez(v) !== idx) empujaPeon(pc);
+          else if (!v && estado.paso === pc) res.push({ de: pos, hasta: pc, alPaso: true });
+        }
+      }
+    } else if (tipo === 'C') saltar(SALTOS_CABALLO);
+    else if (tipo === 'A') deslizar(DIRS_ALFIL);
+    else if (tipo === 'T') deslizar(DIRS_TORRE);
+    else if (tipo === 'D') { deslizar(DIRS_ALFIL); deslizar(DIRS_TORRE); }
+    else if (tipo === 'R') saltar(DIRS_REY);
+    return res;
+  }
+  // Aplica un movimiento pseudo-legal a una copia del tablero (sin validar jaque).
+  function aplicarEnTableroAjedrez(estado, mov) {
+    var tablero = estado.tablero.slice();
+    var pieza = tablero[mov.de];
+    var capturada = tablero[mov.hasta] || null;
+    tablero[mov.de] = '';
+    if (mov.alPaso) {
+      var posCaptura = Math.floor(mov.de / 8) * 8 + (mov.hasta % 8);
+      capturada = tablero[posCaptura];
+      tablero[posCaptura] = '';
+    }
+    if (mov.enroque) {
+      var f = Math.floor(mov.de / 8);
+      if (mov.hasta % 8 === 6) { tablero[f * 8 + 5] = tablero[f * 8 + 7]; tablero[f * 8 + 7] = ''; }
+      else { tablero[f * 8 + 3] = tablero[f * 8 + 0]; tablero[f * 8 + 0] = ''; }
+    }
+    var puesta = pieza;
+    if (mov.promocion) puesta = colorPiezaAjedrez(pieza) === 0 ? mov.promocion : mov.promocion.toLowerCase();
+    tablero[mov.hasta] = puesta;
+    return { tablero: tablero, capturada: capturada };
+  }
+  function movimientosLegalesAjedrez(estado, idxJug) {
+    var res = [];
+    for (var pos = 0; pos < 64; pos++) {
+      if (colorPiezaAjedrez(estado.tablero[pos]) !== idxJug) continue;
+      var movs = movimientosPiezaAjedrez(estado, pos);
+      for (var i = 0; i < movs.length; i++) {
+        var aplicado = aplicarEnTableroAjedrez(estado, movs[i]);
+        if (!enJaqueAjedrez(aplicado.tablero, idxJug)) res.push(movs[i]);
+      }
+    }
+    // Enroque: derechos, casillas vacías y que el rey no cruce el jaque.
+    var f = idxJug === 0 ? 7 : 0;
+    var reyPos = f * 8 + 4;
+    if (estado.tablero[reyPos] === (idxJug === 0 ? 'R' : 'r') && !enJaqueAjedrez(estado.tablero, idxJug)) {
+      var torre = idxJug === 0 ? 'T' : 't';
+      var rival = 1 - idxJug;
+      var der = estado.enroque[idxJug === 0 ? 'BC' : 'NC'];
+      var izq = estado.enroque[idxJug === 0 ? 'BL' : 'NL'];
+      if (der && estado.tablero[f * 8 + 7] === torre
+        && !estado.tablero[f * 8 + 5] && !estado.tablero[f * 8 + 6]
+        && !casillaAtacadaAjedrez(estado.tablero, f * 8 + 5, rival)
+        && !casillaAtacadaAjedrez(estado.tablero, f * 8 + 6, rival)) {
+        res.push({ de: reyPos, hasta: f * 8 + 6, enroque: 'corto' });
+      }
+      if (izq && estado.tablero[f * 8 + 0] === torre
+        && !estado.tablero[f * 8 + 1] && !estado.tablero[f * 8 + 2] && !estado.tablero[f * 8 + 3]
+        && !casillaAtacadaAjedrez(estado.tablero, f * 8 + 3, rival)
+        && !casillaAtacadaAjedrez(estado.tablero, f * 8 + 2, rival)) {
+        res.push({ de: reyPos, hasta: f * 8 + 2, enroque: 'largo' });
+      }
+    }
+    return res;
+  }
+  function materialInsuficienteAjedrez(tablero) {
+    var menores = [];
+    for (var pos = 0; pos < 64; pos++) {
+      var p = tablero[pos];
+      if (!p || p === 'R' || p === 'r') continue;
+      var t = p.toUpperCase();
+      if (t === 'P' || t === 'T' || t === 'D') return false;
+      menores.push({ tipo: t, color: colorPiezaAjedrez(p), paridad: (Math.floor(pos / 8) + pos % 8) % 2 });
+    }
+    if (menores.length <= 1) return true; // rey contra rey, o con un solo caballo/alfil
+    if (menores.length === 2 && menores[0].tipo === 'A' && menores[1].tipo === 'A'
+      && menores[0].color !== menores[1].color && menores[0].paridad === menores[1].paridad) return true;
+    return false;
+  }
+  function jugadaAjedrez(estado, jugadorIdx, de, hasta, promocion) {
+    if (estado.terminado) throw new Error('La partida ya terminó');
+    if (estado.turno !== jugadorIdx) throw new Error('No es tu turno');
+    if (colorPiezaAjedrez(estado.tablero[de]) !== jugadorIdx) throw new Error('Esa pieza no es tuya');
+    var legales = movimientosLegalesAjedrez(estado, jugadorIdx);
+    var mov = null;
+    legales.forEach(function (m) {
+      if (m.de !== de || m.hasta !== hasta) return;
+      if (m.promocion) { if ((promocion || 'D') === m.promocion) mov = m; }
+      else if (!mov) mov = m;
+    });
+    if (!mov) throw new Error('Ahí no puedes mover');
+    var pieza = estado.tablero[de];
+    var aplicado = aplicarEnTableroAjedrez(estado, mov);
+    var tablero = aplicado.tablero;
+    // Derechos de enroque: se pierden al mover rey/torre o al comerse la torre en su casa.
+    var enroque = Object.assign({}, estado.enroque);
+    if (pieza === 'R') { enroque.BC = false; enroque.BL = false; }
+    if (pieza === 'r') { enroque.NC = false; enroque.NL = false; }
+    if (de === 63 || aplicado.capturada && hasta === 63) enroque.BC = false;
+    if (de === 56 || aplicado.capturada && hasta === 56) enroque.BL = false;
+    if (de === 7 || aplicado.capturada && hasta === 7) enroque.NC = false;
+    if (de === 0 || aplicado.capturada && hasta === 0) enroque.NL = false;
+    var capturadas = [estado.capturadas[0].slice(), estado.capturadas[1].slice()];
+    if (aplicado.capturada) capturadas[jugadorIdx].push(aplicado.capturada);
+    var rival = 1 - jugadorIdx;
+    var cols = 'abcdefgh';
+    function nombreCasilla(p) { return cols[p % 8] + (8 - Math.floor(p / 8)); }
+    var texto = nombreCasilla(de) + nombreCasilla(hasta) + (mov.promocion ? mov.promocion : '');
+    var nuevo = Object.assign({}, estado, {
+      tablero: tablero, turno: rival, enroque: enroque,
+      paso: mov.doble ? (de + hasta) / 2 : null,
+      medios: (pieza.toUpperCase() === 'P' || aplicado.capturada) ? 0 : estado.medios + 1,
+      capturadas: capturadas,
+      ultimaJugada: { de: de, hasta: hasta, captura: aplicado.capturada || null, promocion: mov.promocion || null, enroque: mov.enroque || null },
+      historial: estado.historial.concat([texto])
+    });
+    var jaqueRival = enJaqueAjedrez(tablero, rival);
+    nuevo.jaque = jaqueRival;
+    var legalesRival = movimientosLegalesAjedrez(nuevo, rival);
+    if (!legalesRival.length) {
+      nuevo.terminado = true;
+      if (jaqueRival) nuevo.ganador = estado.jugadores[jugadorIdx]; // ¡jaque mate!
+      else nuevo.empate = true; // rey ahogado
+    } else if (nuevo.medios >= 100 || materialInsuficienteAjedrez(tablero)) {
+      nuevo.terminado = true; nuevo.empate = true;
     }
     return nuevo;
   }
@@ -3891,6 +4155,8 @@
     crearOrden: crearOrden, voltearOrden: voltearOrden, enviarOrden: enviarOrden, siguienteOrden: siguienteOrden, largoFilaOrden: largoFilaOrden,
     crearNumeros: crearNumeros, ocultarNumeros: ocultarNumeros, responderNumeros: responderNumeros, siguienteNumeros: siguienteNumeros,
     crearDamas: crearDamas, movimientosDamas: movimientosDamas, moverDamas: moverDamas, tieneMovimientosDamas: tieneMovimientosDamas,
+    crearAjedrez: crearAjedrez, jugadaAjedrez: jugadaAjedrez, movimientosLegalesAjedrez: movimientosLegalesAjedrez,
+    movimientosPiezaAjedrez: movimientosPiezaAjedrez, enJaqueAjedrez: enJaqueAjedrez, casillaAtacadaAjedrez: casillaAtacadaAjedrez,
     FIGURAS_LOTERIA: FIGURAS_LOTERIA, crearLoteria: crearLoteria, cantarLoteria: cantarLoteria, cartonDeLoteria: cartonDeLoteria,
     crearGuerra: crearGuerra, revelarGuerra: revelarGuerra, siguienteGuerra: siguienteGuerra, cartaDeGuerra: cartaDeGuerra, nombreCartaGuerra: nombreCartaGuerra, PALOS_GUERRA: PALOS_GUERRA,
     crearTesoro: crearTesoro, buscarTesoro: buscarTesoro, pistaTesoro: pistaTesoro, distanciaTesoro: distanciaTesoro,
