@@ -409,6 +409,16 @@ button.celda-naval.disparo:disabled{cursor:default; opacity:1}
 .casilla-damas{aspect-ratio:1; border:none; border-radius:6px; font-size:1.25rem; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0; min-width:0; min-height:0}
 .casilla-damas.clara{background:#f3e2c7}.casilla-damas.oscura{background:#b07a45}
 .casilla-damas.sel{outline:3px solid #ffd23f; outline-offset:-3px}
+.tablero-ajedrez{display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:2px; max-width:400px; margin:10px auto}
+.casilla-ajedrez{aspect-ratio:1; border:none; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0; min-width:0; min-height:0}
+.casilla-ajedrez.clara{background:#f3e2c7}.casilla-ajedrez.oscura{background:#8a9a5b}
+.casilla-ajedrez.sel{outline:3px solid #ffd23f; outline-offset:-3px}
+.casilla-ajedrez.ultima{box-shadow:inset 0 0 0 3px #f5c54288}
+.casilla-ajedrez.en-jaque{background:#e5484d}
+.pieza-ajedrez{font-size:1.55rem; line-height:1}
+.pieza-ajedrez.blanca{color:#fff; text-shadow:0 0 2px #000, 0 0 3px #000, 1px 1px 1px #000}
+.pieza-ajedrez.negra{color:#1d1d1f; text-shadow:0 0 2px #fff8, 1px 1px 1px #fff6}
+.pieza-ajedrez.en-linea{font-size:1rem}
 .mapa-tesoro{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:4px; max-width:330px; margin:10px auto}
 .casilla-tesoro{aspect-ratio:1; border:2px solid #e5d5bd; border-radius:10px; background:#fff8ec; font-size:1.15rem; cursor:pointer; padding:0; min-width:0; min-height:0}
 .casilla-tesoro:disabled{cursor:default; opacity:.85}
